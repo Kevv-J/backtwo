@@ -1,0 +1,4 @@
+# backtwo build-pipeline dependencies (build_db.py, build_dex.py, build_og.py).
+# Pinned to give the weekly cron a stable surface. Bump by hand when needed.
+requests==2.34.2
+Pillow==12.2.0
