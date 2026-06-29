@@ -1,0 +1,1779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>backtwo — VGC doubles companion</title>
+<meta name="description" content="A VGC doubles companion for Pokémon Champions — damage calc, team finder over 1,400+ tournament teams, and meta browser. Built for your climb through every regulation.">
+<meta name="author" content="Kevin John">
+<meta name="build" content="{{BUILD_SHA}} · {{BUILD_DATE}}">
+<meta name="theme-color" content="#08090d">
+<meta property="og:type" content="website">
+<meta property="og:title" content="backtwo — VGC doubles companion">
+<meta property="og:description" content="Read the back two. Team finder, damage calc, and meta browser for VGC doubles in Pokémon Champions.">
+<meta property="og:image" content="og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="backtwo — VGC doubles companion">
+<meta name="twitter:description" content="Read the back two. A VGC doubles companion for your climb.">
+<meta name="twitter:image" content="og.png">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='50%25' stop-color='%2322d3ee'/%3E%3Cstop offset='50%25' stop-color='%23a78bfa'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='32' cy='32' r='30' fill='url(%23g)'/%3E%3Ctext x='32' y='44' text-anchor='middle' font-family='Rajdhani,Inter,sans-serif' font-weight='700' font-size='38' fill='%23ffffff'%3E2%3C/text%3E%3C/svg%3E">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+  /* === Figma-ported design tokens (cyan/violet dichotomy, translucent chips) === */
+  :root{
+    /* Base palette (Figma theme.css) */
+    --background:#08090d; --foreground:#dde1ef;
+    --card:#0f1118; --card-elev:#131724;
+    --popover:#13161f; --popover-foreground:#dde1ef;
+    --primary:#22d3ee;            /* cyan-400 — universal accent */
+    --secondary:#1a1e2a;          /* input/chip bg */
+    --secondary-foreground:#8b91ab;
+    --muted:#141720; --muted-foreground:#7a8095;
+    --border:rgba(255,255,255,0.07);
+    --border-strong:rgba(255,255,255,0.14);
+    --input-bg:#1a1e2a;
+    --destructive:#ef4444;
+    --radius:6px;
+    /* Side dichotomy: attacker = cyan, defender = violet */
+    --atk-color:#22d3ee; --atk-bg:rgba(6,182,212,0.10); --atk-border:rgba(6,182,212,0.30);
+    --def-color:#a78bfa; --def-bg:rgba(139,92,246,0.10); --def-border:rgba(139,92,246,0.30);
+    /* Status colour roles */
+    --good:#34d399;        /* emerald: OHKO / positive / terrain */
+    --good-bg:rgba(16,185,129,0.18); --good-border:rgba(16,185,129,0.35);
+    --warning:#fbbf24;     /* amber: maybe-OHKO / weather */
+    --warning-bg:rgba(245,158,11,0.18); --warning-border:rgba(245,158,11,0.40);
+    --bad:#ef4444;
+    --violet:#a78bfa;
+    --violet-bg:rgba(139,92,246,0.18); --violet-border:rgba(139,92,246,0.40);
+    /* Backwards-compat aliases for existing class rules */
+    --bg:var(--background); --panel:var(--card); --panel2:var(--secondary);
+    --line:var(--border); --txt:var(--foreground); --dim:var(--muted-foreground);
+    --accent:var(--primary); --accent2:var(--warning);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Inter','Segoe UI',system-ui,sans-serif;font-size:13px;line-height:1.5;background:var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased;font-feature-settings:"cv02","cv03","cv04","cv11"}
+  .display,h1,h2,h3,.section-title,.slbl,.flbl{font-family:'Rajdhani','Inter',sans-serif;font-weight:600;letter-spacing:.04em}
+  .mono,.num,.tabnum{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+  header{padding:0 16px;height:46px;border-bottom:1px solid var(--border);display:flex;gap:14px;align-items:center;flex-wrap:nowrap;position:sticky;top:0;background:rgba(8,9,13,0.88);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:10}
+  /* backtwo wordmark: two-line stacked lockup, cyan over violet */
+  h1.wordmark{margin:0;display:inline-flex;flex-direction:column;line-height:.82;font-family:'Rajdhani','Inter',sans-serif;letter-spacing:0;text-transform:lowercase}
+  h1.wordmark .wm-a{color:var(--atk-color);font-weight:600;font-size:15px}
+  h1.wordmark .wm-b{color:var(--def-color);font-weight:700;font-size:15px}
+  .byline{color:var(--dim);font-size:10px;font-family:'JetBrains Mono',ui-monospace,monospace;opacity:.55;text-decoration:none}
+  .byline:hover{opacity:1;color:var(--foreground)}
+  .sub{color:var(--dim);font-size:10px;font-family:'JetBrains Mono',ui-monospace,monospace;border:1px solid var(--border);padding:2px 7px;border-radius:4px;white-space:nowrap}
+  .applogo{width:22px;height:22px;border-radius:5px;background:linear-gradient(135deg,var(--atk-color) 50%,var(--def-color) 50%);display:inline-flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;font-family:'Rajdhani','Inter',sans-serif;line-height:1}
+  .fieldsum{color:var(--muted-foreground);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;margin-left:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .reset-btn{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--border);background:transparent;color:var(--muted-foreground);padding:4px 10px;border-radius:4px;font-size:10px;font-weight:600;cursor:pointer;text-transform:uppercase;letter-spacing:.06em}
+  .reset-btn:hover{border-color:var(--border-strong);color:var(--foreground)}
+  .tabs{display:flex;gap:2px;padding:2px;background:var(--secondary);border-radius:6px}
+  .tab{padding:5px 12px;border:none;border-radius:4px;background:transparent;color:var(--muted-foreground);cursor:pointer;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-family:'Rajdhani','Inter',sans-serif;transition:all .12s}
+  .tab:hover{color:var(--foreground)}
+  .tab.active{color:var(--primary);background:var(--card-elev);box-shadow:0 0 0 1px var(--atk-border)}
+  .regs{display:flex;gap:2px;padding:2px;background:var(--secondary);border-radius:6px}
+  .regbtn{padding:5px 9px;border:none;border-radius:4px;background:transparent;color:var(--muted-foreground);cursor:pointer;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-family:'Rajdhani','Inter',sans-serif}
+  .regbtn:hover{color:var(--foreground)}
+  .regbtn.active{color:var(--warning);background:var(--card-elev);box-shadow:0 0 0 1px var(--warning-border)}
+  .regbadge{display:inline-block;font-size:9px;background:rgba(34,211,238,0.10);color:var(--primary);border:1px solid rgba(34,211,238,0.25);border-radius:3px;padding:1px 5px;margin-left:6px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+  .regbadge.mb{background:rgba(245,158,11,0.10);color:var(--warning);border-color:rgba(245,158,11,0.30)}
+  .newbadge{display:inline-block;font-size:9px;background:rgba(16,185,129,0.10);color:var(--good);border:1px solid rgba(16,185,129,0.30);border-radius:3px;padding:1px 5px;margin-left:6px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+  input,textarea,select{font:inherit;color:var(--foreground);background:var(--input-bg);border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;font-size:13px}
+  input:focus,textarea:focus,select:focus{outline:none;border-color:rgba(34,211,238,0.50);background:var(--secondary)}
+  select{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='%237a8095' d='M0 0l5 6 5-6z'/></svg>");background-repeat:no-repeat;background-position:right 8px center;padding-right:24px}
+  #search{flex:1;min-width:200px;max-width:340px}
+  main{height:calc(100vh - 46px);overflow:hidden}
+  .view{display:none;height:100%}
+  .view.active{display:flex}
+  /* Pokemon view */
+  #list{width:300px;border-right:1px solid var(--line);overflow-y:auto;flex-shrink:0}
+  .row{padding:8px 14px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;justify-content:space-between;gap:8px;align-items:center}
+  .row:hover{background:var(--panel)}
+  .row.sel{background:var(--panel2);border-left:3px solid var(--accent)}
+  .row .ct{color:var(--dim);font-variant-numeric:tabular-nums}
+  #detail{flex:1;overflow-y:auto;padding:20px 26px}
+  .empty{color:var(--dim);padding:40px;text-align:center}
+  h2{font-size:21px;margin:0 0 2px}
+  .usage{color:var(--accent2);font-weight:600;margin-bottom:6px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:13px;margin:16px 0}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:11px 13px}
+  .card h3{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim)}
+  .bar{display:flex;align-items:center;gap:8px;margin:3px 0}
+  .bar .lab{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bar .pct{height:6px;border-radius:3px;background:var(--accent);flex-shrink:0}
+  .bar .n{color:var(--dim);width:32px;text-align:right;font-variant-numeric:tabular-nums;flex-shrink:0}
+  .teammate{color:var(--good)}
+  .tcard{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin-bottom:11px}
+  .tcard .th{display:flex;justify-content:space-between;gap:10px;align-items:baseline;flex-wrap:wrap}
+  .tcard .desc{font-weight:600}
+  .meta{color:var(--dim);font-size:12px}
+  .chip{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:1px 7px;margin:2px 4px 2px 0;font-size:12px}
+  .chip.rank{border-color:var(--accent2);color:var(--accent2)}
+  .badge{font-size:10px;background:#3a2d12;color:var(--accent2);border:1px solid #5a4a1e;border-radius:5px;padding:0 5px;margin-left:6px;white-space:nowrap}
+  .mons{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-top:9px}
+  .mon{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+  .mon .nm{font-weight:700}
+  .mon .it{color:var(--accent2);font-size:12px}
+  .mon .ab{color:var(--dim);font-size:12px;margin-top:1px}
+  .mon .ev{font-size:11px;color:var(--dim);margin-top:5px}
+  .moves{margin-top:5px;display:flex;flex-wrap:wrap;gap:3px}
+  /* Translucent type chips — Figma-style: 20% bg, 30% border, 300-shade text */
+  .mv{font-size:10px;border-radius:3px;padding:1px 6px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;border:1px solid;line-height:1.4}
+  .mv.status{background:rgba(148,163,184,0.10);color:#94a3b8;border-color:rgba(148,163,184,0.30)}
+  /* Per-type translucent palettes — applied via inline style fallback for legacy renderers,
+     plus these named classes for new renders. Each pairs bg / text / border. */
+  .t-normal{background:rgba(113,113,122,0.20);color:#d4d4d8;border-color:rgba(113,113,122,0.30)}
+  .t-fire{background:rgba(249,115,22,0.20);color:#fdba74;border-color:rgba(249,115,22,0.35)}
+  .t-water{background:rgba(59,130,246,0.20);color:#93c5fd;border-color:rgba(59,130,246,0.35)}
+  .t-electric{background:rgba(234,179,8,0.20);color:#fde047;border-color:rgba(234,179,8,0.35)}
+  .t-grass{background:rgba(16,185,129,0.20);color:#6ee7b7;border-color:rgba(16,185,129,0.35)}
+  .t-ice{background:rgba(6,182,212,0.20);color:#67e8f9;border-color:rgba(6,182,212,0.35)}
+  .t-fighting{background:rgba(220,38,38,0.20);color:#fca5a5;border-color:rgba(220,38,38,0.35)}
+  .t-poison{background:rgba(168,85,247,0.20);color:#d8b4fe;border-color:rgba(168,85,247,0.35)}
+  .t-ground{background:rgba(217,119,6,0.20);color:#fcd34d;border-color:rgba(217,119,6,0.35)}
+  .t-flying{background:rgba(96,165,250,0.20);color:#bae6fd;border-color:rgba(96,165,250,0.35)}
+  .t-psychic{background:rgba(236,72,153,0.20);color:#f9a8d4;border-color:rgba(236,72,153,0.35)}
+  .t-bug{background:rgba(132,204,22,0.20);color:#bef264;border-color:rgba(132,204,22,0.35)}
+  .t-rock{background:rgba(120,113,108,0.25);color:#d6d3d1;border-color:rgba(120,113,108,0.40)}
+  .t-ghost{background:rgba(139,92,246,0.20);color:#c4b5fd;border-color:rgba(139,92,246,0.35)}
+  .t-dragon{background:rgba(99,102,241,0.20);color:#c7d2fe;border-color:rgba(99,102,241,0.35)}
+  .t-dark{background:rgba(64,64,64,0.40);color:#d4d4d4;border-color:rgba(82,82,82,0.50)}
+  .t-steel{background:rgba(148,163,184,0.20);color:#cbd5e1;border-color:rgba(148,163,184,0.35)}
+  .t-fairy{background:rgba(249,168,212,0.20);color:#fbcfe8;border-color:rgba(249,168,212,0.35)}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  mark{background:var(--accent2);color:#000;border-radius:2px}
+  /* stat bars */
+  .stat{display:grid;grid-template-columns:42px 1fr;gap:8px;align-items:center;margin:3px 0}
+  .stat .k{color:var(--dim);font-size:12px}
+  .statbar{height:14px;border-radius:4px;background:#2a2f3a;position:relative;overflow:hidden}
+  .statbar > span{position:absolute;left:0;top:0;bottom:0;border-radius:4px}
+  .statval{position:absolute;right:6px;top:0;font-size:11px;line-height:14px;color:#fff;text-shadow:0 0 2px #000}
+  .delta{font-size:11px;margin-left:6px}
+  .up{color:var(--good)} .down{color:var(--bad)}
+  label.tg{display:inline-flex;align-items:center;gap:6px;color:var(--dim);font-size:12px;cursor:pointer;margin-left:10px}
+  /* tables */
+  table{border-collapse:collapse;width:100%;font-size:13px}
+  th,td{border:1px solid var(--line);padding:5px 9px;text-align:left}
+  th{background:var(--panel);color:var(--dim);position:sticky;top:0;cursor:pointer}
+  tr:hover td{background:var(--panel)}
+  .num{text-align:right;font-variant-numeric:tabular-nums}
+  /* speed + damage layout */
+  .pad{flex:1;overflow-y:auto;padding:16px 22px}
+  .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+  .dmgwrap{display:flex;gap:18px;height:100%}
+  .dmgcol{flex:1;overflow-y:auto;padding:16px 18px}
+  .dmgcol.left{max-width:360px;border-right:1px solid var(--line)}
+  textarea{width:100%;height:150px;resize:vertical;font-family:ui-monospace,Menlo,monospace;font-size:12px}
+  .cell{cursor:default;font-variant-numeric:tabular-nums;text-align:center;font-weight:600}
+  .ko{outline:2px solid var(--bad)}
+  .small{font-size:11px;color:var(--dim)}
+  .dmgtop{display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+  .dmgslot{flex:1;min-width:320px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:0;overflow:hidden;display:flex;flex-direction:column}
+  .dmgslot[data-p="a"]{border-color:var(--atk-border)}
+  .dmgslot[data-p="b"]{border-color:var(--def-border)}
+  .slothd{padding:9px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:0}
+  .dmgslot[data-p="a"] .slothd{background:var(--atk-bg)}
+  .dmgslot[data-p="b"] .slothd{background:var(--def-bg)}
+  .slothd h3{margin:0;font-size:11px;text-transform:uppercase;letter-spacing:.18em;font-weight:700;display:flex;align-items:center;gap:6px}
+  .dmgslot[data-p="a"] .slothd h3{color:var(--atk-color)}
+  .dmgslot[data-p="b"] .slothd h3{color:var(--def-color)}
+  .dmgslot .slotbody{padding:11px 14px;display:flex;flex-direction:column;gap:9px}
+  .dmgslot > input,.dmgslot > select{width:100%;margin-bottom:0}
+  .fld{display:grid;grid-template-columns:74px 1fr;gap:8px;align-items:center;margin-bottom:6px}
+  .fld label{color:var(--dim);font-size:12px}
+  .movegrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:4px 0 2px}
+  .statline{margin-top:8px;line-height:1.7}
+  .myteam{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:12px}
+  #myta{height:84px}
+  .btn{margin-top:7px;padding:7px 14px;border-radius:8px;border:1px solid var(--accent);background:var(--panel2);color:var(--txt);cursor:pointer;font-weight:600}
+  .statedit{width:100%;border-collapse:collapse;margin:4px 0 6px}
+  .statedit colgroup col.statcol{width:110px}
+  .statedit colgroup col.spcol{width:140px}
+  .statedit .sk{padding:4px 6px 4px 0;vertical-align:middle}
+  .statedit .slbl{color:var(--dim);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin-right:4px}
+  .statedit .finv{font-weight:700;font-size:14px;font-variant-numeric:tabular-nums;color:var(--txt)}
+  .statedit .finv b.up{color:var(--good)}
+  .statedit .finv b.down{color:var(--bad)}
+  .statedit .finv .finbase{color:var(--dim);font-size:11px;font-weight:400}
+  .statedit .finv .bsign{font-size:11px;font-weight:700;margin-left:2px}
+  .statedit .finv .bsign.up{color:var(--good)}
+  .statedit .finv .bsign.down{color:var(--bad)}
+  .statedit th{position:static;background:none;border:none;color:var(--dim);font-size:10px;font-weight:600;text-align:left;padding:1px 4px;cursor:default}
+  .statedit td{border:none;padding:1px 4px;background:none}
+  .statedit tr:hover td{background:none}
+  .statedit .sk{color:var(--dim);font-size:12px;width:34px}
+  .statedit .spin{width:56px;padding:3px 6px;font-size:12px}
+  .statedit .spc{display:flex;align-items:center;gap:6px;min-width:120px}
+  .statedit .spslider{flex:1;height:14px;-webkit-appearance:none;background:transparent;cursor:pointer;margin:0;padding:0;min-width:70px}
+  .statedit .spslider::-webkit-slider-runnable-track{height:5px;border-radius:3px;background:var(--panel2);border:1px solid var(--line)}
+  .statedit .spslider::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent);margin-top:-5px;cursor:pointer}
+  .statedit .spslider::-moz-range-track{height:5px;border-radius:3px;background:var(--panel2);border:1px solid var(--line)}
+  .statedit .spslider::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--accent);border:none;cursor:pointer}
+  .statedit .spv{display:inline-block;width:24px;text-align:right;font-variant-numeric:tabular-nums;font-size:12px;font-weight:600;color:var(--accent)}
+  .statedit .bsel{width:62px;padding:3px 4px;font-size:12px}
+  .statedit .boostc{padding:2px}
+  .statedit .stagerow{display:flex;gap:2px;justify-content:center;align-items:center}
+  .statedit .stagec{min-width:22px;height:20px;padding:0 2px;border:1px solid var(--line);background:var(--panel2);color:#6a6f7a;font-size:11px;font-weight:600;cursor:pointer;border-radius:4px;line-height:1;font-variant-numeric:tabular-nums;display:inline-flex;align-items:center;justify-content:center}
+  .statedit .stagec[data-s^="-"]{color:#8f6464}
+  .statedit .stagec[data-s="-1"],.statedit .stagec[data-s="-2"],.statedit .stagec[data-s="-3"],.statedit .stagec[data-s="-4"],.statedit .stagec[data-s="-5"],.statedit .stagec[data-s="-6"]{color:#9b6868}
+  .statedit .stagec[data-s="1"],.statedit .stagec[data-s="2"],.statedit .stagec[data-s="3"],.statedit .stagec[data-s="4"],.statedit .stagec[data-s="5"],.statedit .stagec[data-s="6"]{color:#68986b}
+  .statedit .stagec:hover{border-color:var(--accent);color:var(--accent);background:#1b2230}
+  .statedit .stagec.active{font-weight:700;transform:scale(1.08)}
+  .statedit .stagec.active.pos{color:var(--good);border-color:var(--good);background:#1a2e1f}
+  .statedit .stagec.active.neg{color:var(--bad);border-color:var(--bad);background:#2e1717}
+  .statedit .stagec.active.zero{color:var(--accent);border-color:var(--accent);background:#1b2230}
+  /* Typeable SP value input */
+  .statedit .spv{width:34px;text-align:right;padding:2px 4px;font-size:12px;border:1px solid var(--line);background:var(--panel);color:var(--accent);font-weight:600;border-radius:4px;font-variant-numeric:tabular-nums}
+  .statedit .spv::-webkit-inner-spin-button,.statedit .spv::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+  .statedit .spv{-moz-appearance:textfield}
+  /* Slot layout */
+  .slothd{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+  .slothd h3{margin:0;font-size:13px}
+  .fld3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:6px}
+  .fld3 > *{width:100%}
+  .seclabel{margin:8px 0 4px;color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:.5px;font-weight:600;display:flex;justify-content:space-between}
+  .btnrow{display:flex;flex-wrap:wrap;gap:4px}
+  .optbtn{padding:3px 9px;border-radius:3px;background:transparent;border:1px solid var(--border);color:var(--muted-foreground);cursor:pointer;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-family:'Rajdhani','Inter',sans-serif}
+  .optbtn:hover{border-color:var(--border-strong);color:var(--foreground)}
+  /* Default active = Figma amber (most common for weather/format/single toggles) */
+  .optbtn.active{background:var(--warning-bg);border-color:var(--warning-border);color:var(--warning)}
+  /* Weather buttons: amber as Figma */
+  .optbtn[data-grp="weat"].active{background:var(--warning-bg);border-color:var(--warning-border);color:var(--warning)}
+  /* Terrain buttons: emerald as Figma */
+  .optbtn[data-grp="terr"].active{background:var(--good-bg);border-color:var(--good-border);color:var(--good)}
+  /* Room conditions: violet as Figma */
+  .optbtn[data-grp="rm"].active{background:var(--violet-bg);border-color:var(--violet-border);color:var(--violet)}
+  /* Status group active per side-color (handled at slot level via inheritance) */
+  .optbtn.critbtn.active{background:rgba(239,68,68,0.18);border-color:rgba(239,68,68,0.40);color:#fca5a5}
+  /* HP slider */
+  .hpbar{width:100%;height:18px;-webkit-appearance:none;background:transparent}
+  .hpbar::-webkit-slider-runnable-track{height:8px;border-radius:4px;background:linear-gradient(to right,var(--good),var(--accent2),var(--bad))}
+  .hpbar::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--txt);margin-top:-3px;cursor:pointer}
+  /* Field section */
+  .fieldbar{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:12px}
+  .fline{display:grid;grid-template-columns:64px 1fr;gap:8px;align-items:start;margin:5px 0}
+  .flbl{color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:.5px;font-weight:600;padding-top:4px}
+  /* Fight bar */
+  .fightbar{background:#1b2230;border:1px solid var(--accent);border-radius:10px;padding:10px 14px;margin-bottom:12px}
+  .fbhdr{display:flex;gap:8px;align-items:baseline;margin-bottom:8px}
+  .ftrow{display:flex;gap:6px;flex-wrap:wrap}
+  .ftbtn{padding:5px 10px;border-radius:6px;border:1px solid var(--line);background:var(--panel2);color:var(--accent);cursor:pointer;font-size:12px;font-weight:600}
+  .ftbtn:hover{border-color:var(--accent)}
+  .ftbtn.active{background:var(--panel);border-color:var(--accent2);color:var(--accent2)}
+  .closebtn{margin-left:auto;background:transparent;border:none;color:var(--dim);font-size:18px;cursor:pointer;padding:0 4px}
+  .closebtn:hover{color:var(--bad)}
+  /* Fight-this-team card button */
+  .fightcardbtn{padding:1px 8px;border-radius:6px;border:1px solid var(--accent);background:var(--panel2);color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-right:4px}
+  .fightcardbtn:hover{background:var(--accent);color:#0c0e12}
+  /* My-team details/summary */
+  details.myteam{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:12px}
+  details.myteam summary{cursor:pointer;list-style:none;font-weight:600}
+  details.myteam summary::-webkit-details-marker{display:none}
+  details.myteam[open] summary{margin-bottom:8px}
+  .calcfoot{margin-top:14px;padding:10px 14px;background:var(--panel);border:1px solid var(--line);border-radius:10px;line-height:1.5}
+  .myrow{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-bottom:7px}
+  .mybtn{padding:3px 9px;border-radius:6px;border:1px solid var(--line);background:var(--panel2);color:var(--accent);cursor:pointer;font-size:12px;font-weight:600}
+  .mybtn:hover{border-color:var(--accent)}
+  .rescols{display:flex;gap:12px;flex-wrap:wrap}
+  .rescol{flex:1;min-width:340px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:0;overflow:hidden}
+  .rescol[data-side="A"]{border-color:var(--atk-border)}
+  .rescol[data-side="B"]{border-color:var(--def-border)}
+  .rescol .restitle{padding:8px 14px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.10em;text-transform:uppercase;font-family:'Rajdhani','Inter',sans-serif;display:flex;align-items:center;justify-content:space-between}
+  .rescol[data-side="A"] .restitle{background:var(--atk-bg);color:var(--atk-color)}
+  .rescol[data-side="B"] .restitle{background:var(--def-bg);color:var(--def-color)}
+  .rescol .resbody{padding:4px 0}
+  .moverow{display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--border);cursor:pointer;font-size:12px;transition:background .12s}
+  .moverow:hover{background:var(--secondary)}
+  .moverow.sel{background:var(--secondary)}
+  .moverow.bestrow{border-left:2px solid var(--good)}
+  .rpct{font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;margin-left:auto}
+  .moverow .mvname{font-weight:600;font-size:12px;color:var(--foreground);min-width:110px}
+  .mv.typeonly{font-size:9px;padding:1px 5px;min-width:40px;text-align:center}
+  .moverow .mvmeta{display:flex;gap:5px;align-items:center;font-size:10px}
+  .detail{margin:0;padding:10px 14px;background:var(--muted);border-bottom:1px solid var(--border);line-height:1.55;font-size:12px}
+  /* KO chip — Figma translucent style */
+  .kochip{display:inline-block;border-radius:3px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:6px;white-space:nowrap;border:1px solid;letter-spacing:.06em;text-transform:uppercase}
+  .kochip.kosure{background:var(--good-bg);color:var(--good);border-color:var(--good-border)}
+  .kochip.komaybe{background:var(--warning-bg);color:var(--warning);border-color:var(--warning-border)}
+  .kochip.ko2{background:var(--violet-bg);color:var(--violet);border-color:var(--violet-border)}
+  .kochip.ko3{background:rgba(100,116,139,0.15);color:#94a3b8;border-color:rgba(100,116,139,0.30)}
+  .kochip.kolow{background:rgba(82,82,91,0.15);color:#71717a;border-color:rgba(82,82,91,0.25)}
+  .kochip.koimmune{background:rgba(82,82,91,0.20);color:#71717a;border-color:rgba(82,82,91,0.30)}
+  /* Type-effectiveness chip */
+  .effchip{display:inline-block;border-radius:3px;padding:1px 5px;font-size:10px;font-weight:700;margin-left:5px;border:1px solid;font-family:'JetBrains Mono',ui-monospace,monospace}
+  .effchip.effstrong{background:var(--good-bg);color:#34d399;border-color:var(--good-border)}
+  .effchip.effse{background:var(--good-bg);color:#6ee7b7;border-color:var(--good-border)}
+  .effchip.effweak{background:rgba(100,116,139,0.10);color:#64748b;border-color:rgba(100,116,139,0.20)}
+  .effchip.effimmune{background:rgba(82,82,91,0.15);color:#52525b;border-color:rgba(82,82,91,0.25)}
+  .moverow.bestrow{border-left-width:3px;border-left-color:var(--good)}
+  .moverow.koimmune{opacity:0.65}
+  .survive{color:var(--accent2);font-size:11px;margin-left:6px;font-weight:600}
+  /* Speed-tier ribbon */
+  .speedribbon{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 14px;margin-bottom:10px;text-align:center;font-size:14px;font-weight:600}
+  .speedribbon:empty{display:none}
+  .speedribbon .fast-a,.speedribbon .slow-b{color:var(--accent)}
+  .speedribbon .fast-b,.speedribbon .slow-a{color:var(--accent2)}
+  .speedribbon .srpair{font-size:15px}
+  .speedribbon .seprator{color:var(--dim)}
+  /* Pin button on slot header */
+  .pinbtn{margin-left:6px;padding:2px 6px;border-radius:6px;border:1px solid var(--line);background:var(--panel2);color:var(--dim);cursor:pointer;font-size:13px;line-height:1}
+  .pinbtn:hover{border-color:var(--accent)}
+  .pinbtn.locked{border-color:var(--accent2);color:var(--accent2);background:#2a2415}
+  /* Lead matchup matrix */
+  .mxwrap{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:12px}
+  .mxwrap summary{cursor:pointer;list-style:none;margin-bottom:8px}
+  .mxwrap summary::-webkit-details-marker{display:none}
+  .mxgrid{border-collapse:separate;border-spacing:3px;width:100%}
+  .mxgrid th{position:static;background:var(--panel2);font-weight:600;padding:5px 7px;color:var(--dim);font-size:11px;text-align:center;border:1px solid var(--line);cursor:default}
+  .mxgrid .mxcell{background:var(--panel2);border:1px solid var(--line);padding:6px 8px;text-align:center;font-weight:700;font-size:12px;cursor:pointer;font-variant-numeric:tabular-nums}
+  .mxgrid .mxcell:hover{background:#1e222b;border-color:var(--accent)}
+  .mxgrid .mxcell.empty{color:var(--dim);cursor:default;font-weight:400}
+  /* Find Team view */
+  .findhdr{margin-bottom:14px}
+  .findbox{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-bottom:10px}
+  .findbox input{width:100%;font-size:14px;padding:9px 12px}
+  .findbtns{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+  .findh{color:var(--accent);font-size:13px;text-transform:uppercase;letter-spacing:.6px;margin:18px 0 8px;border-bottom:1px solid var(--line);padding-bottom:4px}
+  .findh .small{color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0}
+  #findresults{margin-top:4px}
+  .findresult{position:relative;margin-bottom:11px}
+  .findresult .tcard{margin-bottom:0;border-color:#3a2415}
+  .missline{display:inline-block;padding:3px 10px;background:#3a2415;color:#ffb070;border:1px solid #5a3520;border-top-left-radius:8px;border-top-right-radius:8px;border-bottom:none;font-size:12px;font-weight:600;margin-bottom:-1px}
+  .missline::before{content:"⚠ "}
+  /* Pokémon sprite icons (PokeAPI front_default, 96×96 or 512×512 home renders) */
+  .psprite{display:inline-block;width:32px;height:32px;vertical-align:middle;flex-shrink:0;object-fit:contain;line-height:0}
+  .psprite.s24{width:24px;height:24px}
+  .psprite.s28{width:28px;height:28px}
+  .psprite.s32{width:32px;height:32px}
+  .psprite.s40{width:40px;height:40px}
+  .psprite.s48{width:48px;height:48px}
+  .psprite.empty{background:rgba(255,255,255,0.04);border:1px dashed var(--border);border-radius:4px}
+  .row .rowname{display:flex;align-items:center;gap:8px;min-width:0}
+  .row .rowname > span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  h2{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  h2 .h2-name{font-family:'Rajdhani','Inter',sans-serif;font-weight:600;letter-spacing:.02em}
+  .mybtn,.ftbtn{display:inline-flex;align-items:center;gap:5px}
+  .mon .nm{display:flex;align-items:center;gap:6px;font-weight:700}
+  .mon .mon-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .slothd-right{display:flex;align-items:center;gap:8px;margin-left:auto}
+  .slotsprite{display:inline-flex;align-items:center;line-height:0}
+  .slotsprite:empty{display:none}
+  .slotsprite .psprite{display:block}
+  /* Slot internals (overrides for the new wrapped structure) */
+  .dmgslot .slothd h3{font-size:11px;text-transform:uppercase;letter-spacing:.18em;font-weight:700;margin:0}
+  .dmgslot .pinbtn{background:transparent;border:1px solid var(--border);padding:1px 7px;border-radius:3px;color:inherit;opacity:0.7;font-size:11px;line-height:1.4}
+  .dmgslot .pinbtn:hover{opacity:1}
+  .dmgslot .pinbtn.locked{background:var(--warning-bg);border-color:var(--warning-border);color:var(--warning);opacity:1}
+  .dmgslot .seclabel{font-family:'Rajdhani','Inter',sans-serif;font-size:10px;text-transform:uppercase;letter-spacing:.10em;color:var(--muted-foreground);font-weight:700;margin:6px 0 3px;display:flex;justify-content:space-between;align-items:center}
+  .dmgslot .typeline{display:flex;gap:4px;align-items:center}
+  /* Move-row sub-meta: type chip + Phys/Spec + BP */
+  .moverow .mvmeta{display:flex;gap:5px;align-items:center;font-size:10px;color:var(--muted-foreground)}
+  .moverow .mvcat{font-family:'JetBrains Mono',ui-monospace,monospace;text-transform:capitalize}
+  .moverow .mvcat.physical{color:#fb923c}
+  .moverow .mvcat.special{color:#60a5fa}
+  .moverow .mvcat.status{color:#94a3b8}
+  .moverow .mvbp{font-family:'JetBrains Mono',ui-monospace,monospace;color:var(--muted-foreground)}
+  .restitle-hp{font-family:'JetBrains Mono',ui-monospace,monospace;color:var(--muted-foreground);font-size:10px;font-weight:500;letter-spacing:0;text-transform:none}
+  /* SP-total counter (shows N/66, red when over) */
+  .sp-total{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;color:var(--muted-foreground);font-weight:500;letter-spacing:0;text-transform:none}
+  .sp-total.over{color:var(--bad);font-weight:700}
+  /* Nature highlight on stat label */
+  .statedit .slbl.natup{color:var(--bad)}
+  .statedit .slbl.natdown{color:#60a5fa}
+  /* Help overlay */
+  #helpoverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
+  #helpoverlay .hovbox{background:var(--panel);border:1px solid var(--accent);border-radius:12px;padding:18px 24px;min-width:380px;max-width:520px}
+  #helpoverlay h3{margin:0 0 14px;font-size:15px;color:var(--accent)}
+  .hovgrid{display:grid;grid-template-columns:auto 1fr;gap:8px 14px;align-items:baseline;font-size:13px}
+  .hovgrid kbd{font-family:ui-monospace,Menlo,monospace;background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:2px 7px;font-size:12px;color:var(--accent);text-align:center;font-weight:600}
+  .pill2{display:inline-block;border-radius:3px;padding:1px 6px;font-size:10px;font-weight:700;margin-right:4px;text-transform:uppercase;letter-spacing:.06em;border:1px solid}
+  /* Site footer — one muted line: byline · repo · data · disclaimer · build */
+  footer.sitefoot{border-top:1px solid var(--border);background:rgba(8,9,13,0.92);padding:8px 16px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;color:var(--muted-foreground);display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;justify-content:flex-start}
+  footer.sitefoot a{color:var(--muted-foreground);text-decoration:none;border-bottom:1px dotted rgba(255,255,255,0.18)}
+  footer.sitefoot a:hover{color:var(--foreground);border-bottom-color:var(--foreground)}
+  footer.sitefoot .sep{opacity:.4}
+  footer.sitefoot .ftbrand{color:var(--atk-color)}
+  footer.sitefoot .ftbrand .v2{color:var(--def-color)}
+  /* About modal — shares the helpoverlay positioning but its own box */
+  #aboutoverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:120;align-items:center;justify-content:center;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);padding:24px}
+  #aboutoverlay.open{display:flex}
+  #aboutoverlay .abox{background:var(--panel);border:1px solid var(--border-strong);border-radius:14px;padding:22px 26px;max-width:620px;width:100%;max-height:90vh;overflow-y:auto;line-height:1.55;font-size:13px}
+  #aboutoverlay .abox h2{font-family:'Rajdhani','Inter',sans-serif;font-size:22px;font-weight:700;margin:0 0 4px;letter-spacing:0;color:var(--foreground);text-transform:none;display:flex;flex-direction:column;line-height:.82}
+  #aboutoverlay .abox h2 .wm-a{color:var(--atk-color);font-weight:600}
+  #aboutoverlay .abox h2 .wm-b{color:var(--def-color);font-weight:700}
+  #aboutoverlay .abox .atag{color:var(--dim);font-size:11px;font-family:'JetBrains Mono',ui-monospace,monospace;margin-bottom:14px;letter-spacing:.04em}
+  #aboutoverlay .abox h3{font-family:'Rajdhani','Inter',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.14em;color:var(--muted-foreground);margin:14px 0 4px}
+  #aboutoverlay .abox p{margin:0 0 8px}
+  #aboutoverlay .abox a{color:var(--atk-color);text-decoration:none;border-bottom:1px dotted rgba(34,211,238,0.4)}
+  #aboutoverlay .abox a:hover{border-bottom-style:solid}
+  #aboutoverlay .abox .close{position:sticky;float:right;background:transparent;border:1px solid var(--border);color:var(--muted-foreground);border-radius:6px;padding:2px 9px;cursor:pointer;font-family:inherit;font-size:11px}
+  #aboutoverlay .abox .close:hover{color:var(--foreground);border-color:var(--foreground)}
+  #aboutoverlay .abox .disclaim{margin-top:14px;padding:10px 12px;background:var(--muted);border:1px solid var(--border);border-radius:8px;color:var(--dim);font-size:11px;line-height:1.55}
+  /* Adjust main height to make room for footer */
+  main{height:calc(100vh - 46px - 34px)}
+</style>
+</head>
+<body>
+<div id="helpoverlay" onclick="this.style.display='none'">
+  <div class="hovbox" onclick="event.stopPropagation()">
+    <h3>Damage Calc · Hotkeys</h3>
+    <div class="hovgrid">
+      <kbd>1–6</kbd><span>Load opponent's mon (or my team if no opposing team) into B</span>
+      <kbd>Shift+1–6</kbd><span>Load my team mon into A</span>
+      <kbd>[ / ]</kbd><span>Cycle B through opposing team mons</span>
+      <kbd>Tab</kbd><span>Swap A ↔ B (sides also swap)</span>
+      <kbd>W</kbd><span>Cycle weather</span>
+      <kbd>T</kbd><span>Cycle terrain</span>
+      <kbd>R</kbd><span>Toggle Trick Room</span>
+      <kbd>C</kbd><span>Toggle Crit on side A</span>
+      <kbd>Esc</kbd><span>Clear opposing team</span>
+      <kbd>?</kbd><span>Show this overlay</span>
+    </div>
+    <div class="small" style="margin-top:10px;text-align:center">Click anywhere to dismiss.</div>
+  </div>
+</div>
+<header>
+  <span class="applogo" title="backtwo">2</span>
+  <h1 class="wordmark" title="Read the back two."><span class="wm-a">back</span><span class="wm-b">two</span></h1>
+  <span class="sub" id="stat">VGC · Reg M-A/B</span>
+  <span class="fieldsum" id="fieldsum"></span>
+  <input id="search" placeholder="Search…">
+  <div class="regs" title="Reg A shows only that reg's teams. Later regs are additive: each pill includes prior-reg teams still legal in that reg.">
+    <div class="regbtn" data-reg="M-A">Reg A</div>
+    <div class="regbtn active" data-reg="M-B">Reg B</div>
+  </div>
+  <div class="tabs">
+    <div class="tab active" data-view="poke">Pokémon</div>
+    <div class="tab" data-view="find">Find Team</div>
+    <div class="tab" data-view="dmg">Damage Calc</div>
+    <div class="tab" data-view="team">Teams</div>
+  </div>
+  <button class="reset-btn" id="resetbtn" title="Reset field, side effects, status, and HP on both combatants (does not clear your saved team)">↻ Reset</button>
+</header>
+<main>
+  <div class="view active" id="view-poke">
+    <div id="list"></div>
+    <div id="detail"><div class="empty">Pick a Pokémon on the left, or type to search.</div></div>
+  </div>
+  <div class="view" id="view-find"><div class="pad" id="findpad"></div></div>
+  <div class="view" id="view-dmg"><div class="pad" id="dmgpad"></div></div>
+  <div class="view" id="view-team"><div class="pad" id="teampad"></div></div>
+</main>
+
+<footer class="sitefoot">
+  <span class="ftbrand">back<span class="v2">two</span></span>
+  <span class="sep">·</span>
+  <span>built by <a href="https://github.com/Kevv-J" target="_blank" rel="noopener">Kevin John</a></span>
+  <span class="sep">·</span>
+  <a href="https://github.com/Kevv-J/backtwo" target="_blank" rel="noopener" title="Source on GitHub">github.com/Kevv-J/backtwo</a>
+  <span class="sep">·</span>
+  <a href="#" id="aboutlink">about / credits</a>
+  <span class="sep">·</span>
+  <span>data: <a href="https://docs.google.com/spreadsheets/d/1axlwmzPA49rYkqXh7zHvAtSP-TKbM0ijGYBPRflLSWw" target="_blank" rel="noopener">VGCPastes</a>, <a href="https://pokeapi.co" target="_blank" rel="noopener">PokéAPI</a>, <a href="https://pokemonshowdown.com" target="_blank" rel="noopener">Showdown</a></span>
+  <span class="sep">·</span>
+  <span title="Fan project — not affiliated with Nintendo / The Pokémon Company / Game Freak">fan project</span>
+  <span class="sep">·</span>
+  <span title="Build SHA · date">v{{BUILD_SHA}} {{BUILD_DATE}}</span>
+</footer>
+
+<div id="aboutoverlay" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="abox">
+    <button class="close" onclick="document.getElementById('aboutoverlay').classList.remove('open')">esc</button>
+    <h2><span class="wm-a">back</span><span class="wm-b">two</span></h2>
+    <div class="atag">read the back two · a VGC doubles companion</div>
+
+    <h3>What it is</h3>
+    <p>backtwo is a VGC doubles companion for Pokémon Champions — built for the climb. Browse a meta cut from 1,400+ tournament teams, find an archetype by your six mons, and run Gen-9-accurate damage calcs with the field, spreads, and abilities you'll actually see across every regulation.</p>
+
+    <h3>Built by</h3>
+    <p><a href="https://github.com/Kevv-J" target="_blank" rel="noopener">Kevin John</a> — one VGC player, building the tool I wanted to use.</p>
+
+    <h3>How to reach me</h3>
+    <p>Bug reports, data corrections, or rights-holder concerns: open an issue on <a href="https://github.com/Kevv-J/backtwo/issues" target="_blank" rel="noopener">GitHub</a>. I'll see it.</p>
+
+    <h3>Data sources</h3>
+    <p>Teams come from the <a href="https://docs.google.com/spreadsheets/d/1axlwmzPA49rYkqXh7zHvAtSP-TKbM0ijGYBPRflLSWw" target="_blank" rel="noopener">VGCPastes</a> community archive — none of this exists without Logan and the contributors who keep it updated. Dex and move data via <a href="https://pokeapi.co" target="_blank" rel="noopener">PokéAPI</a> and <a href="https://play.pokemonshowdown.com/data/moves.js" target="_blank" rel="noopener">Pokémon Showdown</a>. Sprites via PokéAPI's sprite repo.</p>
+
+    <h3>License</h3>
+    <p>Code is MIT — fork it, learn from it, build your own. Pokémon names, sprites, and game data remain the property of their respective owners (see NOTICE.md in the repo).</p>
+
+    <div class="disclaim">
+      <b>Fan project.</b> backtwo is an unofficial fan tool. It is not affiliated with, endorsed by, or sponsored by Nintendo, The Pokémon Company, Game Freak, or the publishers of Pokémon Champions. All Pokémon-related trademarks belong to their respective owners.
+    </div>
+
+    <div class="atag" style="margin-top:14px">build v{{BUILD_SHA}} · {{BUILD_DATE}}</div>
+  </div>
+</div>
+
+<script>
+const TEAMS = /*__DATA__*/null;
+const DEX   = /*__DEX__*/null;
+
+// ---------- type colors ----------
+const TYPECOLOR={normal:'#9099a1',fire:'#ff9d55',water:'#4d90d5',electric:'#f4d23c',grass:'#63bc5a',
+ice:'#73cec0',fighting:'#ce4069',poison:'#ab6ac8',ground:'#d97746',flying:'#8fa8dd',psychic:'#f97176',
+bug:'#90c12c',rock:'#c7b78b',ghost:'#5269ac',dragon:'#0b6dc3',dark:'#5a5366',steel:'#5a8ea1',fairy:'#ec8fe6'};
+
+// ---------- stat math (Champions: lv50, IV 31, SP*8 = old EVs) ----------
+const NATURES={Adamant:['atk','spa'],Modest:['spa','atk'],Jolly:['spe','spa'],Timid:['spe','atk'],
+Bold:['def','atk'],Calm:['spd','atk'],Careful:['spd','spa'],Impish:['def','spa'],Brave:['atk','spe'],
+Relaxed:['def','spe'],Quiet:['spa','spe'],Sassy:['spd','spe'],Naughty:['atk','spd'],Lonely:['atk','def'],
+Rash:['spa','spd'],Mild:['spa','def'],Gentle:['spd','def'],Lax:['def','spd'],Hasty:['spe','def'],Naive:['spe','spd']};
+function natMult(nat,stat){const n=NATURES[nat];if(!n)return 1;if(n[0]===stat)return 1.1;if(n[1]===stat)return 0.9;return 1;}
+function statAt50(base,sp,isHP,nat){const ev=Math.min(252,(sp||0)*8);const inner=Math.floor((2*base+31+Math.floor(ev/4))*0.5);
+  return isHP?inner+60:Math.floor((inner+5)*nat);}
+const EVKEY={HP:'hp',Atk:'atk',Def:'def',SpA:'spa',SpD:'spd',Spe:'spe'};
+function parseEVs(str){const o={hp:0,atk:0,def:0,spa:0,spd:0,spe:0};(str||'').match(/\d+ \w+/g)?.forEach(p=>{
+  const[n,k]=p.split(' ');if(EVKEY[k])o[EVKEY[k]]=+n;});return o;}
+function statline(forme,ev,nature){const f=DEX.formes[forme];if(!f)return null;const b=f.stats;
+  return{hp:statAt50(b.hp,ev.hp,true,1),atk:statAt50(b.atk,ev.atk,0,natMult(nature,'atk')),
+  def:statAt50(b.def,ev.def,0,natMult(nature,'def')),spa:statAt50(b.spa,ev.spa,0,natMult(nature,'spa')),
+  spd:statAt50(b.spd,ev.spd,0,natMult(nature,'spd')),spe:statAt50(b.spe,ev.spe,0,natMult(nature,'spe'))};}
+function computeStats(forme,evstr,nature){return DEX.formes[forme]?statline(forme,parseEVs(evstr),nature):null;}
+function boostMult(s){return s>=0?(2+s)/2:2/(2-s);}
+function applyBoost(stat,s){return s>=0?Math.floor(stat*(2+s)/2):Math.floor(stat*2/(2-s));}
+
+// ---------- forme helpers ----------
+const isMega=l=>/-Mega(-[XY])?$/.test(l);
+const baseOf=l=>l.replace(/-Mega(-[XY])?$/,'');
+function normSpec(n){n=n.replace(/-Mega(-[XY])?$/,'');if(n==='Floette')n='Floette-Eternal';return n;}
+const isStone=it=>!!it&&it!=='Eviolite'&&/ite( [XY])?$/.test(it);
+function jsForme(name,item){name=normSpec(name);if(!isStone(item))return name;
+  const xy=/ ([XY])$/.exec(item);
+  if(xy){const lab=`${name}-Mega-${xy[1]}`;return DEX.formes[lab]?lab:(DEX.formes[name+'-Mega']?name+'-Mega':name);}
+  const m=name+'-Mega';return DEX.formes[m]?m:name;}
+
+// ---------- build per-forme index (keyed by mega-aware forme) ----------
+function bump(o,k){if(!k)return;o[k]=(o[k]||0)+1;}
+// monAllRegs: which regs each forme has EVER appeared in (from full TEAMS,
+// never filtered). Used for the "new in M-B" badge.
+const monAllRegs=new Map();
+TEAMS.forEach(t=>{const r=t.reg||'M-A';t.mons.forEach(m=>{const k=m.forme||m.name;if(!k)return;
+  if(!monAllRegs.has(k))monAllRegs.set(k,new Set());monAllRegs.get(k).add(r);});});
+function isNewInMB(name){const r=monAllRegs.get(name);return !!(r&&r.has('M-B')&&!r.has('M-A'));}
+function representativeSet(e){const m={};e.sets.forEach(s=>{const k=s.item+'|'+s.evs;m[k]=m[k]||{...s,n:0};m[k].n++;});
+  return Object.values(m).sort((a,b)=>b.n-a.n)[0]||e.sets[0];}
+// regFilter='M-A' shows only M-A teams. 'M-B' shows BOTH M-A and M-B teams,
+// because M-A's pool is also legal under M-B. Default to M-B (the superset).
+let regFilter='M-B';
+function teamInScope(t){return regFilter==='M-A'?(t.reg==='M-A'):true;}
+let idx,pokeList,megaBases,speedRank,speedPos,scopeTeams;
+function rebuildIndex(){
+  idx=new Map();
+  scopeTeams=TEAMS.filter(teamInScope);
+  scopeTeams.forEach(t=>{const formes=t.mons.map(m=>m.forme||m.name).filter(Boolean);
+    t.mons.forEach(m=>{const key=m.forme||m.name;if(!key)return;
+      let e=idx.get(key);
+      if(!e){e={name:key,count:0,items:{},abilities:{},natures:{},moves:{},teammates:{},sets:[],teams:[],regCount:{'M-A':0,'M-B':0}};idx.set(key,e);}
+      e.count++;e.regCount[t.reg||'M-A']++;
+      bump(e.items,m.item);bump(e.abilities,m.ability);bump(e.natures,m.nature);
+      (m.moves||[]).forEach(mv=>bump(e.moves,mv));
+      formes.forEach(f=>{if(f!==key)bump(e.teammates,f);});
+      e.sets.push({item:m.item,ability:m.ability,nature:m.nature,evs:m.evs,moves:m.moves,date:t.date,team:t.description,reg:t.reg});
+      e.teams.push(t);});});
+  pokeList=[...idx.values()].sort((a,b)=>b.count-a.count);
+  megaBases=new Set();idx.forEach((_,k)=>{if(isMega(k))megaBases.add(baseOf(k));});
+  speedRank=pokeList.map(e=>{const s=speedFor(e);return{name:e.name,common:s.common,max:s.max,count:e.count};})
+    .filter(r=>r.common!=null).sort((a,b)=>b.common-a.common);
+  speedPos=new Map(speedRank.map((r,i)=>[r.name,i]));
+  const stEl=document.getElementById('stat');
+  const regLabel = (regFilter||'').replace(/^M-/, 'Reg ');
+  if(stEl)stEl.textContent=`VGC ${regLabel} · ${scopeTeams.length} teams · ${pokeList.length} Pokémon`;
+}
+rebuildIndex();
+
+// ---------- generic ui helpers ----------
+const esc=s=>(s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+function hl(s,q){s=esc(s);if(!q)return s;return s.replace(new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','ig'),'<mark>$1</mark>');}
+function topBars(obj,max=6){const arr=Object.entries(obj).sort((a,b)=>b[1]-a[1]).slice(0,max);if(!arr.length)return'<div class="meta">—</div>';
+  return arr.map(([k,v])=>`<div class="bar"><span class="lab">${esc(k)}</span><span class="pct" style="width:${Math.round(v/arr[0][1]*110)}px"></span><span class="n">${v}</span></div>`).join('');}
+function moveType(mv){return DEX.moves[mv]?.type||'normal';}
+// Sprite icon for a Pokémon forme. Returns an empty span if the dex has no
+// sprite for that forme so the layout doesn't jump. `size` is optional
+// ('24' / '32' / '40' — corresponds to CSS .psprite.s24 etc).
+function pokeSprite(forme, size){
+  if(!forme) return '';
+  const slug=DEX.formes[forme]?.sprite;
+  const cls='psprite'+(size?' s'+size:'');
+  if(!slug) return `<span class="${cls} empty"></span>`;
+  return `<img class="${cls}" src="data/sprites/${slug}.png" alt="" loading="lazy" onerror="this.classList.add('empty');this.removeAttribute('src')">`;
+}
+// Inline chip showing a MOVE'S NAME, colored by its type. Used in Pokémon
+// detail "moves" list and inside team-card mons (where you want to see the
+// move name itself, e.g. "Earthquake").
+function movePill(mv){const t=moveType(mv),cat=DEX.moves[mv]?.category;
+  if(cat==='status')return `<span class="mv status" title="${esc(t)} · status">${esc(mv)}</span>`;
+  return `<span class="mv t-${t}" title="${esc(t)} · ${cat}">${esc(mv)}</span>`;}
+// Inline chip showing JUST THE TYPE LABEL (e.g. "ICE"), in the same translucent
+// palette. Used in result rows next to the move name to match Figma's layout.
+function moveTypeChip(mv){const t=moveType(mv);return `<span class="mv t-${t} typeonly" title="${esc(t)}">${esc(t).toUpperCase()}</span>`;}
+// Pokemon-type pill on stat panels and slot headers (used for the dex's type pair).
+function typePill(t){return `<span class="pill2 t-${t}">${t}</span>`;}
+
+// ---------- POKEMON VIEW ----------
+let q='',selMon=null,megaCmp=false;
+function renderPokeList(){
+  const f=q?pokeList.filter(p=>p.name.toLowerCase().includes(q)):pokeList;
+  document.getElementById('list').innerHTML=f.map(p=>{
+    const mb=isNewInMB(p.name)?'<span class="newbadge">new M-B</span>':'';
+    const hm=(!isMega(p.name)&&megaBases.has(p.name))?'<span class="badge">has Mega</span>':'';
+    return `<div class="row ${selMon===p.name?'sel':''}" data-name="${esc(p.name)}"><span class="rowname">${pokeSprite(p.name,'24')}<span>${hl(p.name,q)}${mb}${hm}</span></span><span class="ct">${p.count}</span></div>`;
+  }).join('')||'<div class="empty">No match.</div>';
+}
+function statBlock(forme){
+  const cur=DEX.formes[forme]?.stats; if(!cur) return '';
+  const baseL=baseOf(forme);
+  const other = isMega(forme) ? DEX.formes[baseL]?.stats : DEX.formes[forme+'-Mega']?.stats;
+  const cmp = megaCmp ? (other||null) : null;
+  const order=[['hp','HP'],['atk','Atk'],['def','Def'],['spa','SpA'],['spd','SpD'],['spe','Spe']];
+  const types=DEX.formes[forme].types.map(typePill).join(' ');
+  const rows=order.map(([k,lab])=>{
+    const v=cur[k],w=Math.min(100,v/200*100);
+    const col=v>=120?'#5ad19a':v>=90?'#ffd166':v>=60?'#ff9d55':'#ff7a7a';
+    let d='';if(cmp){const dv=v-cmp[k];d=dv?`<span class="delta ${dv>0?'up':'down'}">${dv>0?'+':''}${dv}</span>`:'<span class="delta meta">0</span>';}
+    return `<div class="stat"><span class="k">${lab}</span><div class="statbar"><span style="width:${w}%;background:${col}"></span><span class="statval">${v}${d}</span></div></div>`;});
+  return `<div class="card"><h3>${esc(forme)} — base stats ${types}</h3>${rows.join('')}
+    <div class="small" style="margin-top:6px">BST ${order.reduce((s,[k])=>s+cur[k],0)}${cmp?` · Δ vs ${esc(isMega(forme)?baseL:forme)}`:''}</div></div>`;
+}
+function renderDetail(name){
+  const e=idx.get(name);if(!e){document.getElementById('detail').innerHTML='<div class="empty">Pick a Pokémon.</div>';return;}
+  const pct=(e.count/scopeTeams.length*100).toFixed(1);
+  const mega=isMega(name), hasMega=!isMega(name)&&megaBases.has(name);
+  const newMB=isNewInMB(name);
+  const cmpToggle=(mega||hasMega)?`<label class="tg"><input type="checkbox" id="megacmp" ${megaCmp?'checked':''}> compare ${mega?'vs base':'vs Mega'}</label>`:'';
+  const teams=e.teams.slice().sort((a,b)=>(a.rank&&a.rank!=='-'?0:1)-(b.rank&&b.rank!=='-'?0:1));
+  const split=regFilter==='M-B'?` <span class="small">(M-A: ${e.regCount['M-A']} · M-B: ${e.regCount['M-B']})</span>`:'';
+  document.getElementById('detail').innerHTML=`
+    <h2>${pokeSprite(name,'48')}<span class="h2-name">${esc(e.name)}</span>${newMB?'<span class="newbadge">new M-B</span>':''}${(!mega&&hasMega)?'<span class="badge">has Mega</span>':''}</h2>
+    <div class="usage">${e.count} teams · ${pct}% of ${regFilter} meta${split} ${cmpToggle}</div>
+    <div class="grid">
+      ${statBlock(name)}
+      ${speedCard(name)}
+      <div class="card"><h3>Items</h3>${topBars(e.items)}</div>
+      <div class="card"><h3>Ability</h3>${topBars(e.abilities,4)}</div>
+      <div class="card"><h3>Moves</h3>${Object.entries(e.moves).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([m,n])=>`<div class="bar"><span class="lab">${movePill(m)}</span><span class="n">${n}</span></div>`).join('')||'—'}</div>
+      <div class="card"><h3>Common teammates</h3>${topBars(e.teammates,8)}</div>
+      <div class="card"><h3>Nature</h3>${topBars(e.natures,4)}</div>
+    </div>
+    <h3 style="color:var(--dim);text-transform:uppercase;letter-spacing:.6px;font-size:11px">Teams running ${esc(e.name)} (${teams.length})</h3>
+    ${teams.map(t=>teamCard(t,name)).join('')}`;
+  const cb=document.getElementById('megacmp');if(cb)cb.onchange=()=>{megaCmp=cb.checked;renderDetail(name);};
+  document.getElementById('detail').scrollTop=0;
+}
+function fightThisTeam(team){
+  fightTeam={team, mons: team.mons.map(m=>({...m, forme:m.forme||m.name}))};
+  setView('dmg');
+  if(fightTeam.mons[0]) loadIntoSlot('b', B, fightTeam.mons[0]);
+}
+function teamCard(t,focus,matchedSet){
+  const reg=t.reg||'M-A';
+  return `<div class="tcard"><div class="th"><span class="desc"><button class="fightcardbtn" data-tid="${esc(t.team_id)}">⚔ Fight</button>${esc(t.description||t.team_id)}<span class="regbadge ${reg==='M-B'?'mb':''}">${reg}</span></span>
+    <span class="meta">${esc(t.creator||'')} ${t.event&&t.event!=='-'?'· '+esc(t.event):''}</span></div>
+    <div>${t.rank&&t.rank!=='-'?`<span class="chip rank">${esc(t.rank)}</span>`:''}${t.date?`<span class="chip">${esc(t.date)}</span>`:''}
+      ${t.pokepaste?`<span class="chip"><a href="${esc(t.pokepaste)}" target="_blank">pokepaste ↗</a></span>`:''}
+      ${t.source&&t.source!=='-'?`<span class="chip"><a href="${esc(t.source)}" target="_blank">source ↗</a></span>`:''}</div>
+    <div class="mons">${t.mons.map(m=>monCard(m,focus,matchedSet)).join('')}</div></div>`;
+}
+function monCard(m,focus,matchedSet){
+  const label=m.forme||m.name;
+  const base=baseOf(label);
+  const isMatch=matchedSet&&matchedSet.has(base);
+  const hi=focus&&label===focus?'style="border-color:var(--accent)"'
+       :isMatch?'style="border-color:var(--good);background:#172a17"':'';
+  return `<div class="mon" ${hi}><div class="nm">${pokeSprite(label,'28')}<span class="mon-label">${esc(label)}</span> ${m.item?`<span class="it">@ ${esc(m.item)}</span>`:''}</div>
+    ${m.ability?`<div class="ab">${esc(m.ability)}</div>`:''}
+    ${m.moves&&m.moves.length?`<div class="moves">${m.moves.map(movePill).join('')}</div>`:''}
+    ${m.evs?`<div class="ev">${esc(m.evs)}${m.nature?' · '+esc(m.nature):''}</div>`:''}</div>`;
+}
+
+// ---------- SPEED (helpers + ranking, shown inside the Pokémon detail) ----------
+function speedFor(e){ // {common, max}
+  const speeds=e.sets.map(s=>computeStats(e.name,s.evs,s.nature)?.spe).filter(Boolean);
+  let common=null;if(speeds.length){const c={};speeds.forEach(v=>c[v]=(c[v]||0)+1);common=+Object.entries(c).sort((a,b)=>b[1]-a[1])[0][0];}
+  const base=DEX.formes[e.name]?.stats.spe;
+  return{common,max:base!=null?statAt50(base,32,0,1.1):null};
+}
+function speedCard(name){
+  const pos=speedPos.get(name);if(pos==null)return '';
+  const me=speedRank[pos];
+  const faster=speedRank.slice(Math.max(0,pos-5),pos);
+  const slower=speedRank.slice(pos+1,pos+6);
+  const line=arr=>arr.map(r=>`<div class="bar"><span class="lab">${esc(r.name)}</span><span class="n">${r.common}</span></div>`).join('')||'<div class="meta">—</div>';
+  return `<div class="card"><h3>Speed · #${pos+1} of ${speedRank.length}</h3>
+    <div class="bar"><span class="lab"><b>Common spread</b></span><span class="n"><b>${me.common}</b></span></div>
+    <div class="bar"><span class="lab">Max (32 SP +nat)</span><span class="n">${me.max}</span></div>
+    <div class="bar"><span class="lab">+Choice Scarf</span><span class="n">${Math.floor(me.common*1.5)}</span></div>
+    <div class="bar"><span class="lab">+Tailwind</span><span class="n">${me.common*2}</span></div>
+    <div class="small" style="margin:8px 0 2px;color:var(--bad)">Outspeeds you ↑</div>${line(faster)}
+    <div class="small" style="margin:8px 0 2px;color:var(--good)">You outspeed ↓</div>${line(slower)}</div>`;
+}
+
+// ---------- DAMAGE CALC (1v1, Showdown-style) ----------
+const ITEM_TYPE_BOOST={Charcoal:'fire','Mystic Water':'water',Magnet:'electric','Miracle Seed':'grass',
+'Never-Melt Ice':'ice','Black Belt':'fighting','Poison Barb':'poison','Soft Sand':'ground','Sharp Beak':'flying',
+'Twisted Spoon':'psychic','Silver Powder':'bug','Hard Stone':'rock','Spell Tag':'ghost','Dragon Fang':'dragon',
+'Black Glasses':'dark','Metal Coat':'steel','Fairy Feather':'fairy','Silk Scarf':'normal'};
+const ALL_FORMES=Object.keys(DEX.formes).sort();
+const ALL_ITEMS=[...new Set(TEAMS.flatMap(t=>t.mons.map(m=>m.item)).filter(i=>i&&i!=='-'))].sort();
+const ALL_MOVES=Object.keys(DEX.moves).sort();
+const ALL_NATURES=['Adamant','Bold','Brave','Calm','Careful','Gentle','Hardy','Hasty','Impish','Jolly','Lax','Lonely','Mild','Modest','Naive','Naughty','Quiet','Rash','Relaxed','Sassy','Serious','Timid'];
+const STAT_DISPLAY={atk:'Atk',def:'Def',spa:'SpA',spd:'SpD',spe:'Spe'};
+// "Modest (+SpA −Atk)" / "Hardy (neutral)" — used in the nature dropdown.
+function natureLabel(n){const x=NATURES[n];if(!x)return `${n} (neutral)`;
+  return `${n} (+${STAT_DISPLAY[x[0]]} −${STAT_DISPLAY[x[1]]})`;}
+// Plain-English descriptions of abilities and items the calc actually models.
+// Surfaced as the input's `title` attribute (hover tooltip) when the user types
+// or picks a recognised value.
+const ABILITY_DESC = {
+  'Adaptability':'STAB ×2 (instead of ×1.5)',
+  'Technician':'Moves with ≤60 BP get ×1.5',
+  'Tinted Lens':'Doubles damage of not-very-effective moves',
+  'Huge Power':'Attack stat is doubled',
+  'Pure Power':'Attack stat is doubled',
+  'Solar Power':'SpA ×1.5 in Sun (Cost: 1/8 HP/turn — not modeled)',
+  'Sand Force':'Rock/Ground/Steel moves ×1.3 in Sand',
+  'Sniper':'Critical hits do ×1.5 extra damage (×2.25 total)',
+  'Neuroforce':'Super-effective moves ×1.25',
+  'Tough Claws':'Contact moves ×1.3',
+  'Iron Fist':'Punch moves ×1.2',
+  'Mega Launcher':'Pulse moves ×1.5',
+  'Strong Jaw':'Bite moves ×1.5',
+  'Sharpness':'Slicing moves ×1.5',
+  'Punk Rock':'Outgoing sound ×1.3; incoming sound ×0.5',
+  'Pixilate':'Normal moves become Fairy + ×1.2',
+  'Aerilate':'Normal moves become Flying + ×1.2',
+  'Refrigerate':'Normal moves become Ice + ×1.2',
+  'Galvanize':'Normal moves become Electric + ×1.2',
+  'Multiscale':'Incoming damage halved when at full HP',
+  'Shadow Shield':'Incoming damage halved when at full HP',
+  'Filter':'Super-effective damage ×0.75',
+  'Solid Rock':'Super-effective damage ×0.75',
+  'Prism Armor':'Super-effective damage ×0.75',
+  'Thick Fat':'Fire and Ice damage halved',
+  'Heatproof':'Fire damage halved',
+  'Purifying Salt':'Ghost damage halved; immune to status',
+  'Fluffy':'Contact damage halved; Fire damage doubled',
+  'Fur Coat':'Defense effectively doubled vs physical',
+  'Ice Scales':'SpD effectively doubled vs special',
+  'Levitate':'Immune to Ground (unless Gravity)',
+  'Flash Fire':'Immune to Fire',
+  'Water Absorb':'Immune to Water',
+  'Dry Skin':'Immune to Water; +25% Fire damage taken (not modeled)',
+  'Storm Drain':'Immune to Water; draws Water moves',
+  'Volt Absorb':'Immune to Electric',
+  'Lightning Rod':'Immune to Electric; draws Electric moves',
+  'Motor Drive':'Immune to Electric',
+  'Sap Sipper':'Immune to Grass',
+  'Earth Eater':'Immune to Ground',
+  'Well-Baked Body':'Immune to Fire',
+  'Soundproof':'Immune to sound moves',
+  'Bulletproof':'Immune to bullet/bomb moves',
+  'Shell Armor':'Cannot be critically hit',
+  'Battle Armor':'Cannot be critically hit',
+  'Intimidate':'Lowers opposing Atk by 1 stage on switch-in',
+  'Defiant':'Atk +2 stages when any stat is lowered',
+  'Competitive':'SpA +2 stages when any stat is lowered',
+  'Clear Body':'Prevents other Pokémon lowering its stats',
+  'Full Metal Body':'Prevents other Pokémon lowering its stats',
+  'White Smoke':'Prevents other Pokémon lowering its stats',
+  'Hyper Cutter':'Prevents Atk drops',
+  'Inner Focus':'Prevents Intimidate (gen 8+) and flinching',
+  'Scrappy':'Prevents Intimidate; hits Ghost-types with Normal/Fighting',
+  'Own Tempo':'Prevents Intimidate and confusion',
+  'Oblivious':'Prevents Intimidate, taunt, infatuation',
+  'Quick Feet':'Speed ×1.5 when statused (ignores paralysis cut)',
+  'Guts':'Atk ×1.5 when statused; ignores burn damage drop',
+  'Drought':'Sets Sun on switch-in',
+  'Desolate Land':'Sets Harsh Sunlight (Water moves fail)',
+  'Drizzle':'Sets Rain on switch-in',
+  'Primordial Sea':'Sets Heavy Rain (Fire moves fail)',
+  'Sand Stream':'Sets Sandstorm on switch-in',
+  'Snow Warning':'Sets Snow on switch-in',
+  'Electric Surge':'Sets Electric Terrain on switch-in',
+  'Grassy Surge':'Sets Grassy Terrain on switch-in',
+  'Misty Surge':'Sets Misty Terrain on switch-in',
+  'Psychic Surge':'Sets Psychic Terrain on switch-in',
+  'Surge Surfer':'Speed ×2 on Electric Terrain',
+  'Chlorophyll':'Speed ×2 in Sun',
+  'Swift Swim':'Speed ×2 in Rain',
+  'Sand Rush':'Speed ×2 in Sand',
+  'Slush Rush':'Speed ×2 in Snow',
+  'Unburden':'Speed ×2 when item is consumed (modeled as ×2 when no item)',
+  'Rough Skin':'Contact attacker loses 1/8 HP (not modeled in damage calc)',
+  'Iron Barbs':'Contact attacker loses 1/8 HP (not modeled)',
+  'Static':'30% to paralyze contact attacker (not modeled)',
+  'Flame Body':'30% to burn contact attacker (not modeled)',
+  'Cute Charm':'30% to infatuate contact attacker (not modeled)',
+  'Disguise':'First hit reduced to chip damage (Mimikyu only)',
+  'Overgrow':'Grass moves ×1.5 below 1/3 HP (not modeled)',
+  'Blaze':'Fire moves ×1.5 below 1/3 HP (not modeled)',
+  'Torrent':'Water moves ×1.5 below 1/3 HP (not modeled)',
+  'Swarm':'Bug moves ×1.5 below 1/3 HP (not modeled)',
+};
+const ITEM_DESC = {
+  'Choice Band':'Atk ×1.5, locks into the first move',
+  'Choice Specs':'SpA ×1.5, locks into the first move',
+  'Choice Scarf':'Speed ×1.5, locks into the first move',
+  'Life Orb':'Damage ×1.3 (cost: 1/10 HP per attack — not modeled)',
+  'Assault Vest':'SpD ×1.5; cannot use status moves',
+  'Eviolite':'Def +50%, SpD +50% (NFE Pokémon only — not enforced)',
+  'Focus Sash':'Survives a one-shot from full HP at 1 HP (consumed)',
+  'Iron Ball':'Speed ×0.5; grounds Flying types (Ground hits)',
+  'Air Balloon':'User floats — immune to Ground until hit',
+  'Mystic Water':'Water moves ×1.2',
+  'Charcoal':'Fire moves ×1.2',
+  'Magnet':'Electric moves ×1.2',
+  'Miracle Seed':'Grass moves ×1.2',
+  'Never-Melt Ice':'Ice moves ×1.2',
+  'Black Belt':'Fighting moves ×1.2',
+  'Poison Barb':'Poison moves ×1.2',
+  'Soft Sand':'Ground moves ×1.2',
+  'Sharp Beak':'Flying moves ×1.2',
+  'Twisted Spoon':'Psychic moves ×1.2',
+  'Silver Powder':'Bug moves ×1.2',
+  'Hard Stone':'Rock moves ×1.2',
+  'Spell Tag':'Ghost moves ×1.2',
+  'Dragon Fang':'Dragon moves ×1.2',
+  'Black Glasses':'Dark moves ×1.2',
+  'Metal Coat':'Steel moves ×1.2',
+  'Fairy Feather':'Fairy moves ×1.2',
+  'Silk Scarf':'Normal moves ×1.2',
+  'Leftovers':'Restores 1/16 HP per turn (not modeled)',
+  'Sitrus Berry':'Restores 25% HP once when low (not modeled)',
+  'Lum Berry':'Cures any major status once (not modeled)',
+  'White Herb':'Restores any lowered stat once (not modeled)',
+  'Mental Herb':'Cures mental ailments (Taunt etc.) once (not modeled)',
+};
+// Heuristic: any item ending in "ite" / "ite X" / "ite Y" is a mega stone.
+function descFor(kind, val){
+  if(!val) return '';
+  if(kind==='ability') return ABILITY_DESC[val] || '';
+  if(kind==='item'){
+    if(ITEM_DESC[val]) return ITEM_DESC[val];
+    if(/ite( [XY])?$/.test(val) && val!=='Eviolite') return `Mega Stone — Pokémon transforms into its mega forme on send-out`;
+    return '';
+  }
+  return '';
+}
+const ALL_ABILITIES=[...new Set(TEAMS.flatMap(t=>t.mons.map(m=>m.ability)).filter(Boolean))].sort();
+const STAT_KEYS=[['hp','HP'],['atk','Atk'],['def','Def'],['spa','SpA'],['spd','SpD'],['spe','Spe']];
+const BOOST_OPTS=Array.from({length:13},(_,i)=>i-6).map(n=>`<option value="${n}">${n>0?'+'+n:n}</option>`).join('');
+const ABIL_IMMUNE={Levitate:'ground','Flash Fire':'fire','Water Absorb':'water','Dry Skin':'water','Storm Drain':'water','Volt Absorb':'electric','Lightning Rod':'electric','Motor Drive':'electric','Sap Sipper':'grass','Earth Eater':'ground','Well-Baked Body':'fire'};
+// Type-changing "-ate" abilities: Normal moves become the ability's type and get 1.2x.
+const ATE_TYPE={Pixilate:'fairy',Aerilate:'flying',Refrigerate:'ice',Galvanize:'electric'};
+// Escalating-BP multi-hit moves (BP per hit, in order)
+const ESCALATING_BP={'Triple Axel':[20,40,60],'Triple Kick':[10,20,30]};
+// Moves whose BP scales with the attacker's current HP%: BP = max(1, floor(150 * hpPct / 100))
+const HP_USER_SCALE=new Set(['Water Spout','Eruption','Dragon Energy']);
+// Reversal/Flail BP table (attacker's HP%; uses the FIRST row where hpPct ≤ threshold, else 20)
+const FLAIL_TABLE=[[1,200],[4,150],[10,100],[21,80],[35,40]];
+// Compute the effective BP for a move, accounting for HP%, status, and target-state doublers.
+function effectiveBP(move, atk, def){
+  const mv=DEX.moves[move];if(!mv||!mv.power)return mv?.power||0;
+  let bp=mv.power;
+  if(HP_USER_SCALE.has(move)) bp=Math.max(1,Math.floor(150*(atk.hpPct??100)/100));
+  if(move==='Reversal'||move==='Flail'){
+    const h=atk.hpPct??100;let found=20;
+    for(const[t,p] of FLAIL_TABLE){if(h<=t){found=p;break;}}
+    bp=found;
+  }
+  // Power doublers
+  const dStatus=def.status||'ok';
+  if(move==='Hex' && dStatus!=='ok') bp*=2;
+  if(move==='Venoshock' && (dStatus==='psn'||dStatus==='tox')) bp*=2;
+  if(move==='Brine' && (def.hpPct??100)<=50) bp*=2;
+  if(move==='Wake-Up Slap' && dStatus==='slp') bp*=2;
+  if(move==='Smelling Salts' && dStatus==='par') bp*=2;
+  if(move==='Assurance' && def.hpPct!=null && def.hpPct<100) bp*=2; // approximation: target already damaged this turn
+  if(move==='Avalanche' || move==='Revenge') {/* would need turn order; skip */}
+  // Item-conditional moves
+  if(move==='Acrobatics' && !atk.item) bp*=2;
+  if(move==='Knock Off' && def.item) bp=Math.floor(bp*1.5);
+  return bp;
+}
+const INTIMIDATE_IMMUNE=new Set(['Clear Body','Full Metal Body','White Smoke','Hyper Cutter','Inner Focus','Scrappy','Own Tempo','Oblivious']);
+// hits resolution: escalating -> exact len; fixed (min==max) -> exact;
+// Skill Link -> max; otherwise 3 (Showdown default for 2-5 hit moves).
+function hitsOf(moveName, ability){
+  if(ESCALATING_BP[moveName])return ESCALATING_BP[moveName].length;
+  const mv=DEX.moves[moveName];if(!mv)return 1;
+  const mn=mv.minHits||1, mx=mv.maxHits||1;
+  if(mn===mx)return mx;
+  if(ability==='Skill Link')return mx;
+  return 3;
+}
+// Statuses (used in calcDmg + UI buttons)
+const STATUSES=[['ok','OK'],['brn','BRN'],['frz','FRZ'],['par','PAR'],['slp','SLP'],['psn','PSN'],['tox','TOX'],['fbt','FBT']];
+const WEATHERS=[['none','—'],['sun','Sun'],['rain','Rain'],['sand','Sand'],['snow','Snow'],['harshsun','Harsh Sun'],['heavyrain','Heavy Rain'],['strongwinds','Strong Winds']];
+const TERRAINS=[['none','—'],['electric','Electric'],['grassy','Grassy'],['misty','Misty'],['psychic','Psychic']];
+// Side-effect button definitions (key, label, tooltip)
+const SIDE_FX=[
+  ['reflect','Reflect','×0.5 phys (×2/3 in doubles)'],
+  ['lightScreen','Light Screen','×0.5 special'],
+  ['auroraVeil','Aurora Veil','×0.5 both (Snow only)'],
+  ['tailwind','Tailwind','×2 Speed (informational)'],
+  ['helpingHand','Helping Hand','×1.5 outgoing damage'],
+  ['friendGuard','Friend Guard','×0.75 incoming (doubles)'],
+  ['flowerGift','Flower Gift','+50% Atk and ally SpD in Sun'],
+  ['powerSpot','Power Spot','×1.3 ally damage'],
+  ['battery','Battery','×1.3 ally special'],
+  ['steelySpirit','Steely Spirit','×1.5 ally Steel moves'],
+  ['crit','Crit','×1.5; ignores defender +boosts'],
+];
+function newSide(){return{reflect:0,lightScreen:0,auroraVeil:0,tailwind:0,helpingHand:0,friendGuard:0,flowerGift:0,powerSpot:0,battery:0,steelySpirit:0,crit:0};}
+function newField(){return{terrain:'none',trickRoom:0,gravity:0,magicRoom:0,wonderRoom:0};}
+let A=newMon(),B=newMon(),doubles=true,weather='none',myTeam=[],selA=null,selB=null;
+let field=newField(),sideA=newSide(),sideB=newSide();
+let fightTeam=null;  // {team, mons, sourceTeamId} when "Fight this team" is active
+let pinned=null;     // 'a' | 'b' | null — which slot is pinned (locked from quick-pick overwriting)
+function targetSlot(defaultP){return pinned==='a'?'b':pinned==='b'?'a':defaultP;}
+function zeroEV(){return{hp:0,atk:0,def:0,spa:0,spd:0,spe:0};}
+function zeroBoost(){return{atk:0,def:0,spa:0,spd:0,spe:0};}
+function newMon(){return{forme:'',item:'',ability:'',nature:'Serious',ev:zeroEV(),boost:zeroBoost(),moves:['','','',''],status:'ok',hpPct:100};}
+function statsOf(m){return m.forme?statline(m.forme,m.ev,m.nature):null;}
+// Grounded check: defender takes terrain effects only if grounded. Flying type
+// or Levitate ability mean ungrounded (unless Gravity overrides them).
+function isGrounded(mon){const types=DEX.formes[mon.forme]?.types||[];
+  if(field.gravity)return true;
+  if(types.includes('flying'))return false;
+  if(mon.ability==='Levitate')return false;
+  if(mon.item==='Air Balloon')return false;
+  return true;}
+function parseShowdown(text){return text.replace(/\r/g,'').split(/\n\s*\n/).map(block=>{
+  const lines=block.split('\n').map(l=>l.trim()).filter(Boolean);if(!lines.length)return null;
+  const mon={name:'',item:'',ability:'',nature:'Serious',evs:'',moves:[]};let head=lines[0];
+  if(head.includes(' @ ')){const[a,b]=head.split(' @ ');head=a;mon.item=b.trim();}
+  head=head.replace(/\((M|F)\)/,'').trim();const nick=head.match(/^(.*?)\s*\(([^)]+)\)\s*$/);
+  mon.name=(nick?nick[2]:head).trim();
+  lines.slice(1).forEach(s=>{if(s.startsWith('- '))mon.moves.push(s.slice(2).trim());
+    else if(s.startsWith('Ability:'))mon.ability=s.split(':')[1].trim();
+    else if(s.startsWith('EVs:'))mon.evs=s.split(':')[1].trim();
+    else if(s.endsWith(' Nature'))mon.nature=s.replace(' Nature','').trim();});
+  if(!mon.name)return null;mon.forme=jsForme(mon.name,mon.item);mon.ev=parseEVs(mon.evs);mon.boost=zeroBoost();
+  mon.status='ok';mon.hpPct=100;
+  while(mon.moves.length<4)mon.moves.push('');mon.moves=mon.moves.slice(0,4);return mon;}).filter(Boolean);}
+try{const raw=localStorage.getItem('vgc_myteam_raw');if(raw){myTeam=parseShowdown(raw);myTeam.raw=raw;}}catch(e){}
+function setTs(d){const t=Date.parse(d);return isNaN(t)?0:t;}
+function setsFor(forme){const e=idx.get(forme);if(!e)return[];const map={};
+  e.sets.forEach(s=>{const k=[s.item,s.evs,s.nature,(s.moves||[]).join(',')].join('|');const t=setTs(s.date);
+    if(!map[k])map[k]={...s,n:1,ts:t};else{map[k].n++;if(t>map[k].ts){map[k].ts=t;map[k].date=s.date;}}});
+  return Object.values(map).sort((a,b)=>b.ts-a.ts||b.n-a.n);}
+// defaultSet: pick the *most common stat spread* (evs+nature) for this forme.
+// Within that spread group, take the most recent variant for moves/item/ability.
+// Falls back to most-recent set if no usable spread is in the data.
+function defaultSet(forme){
+  const e=idx.get(forme);
+  const blank={forme,item:'',ability:'',nature:'Serious',ev:zeroEV(),boost:zeroBoost(),moves:['','','',''],status:'ok',hpPct:100};
+  if(!e||!e.sets.length)return blank;
+  // Bucket by stat spread = evs + nature
+  const buckets={};
+  e.sets.forEach(s=>{const k=(s.evs||'')+'|'+(s.nature||'');
+    if(!buckets[k])buckets[k]={n:0,sets:[]};
+    buckets[k].n++;buckets[k].sets.push(s);});
+  // Sort buckets: most-common first; tie-break by recency of newest set in the bucket
+  const ordered=Object.values(buckets).sort((a,b)=>{
+    if(b.n!==a.n)return b.n-a.n;
+    return Math.max(...b.sets.map(s=>setTs(s.date)))-Math.max(...a.sets.map(s=>setTs(s.date)));
+  });
+  // Prefer the most-common spread that has evs+nature; then with evs; then any
+  const bucket = ordered.find(b=>b.sets[0].evs&&b.sets[0].nature)
+              || ordered.find(b=>b.sets[0].evs)
+              || ordered[0];
+  if(!bucket)return blank;
+  // Within the chosen spread, pick the most recent variant for moves/item/ability
+  const s = bucket.sets.slice().sort((a,b)=>setTs(b.date)-setTs(a.date))[0];
+  return {forme,item:s.item||'',ability:s.ability||'',nature:s.nature||'Serious',ev:parseEVs(s.evs),boost:zeroBoost(),moves:(s.moves||[]).slice(0,4),status:'ok',hpPct:100};
+}
+// Resolve a typed search string to a real forme. Match priority: exact ->
+// case-insensitive exact -> prefix -> contains. Within each tier, prefer the
+// forme with the highest usage in the current dataset (so typing "char" finds
+// the popular Charizard-Mega-Y before a rarer Charizard-Mega-X).
+function resolveForme(v){
+  v=(v||'').trim();if(!v)return null;
+  if(DEX.formes[v])return v;
+  const lo=v.toLowerCase();
+  const usage=name=>idx?.get(name)?.count||0;
+  const byUsage=a=>a.slice().sort((x,y)=>usage(y)-usage(x))[0]||null;
+  // 1) exact ci match
+  const exact=ALL_FORMES.find(f=>f.toLowerCase()===lo);
+  if(exact)return exact;
+  // 2) prefix (top usage wins)
+  const prefix=ALL_FORMES.filter(f=>f.toLowerCase().startsWith(lo));
+  if(prefix.length)return byUsage(prefix);
+  // 3) contains (top usage wins)
+  const contains=ALL_FORMES.filter(f=>f.toLowerCase().includes(lo));
+  if(contains.length)return byUsage(contains);
+  return null;
+}
+// round half DOWN, as the games do ("pokeRound")
+function pokeRound(x){const f=Math.floor(x);return (x-f>0.5)?f+1:f;}
+// one damage roll, in Showdown's modifier order: spread (pre-random) → random
+// → STAB → type → item. eff===0 short-circuits to an immunity.
+function oneRoll(base,roll,spreadMod,stab,eff,itemMod){
+  if(eff===0)return 0;
+  let d=base;
+  if(spreadMod!==1)d=pokeRound(d*spreadMod);
+  d=Math.floor(d*roll/100);
+  if(stab!==1)d=pokeRound(d*stab);
+  d=Math.floor(d*eff);
+  if(itemMod!==1)d=pokeRound(d*itemMod);
+  return Math.max(1,d);
+}
+// "atkSide" / "defSide" pass the per-side field effects (sideA when atk=A, etc.).
+function calcDmg(atk,move,def,atkSide,defSide){
+  const mv=DEX.moves[move];if(!mv||!mv.power)return null;
+  const as=statsOf(atk),ds=statsOf(def);if(!as||!ds)return null;
+  // Effective BP (HP%-scaled moves, status/HP doublers). Used in place of mv.power throughout.
+  const bp=effectiveBP(move,atk,def);
+  atkSide=atkSide||newSide();defSide=defSide||newSide();
+  const phys=mv.category==='physical';
+  // Type-changing -ate abilities (Pixilate/Aerilate/Refrigerate/Galvanize): Normal moves change type + 1.2x
+  let moveType=mv.type;let ateMul=1;
+  if(mv.type==='normal' && ATE_TYPE[atk.ability]){moveType=ATE_TYPE[atk.ability];ateMul=1.2;}
+  const aT=DEX.formes[atk.forme]?.types||[], dT=DEX.formes[def.forme]?.types||[];
+  // Magic Room disables held items
+  const aItem=field.magicRoom?'':atk.item, dItem=field.magicRoom?'':def.item;
+  // CRIT: ignore defender's positive boosts to Def/SpD, and attacker's negative boosts to Atk/SpA.
+  // Crit-immune defender abilities short-circuit the bonus to 1× (we still allow crit dmg ×1.5 unless immune).
+  const critAttempt=!!atkSide.crit;
+  const defCritImmune=(def.ability==='Shell Armor'||def.ability==='Battle Armor');
+  const isCrit=critAttempt && !defCritImmune;
+  // Wonder Room swaps Def and SpD
+  let Aa=phys?as.atk:as.spa;
+  let D;
+  if(field.wonderRoom) D=phys?ds.spd:ds.def;
+  else D=phys?ds.def:ds.spd;
+  // stat boosts (with crit-ignore rules). Wonder Room swaps the base stat
+  // value used, but boosts stay tied to slot name (Showdown rule).
+  const aBoostKey=phys?'atk':'spa', dBoostKey=phys?'def':'spd';
+  let aB=atk.boost?.[aBoostKey]||0, dB=def.boost?.[dBoostKey]||0;
+  // Intimidate auto-apply: defender's ability drops attacker's Atk -1 (phys).
+  // Defiant counters with +2 (net +1); Competitive boosts SpA +2 instead (special).
+  let intimidate=false;
+  if(def.ability==='Intimidate' && !INTIMIDATE_IMMUNE.has(atk.ability)){
+    intimidate=true;
+    if(phys){ aB-=1; if(atk.ability==='Defiant') aB+=2; }
+    else if(atk.ability==='Competitive') aB+=2;
+  }
+  if(isCrit){if(aB<0)aB=0;if(dB>0)dB=0;}
+  Aa=applyBoost(Aa,aB); D=applyBoost(D,dB);
+  // attacker stat-modifying abilities
+  if(phys && (atk.ability==='Huge Power'||atk.ability==='Pure Power')) Aa*=2;
+  if(!phys && atk.ability==='Solar Power' && (weather==='sun'||weather==='harshsun')) Aa=Math.floor(Aa*1.5);
+  // Guts: +50% Atk if burned (and ignores burn's halving)
+  const burnedAtk=(atk.status==='brn'&&phys&&atk.ability!=='Guts');
+  if(atk.status==='brn'&&phys&&atk.ability==='Guts') Aa=Math.floor(Aa*1.5);
+  // Flower Gift on attacker's side in Sun: +50% Atk
+  if(phys && atkSide.flowerGift && (weather==='sun'||weather==='harshsun')) Aa=Math.floor(Aa*1.5);
+  // items on stats (skipped under Magic Room)
+  if(aItem==='Choice Band'&&phys)Aa=Math.floor(Aa*1.5);
+  if(aItem==='Choice Specs'&&!phys)Aa=Math.floor(Aa*1.5);
+  if(dItem==='Assault Vest'&&!phys)D=Math.floor(D*1.5);
+  if(dItem==='Eviolite')D=Math.floor(D*1.5);
+  // defender stat-modifying abilities
+  if(phys && def.ability==='Fur Coat') D=Math.floor(D*2);
+  if(!phys && def.ability==='Ice Scales') D=Math.floor(D*2);
+  // Flower Gift on defender's side in Sun: +50% SpD
+  if(!phys && defSide.flowerGift && (weather==='sun'||weather==='harshsun')) D=Math.floor(D*1.5);
+  // weather-defensive
+  if(!phys && weather==='sand' && dT.includes('rock')) D=Math.floor(D*1.5);
+  if(phys && weather==='snow' && dT.includes('ice')) D=Math.floor(D*1.5);
+  const baseFor=p=>Math.floor(Math.floor(Math.floor(22*p*Aa/D)/50))+2;
+  const base=baseFor(bp);
+  // multi-hit: how many hits to compute (1 if not multi-hit)
+  const hits=hitsOf(move, atk.ability);
+  const bpList=ESCALATING_BP[move]||(hits>1?Array(hits).fill(bp):[bp]);
+  // type effectiveness (with extreme-weather + terrain tweaks)
+  let eff=1;dT.forEach(t=>{let e=DEX.typechart[moveType]?.[t];if(e===undefined)e=1;
+    // Strong Winds: Flying defender takes neutral from Ice/Electric/Rock (super-effective canceled)
+    if(weather==='strongwinds' && t==='flying' && e>1) e=1;
+    // Gravity: Ground hits Flying (eff treated as neutral instead of immune)
+    if(field.gravity && moveType==='ground' && t==='flying') e=1;
+    eff*=e;});
+  if(ABIL_IMMUNE[def.ability]===moveType){
+    // Gravity disables Levitate's ground immunity
+    if(!(field.gravity && def.ability==='Levitate' && moveType==='ground')) eff=0;
+  }
+  // Flag-based defender immunities (sound, bullet)
+  if(def.ability==='Soundproof' && mv.sound) eff=0;
+  if(def.ability==='Bulletproof' && mv.bullet) eff=0;
+  // Extreme weather: Water fails in Harsh Sun, Fire fails in Heavy Rain
+  if(weather==='harshsun' && moveType==='water') eff=0;
+  if(weather==='heavyrain' && moveType==='fire') eff=0;
+  // STAB (Adaptability ×2; -ate abilities give STAB if type matches attacker type now)
+  const aTypesEff=aT.slice();if(ATE_TYPE[atk.ability])aTypesEff.push(ATE_TYPE[atk.ability]);
+  const stab=aTypesEff.includes(moveType)?(atk.ability==='Adaptability'?2:1.5):1;
+  // chained "other" multipliers
+  let mod=1;
+  // -ate boost
+  if(ateMul!==1) mod*=ateMul;
+  // type-boost items
+  if(ITEM_TYPE_BOOST[aItem]===moveType) mod*=1.2;
+  if(aItem==='Life Orb') mod*=1.3;
+  // weather move boosts (regular)
+  if(weather==='sun'){if(moveType==='fire')mod*=1.5;if(moveType==='water')mod*=0.5;}
+  if(weather==='rain'){if(moveType==='water')mod*=1.5;if(moveType==='fire')mod*=0.5;}
+  // Harsh Sun / Heavy Rain boost their type 1.5x (failures handled via eff=0 above)
+  if(weather==='harshsun'){if(moveType==='fire')mod*=1.5;}
+  if(weather==='heavyrain'){if(moveType==='water')mod*=1.5;}
+  // Terrains (boost only grounded attacker; Misty halves Dragon vs grounded defender)
+  const aGround=isGrounded(atk), dGround=isGrounded(def);
+  if(field.terrain==='electric' && moveType==='electric' && aGround) mod*=1.3;
+  if(field.terrain==='grassy' && moveType==='grass' && aGround) mod*=1.3;
+  if(field.terrain==='psychic' && moveType==='psychic' && aGround) mod*=1.3;
+  if(field.terrain==='misty' && moveType==='dragon' && dGround) mod*=0.5;
+  // Grassy Terrain weakens Earthquake/Magnitude/Bulldoze vs grounded (×0.5)
+  if(field.terrain==='grassy' && dGround && ['Earthquake','Magnitude','Bulldoze'].includes(move)) mod*=0.5;
+  // Misty Terrain blocks status on grounded — no damage effect beyond Dragon halving.
+  // attacker abilities
+  if(atk.ability==='Technician' && bp<=60) mod*=1.5;
+  if(atk.ability==='Tinted Lens' && eff>0 && eff<1) mod*=2;
+  if(atk.ability==='Sand Force' && weather==='sand' && ['rock','ground','steel'].includes(moveType)) mod*=1.3;
+  if(atk.ability==='Sniper' && isCrit) mod*=1.5;
+  if(atk.ability==='Neuroforce' && eff>1) mod*=1.25;
+  // Flag-based attacker abilities (contact/punch/pulse/bite/sound/slicing)
+  if(atk.ability==='Tough Claws' && mv.contact) mod*=1.3;
+  if(atk.ability==='Iron Fist' && mv.punch) mod*=1.2;
+  if(atk.ability==='Mega Launcher' && mv.pulse) mod*=1.5;
+  if(atk.ability==='Strong Jaw' && mv.bite) mod*=1.5;
+  if(atk.ability==='Sharpness' && mv.slicing) mod*=1.5;
+  if(atk.ability==='Punk Rock' && mv.sound) mod*=1.3;
+  // defender damage-reduction abilities
+  if((def.ability==='Multiscale'||def.ability==='Shadow Shield') && def.hpPct>=100) mod*=0.5;
+  if((def.ability==='Filter'||def.ability==='Solid Rock'||def.ability==='Prism Armor') && eff>1) mod*=0.75;
+  if(def.ability==='Thick Fat' && (moveType==='fire'||moveType==='ice')) mod*=0.5;
+  if(def.ability==='Heatproof' && moveType==='fire') mod*=0.5;
+  if(def.ability==='Purifying Salt' && moveType==='ghost') mod*=0.5;
+  // Fluffy: ×0.5 on contact, ×2 on fire (so fire+contact = 1×).
+  if(def.ability==='Fluffy'){let fl=1;if(mv.contact)fl*=0.5;if(moveType==='fire')fl*=2;if(fl!==1)mod*=fl;}
+  if(def.ability==='Punk Rock' && mv.sound) mod*=0.5;
+  if(def.ability==='Ice Scales' && !phys){/* applied to D above */}
+  // Side effects (per-side multipliers)
+  if(atkSide.helpingHand) mod*=1.5;
+  if(atkSide.powerSpot) mod*=1.3;
+  if(atkSide.battery && !phys) mod*=1.3;
+  if(atkSide.steelySpirit && moveType==='steel') mod*=1.5;
+  // Friend Guard (doubles only, on defender's side)
+  if(defSide.friendGuard && doubles) mod*=0.75;
+  // Screens (don't apply on crit)
+  if(!isCrit){
+    const screenMult=doubles?2/3:0.5;
+    const veil=defSide.auroraVeil && weather==='snow';
+    if(veil) mod*=screenMult;
+    else if(phys && defSide.reflect) mod*=screenMult;
+    else if(!phys && defSide.lightScreen) mod*=screenMult;
+  }
+  // Crit multiplier (×1.5)
+  if(isCrit) mod*=1.5;
+  // Burn: halve physical (after STAB/type). Skip if Guts applied above.
+  if(burnedAtk) mod*=0.5;
+  if(atk.status==='fbt' && !phys) mod*=0.5;
+  const hp=ds.hp;
+  const range=sp=>{
+    if(hits===1){
+      const rolls=[];for(let r=85;r<=100;r++)rolls.push(oneRoll(base,r,sp,stab,eff,mod));
+      const lo=rolls[0],hi=rolls[15];return{lo,hi,rolls,pctLo:lo/hp*100,pctHi:hi/hp*100};
+    }
+    // multi-hit: sum min & max rolls per hit (each hit rolls independently)
+    let lo=0,hi=0;const perHit=[];
+    for(const bp of bpList){const b=baseFor(bp);
+      const l=oneRoll(b,85,sp,stab,eff,mod),h=oneRoll(b,100,sp,stab,eff,mod);
+      lo+=l;hi+=h;perHit.push({bp,l,h});}
+    return{lo,hi,rolls:null,perHit,pctLo:lo/hp*100,pctHi:hi/hp*100};
+  };
+  const single=range(1),spreadR=range(0.75),isSpread=!!mv.spread;
+  const active=(doubles&&isSpread)?spreadR:single;
+  return{...active,eff,hp,bp,bpRaw:mv.power,cat:mv.category,isSpread,single,spreadR,isCrit,moveType,hits,intimidate};
+}
+function dmgColor(p){if(p>=100)return'#ff7a7a';if(p>=50)return'#ffb070';if(p>=30)return'#ffd166';if(p>0)return'#9aa3b2';return'#5a5f6a';}
+function koNote(r){if(r.eff===0)return'immune';if(r.pctLo>=100)return'guaranteed OHKO';if(r.pctHi>=100)return'possible OHKO';
+  const hi=Math.ceil(100/r.pctHi),lo=Math.ceil(100/r.pctLo);return hi===lo?`${hi}HKO`:`${hi}–${lo}HKO`;}
+const g=id=>document.getElementById(id);
+function slotHTML(p,title){
+  const tag=p==='a'?'A':'B';
+  return `<div class="dmgslot" data-p="${p}"><div class="slothd"><h3>${title} <button class="pinbtn ${pinned===p?'locked':''}" data-p="${p}" title="Lock this slot — quick-picks go to the other slot">${pinned===p?'🔒':'🔓'}</button></h3><div class="slothd-right"><span id="${p}_slotsprite" class="slotsprite"></span><span id="${p}_typeline" class="small"></span></div></div><div class="slotbody">
+  ${myTeam.length?`<div class="myrow"><span class="small">My team:</span> ${myTeam.map((mon,i)=>`<button class="mybtn" data-p="${p}" data-i="${i}">${pokeSprite(mon.forme,'24')}${esc(mon.forme)}</button>`).join('')}</div>`:''}
+  <input id="${p}_search" placeholder="search any Pokémon…" list="formelist" autocomplete="off" onfocus="setTimeout(()=>this.select(),0)">
+  <select id="${p}_set"><option>— pick a Pokémon first —</option></select>
+  <div class="fld3">
+    <input id="${p}_item" list="itemlist" placeholder="Item" autocomplete="off" onfocus="setTimeout(()=>this.select(),0)">
+    <input id="${p}_ability" list="abilitylist" placeholder="Ability" autocomplete="off" onfocus="setTimeout(()=>this.select(),0)">
+    <select id="${p}_nature" title="Nature shapes which stat is +10%/-10%">${ALL_NATURES.map(n=>`<option value="${esc(n)}">${esc(natureLabel(n))}</option>`).join('')}</select>
+  </div>
+  <div class="seclabel">Stat points <span class="sp-total" id="${p}_sptot">0 / 66</span></div>
+  <table class="statedit"><colgroup><col class="statcol"><col class="spcol"><col></colgroup><thead><tr><th></th><th>SP</th><th>Boost</th></tr></thead><tbody>
+    ${STAT_KEYS.map(([k,lab])=>`<tr>
+      <td class="sk"><span class="slbl" id="${p}_slbl_${k}">${lab}</span> <span id="${p}_fin_${k}" class="finv"></span></td>
+      <td class="spc"><input id="${p}_sp_${k}" type="range" min="0" max="32" class="spslider" title="0-32 SP"><input id="${p}_spv_${k}" type="number" min="0" max="32" class="spv" value="0" inputmode="numeric"></td>
+      ${k==='hp'?'<td></td>':
+        `<td class="boostc"><div class="stagerow" data-p="${p}" data-k="${k}">${[-6,-5,-4,-3,-2,-1,0,1,2,3,4,5,6].map(n=>`<button class="stagec" data-s="${n}" title="${n>0?'+'+n:n} ${k.toUpperCase()}">${n===0?'0':n>0?'+'+n:n}</button>`).join('')}</div></td>`}
+    </tr>`).join('')}
+  </tbody></table>
+  <div class="movegrid">${[0,1,2,3].map(i=>`<input id="${p}_mv${i}" list="movelist" placeholder="move ${i+1}" autocomplete="off" onfocus="setTimeout(()=>this.select(),0)">`).join('')}</div>
+  <div class="seclabel">HP <span id="${p}_hppct">100%</span></div>
+  <input id="${p}_hp" type="range" min="0" max="100" value="100" class="hpbar">
+  <div class="seclabel">Status</div>
+  <div class="btnrow">${STATUSES.map(([k,lab])=>`<button class="optbtn" data-grp="${p}_st" data-v="${k}">${lab}</button>`).join('')}</div>
+  <div class="seclabel">Battle effects (${tag})</div>
+  <div class="btnrow">${SIDE_FX.map(([k,lab,tip])=>`<button class="optbtn fx ${k==='crit'?'critbtn':''}" data-grp="${p}_fx" data-v="${k}" title="${esc(tip)}">${lab}</button>`).join('')}</div>
+  </div></div>`;}
+function renderFinals(p,m){const s=statsOf(m);
+  // SP total — turns red when over 66 (Champions cap)
+  const tot=STAT_KEYS.reduce((a,[k])=>a+(m.ev?.[k]||0),0);
+  const tt=g(p+'_sptot'); if(tt){tt.textContent=tot+' / 66';tt.classList.toggle('over',tot>66);}
+  // Nature highlight on stat labels
+  STAT_KEYS.forEach(([k])=>{const lbl=g(p+'_slbl_'+k);if(!lbl)return;
+    const nm=k==='hp'?1:natMult(m.nature,k);
+    lbl.classList.toggle('natup',nm>1);
+    lbl.classList.toggle('natdown',nm<1);
+  });
+  STAT_KEYS.forEach(([k])=>{const cell=g(p+'_fin_'+k);if(!cell)return;
+    if(!s){cell.textContent='';return;}
+    const v=s[k],b=k==='hp'?0:(m.boost?.[k]||0);
+    if(b){
+      const boosted=applyBoost(v,b);
+      const sign=b>0?'up':'down';
+      cell.innerHTML=`<b class="${sign}">${boosted}</b> <span class="finbase">(${v})</span> <span class="bsign ${sign}">${b>0?'+'+b:b}</span>`;
+    } else cell.innerHTML=`<b>${v}</b>`;
+    // Sync stage chip active state
+    if(k!=='hp'){const row=document.querySelector(`.stagerow[data-p="${p}"][data-k="${k}"]`);
+      if(row)row.querySelectorAll('.stagec').forEach(chip=>{
+        const n=+chip.dataset.s;
+        chip.classList.toggle('active',n===b);
+        chip.classList.toggle('pos',n===b && n>0);
+        chip.classList.toggle('neg',n===b && n<0);
+        chip.classList.toggle('zero',n===b && n===0);
+      });}
+  });
+  const st=g(p+'_typeline');
+  if(st)st.innerHTML=s&&DEX.formes[m.forme]?DEX.formes[m.forme].types.map(typePill).join(' '):'';
+  // Slot-header sprite reflects the currently-loaded mon.
+  const sp=g(p+'_slotsprite');
+  if(sp)sp.innerHTML=m.forme?pokeSprite(m.forme,'32'):'';}
+function syncBtnGroup(grp,val){document.querySelectorAll(`[data-grp="${grp}"]`).forEach(b=>b.classList.toggle('active',b.dataset.v===val));}
+function syncFxRow(p,sideObj){SIDE_FX.forEach(([k])=>{const el=document.querySelector(`[data-grp="${p}_fx"][data-v="${k}"]`);if(el)el.classList.toggle('active',!!sideObj[k]);});}
+function populateSlot(p,m){
+  const itEl=g(p+'_item'), abEl=g(p+'_ability');
+  itEl.value=m.item||''; itEl.title=descFor('item', m.item)||'Held item';
+  abEl.value=m.ability||''; abEl.title=descFor('ability', m.ability)||'Ability';
+  g(p+'_nature').value=m.nature||'Serious';
+  STAT_KEYS.forEach(([k])=>{const v=m.ev?.[k]??0;const sp=g(p+'_sp_'+k);if(sp)sp.value=v;const spv=g(p+'_spv_'+k);if(spv)spv.value=v;});
+  [0,1,2,3].forEach(i=>g(p+'_mv'+i).value=m.moves[i]||'');
+  const hp=g(p+'_hp');if(hp){hp.value=m.hpPct??100;g(p+'_hppct').textContent=(m.hpPct??100)+'%';}
+  syncBtnGroup(p+'_st',m.status||'ok');
+  syncFxRow(p,p==='a'?sideA:sideB);
+  renderFinals(p,m);}
+function readSlot(p,m){m.item=g(p+'_item').value.trim();m.ability=g(p+'_ability').value.trim();m.nature=g(p+'_nature').value;
+  if(!m.ev)m.ev=zeroEV();if(!m.boost)m.boost=zeroBoost();
+  STAT_KEYS.forEach(([k])=>{const sp=g(p+'_sp_'+k);if(sp){m.ev[k]=Math.max(0,Math.min(32,+sp.value||0));const spv=g(p+'_spv_'+k);if(spv && +spv.value!==m.ev[k])spv.value=m.ev[k];}});
+  m.moves=[0,1,2,3].map(i=>g(p+'_mv'+i).value.trim());
+  const hp=g(p+'_hp');if(hp){m.hpPct=+hp.value;g(p+'_hppct').textContent=m.hpPct+'%';}
+  renderFinals(p,m);}
+function rebuildSetOptions(p,m){const ss=setsFor(m.forme).slice(0,10);
+  g(p+'_set').innerHTML=`<option value="-1">Most recent / default</option>`+
+    ss.map((s,i)=>`<option value="${i}">${esc(s.evs||'no EVs')} · ${esc(s.nature||'neutral')}${s.item&&s.item!=='-'?' · '+esc(s.item):''}${s.date?' · '+esc(s.date):''}</option>`).join('');}
+function wireSlot(p,m){
+  function applyForme(v){
+    Object.assign(m,defaultSet(v));rebuildSetOptions(p,m);
+    g(p+'_search').value=v;populateSlot(p,m);
+    if(p==='a')selA=null;else selB=null;updateResults();}
+  g(p+'_search').addEventListener('change',e=>{const v=resolveForme(e.target.value);if(v)applyForme(v);});
+  g(p+'_search').addEventListener('keydown',e=>{
+    if(e.key==='Enter'){e.preventDefault();const v=resolveForme(e.target.value);
+      if(v){applyForme(v);g(p+'_search').blur();}}});
+  g(p+'_set').addEventListener('change',e=>{const ss=setsFor(m.forme).slice(0,10),i=+e.target.value;
+    if(i<0||!ss[i])Object.assign(m,defaultSet(m.forme));
+    else{const s=ss[i];m.item=s.item||'';m.ability=s.ability||'';m.nature=s.nature||'Serious';m.ev=parseEVs(s.evs);m.boost=zeroBoost();m.moves=(s.moves||[]).slice(0,4);while(m.moves.length<4)m.moves.push('');m.status='ok';m.hpPct=100;}
+    populateSlot(p,m);if(p==='a')selA=null;else selB=null;updateResults();});
+  ['_item','_ability'].forEach(x=>g(p+x).addEventListener('input',()=>{
+    readSlot(p,m); updateResults();
+    const el=g(p+x); el.title=descFor(x==='_item'?'item':'ability', el.value) || (x==='_item'?'Held item':'Ability');
+  }));
+  g(p+'_nature').addEventListener('change',()=>{readSlot(p,m);updateResults();});
+  STAT_KEYS.forEach(([k])=>{
+    const sp=g(p+'_sp_'+k);
+    const spv=g(p+'_spv_'+k);
+    if(sp) sp.addEventListener('input',()=>{if(spv)spv.value=sp.value;readSlot(p,m);updateResults();});
+    if(spv) spv.addEventListener('input',()=>{const v=Math.max(0,Math.min(32,+spv.value||0));if(sp)sp.value=v;readSlot(p,m);updateResults();});
+  });
+  // Stage chips: jump directly to any -6..+6 stage (the only boost control)
+  document.querySelectorAll(`.stagerow[data-p="${p}"] .stagec`).forEach(chip=>chip.onclick=()=>{
+    const k=chip.parentElement.dataset.k, s=+chip.dataset.s;
+    if(!m.boost)m.boost=zeroBoost();
+    m.boost[k]=Math.max(-6,Math.min(6,s));
+    renderFinals(p,m);updateResults();});
+  // Status buttons (single-click)
+  document.querySelectorAll(`[data-grp="${p}_st"]`).forEach(btn=>btn.onclick=()=>{
+    m.status=btn.dataset.v;syncBtnGroup(p+'_st',m.status);updateResults();});
+  // Side-effects buttons (toggle, single-click)
+  const side=p==='a'?sideA:sideB;
+  document.querySelectorAll(`[data-grp="${p}_fx"]`).forEach(btn=>btn.onclick=()=>{
+    const k=btn.dataset.v;side[k]=side[k]?0:1;btn.classList.toggle('active',!!side[k]);updateResults();});
+  // HP slider
+  g(p+'_hp').addEventListener('input',()=>{m.hpPct=+g(p+'_hp').value;g(p+'_hppct').textContent=m.hpPct+'%';updateResults();});
+  [0,1,2,3].forEach(i=>g(p+'_mv'+i).addEventListener('input',()=>{readSlot(p,m);updateResults();}));
+}
+// KO chip classification — green/orange/blue/gray tiers
+function koClass(r){
+  if(!r) return '';
+  if(r.eff===0) return 'koimmune';
+  if(r.pctLo>=100) return 'kosure';
+  if(r.pctHi>=100) return 'komaybe';
+  const hi=Math.ceil(100/r.pctHi);
+  return hi<=2 ? 'ko2' : hi<=3 ? 'ko3' : 'kolow';
+}
+function koText(r){
+  if(!r) return '';
+  if(r.eff===0) return '0×';
+  if(r.pctLo>=100) return 'OHKO';
+  if(r.pctHi>=100){
+    if(r.rolls){const ok=r.rolls.filter(x=>x>=r.hp).length;return `OHKO ${Math.round(ok/16*100)}%`;}
+    return 'OHKO?';
+  }
+  const hi=Math.ceil(100/r.pctHi),lo=Math.ceil(100/r.pctLo);
+  return hi===lo?`${hi}HKO`:`${hi}–${lo}HKO`;
+}
+function effChip(eff){
+  if(eff===1) return '';
+  const lab = eff===0?'0×':eff===0.25?'¼×':eff===0.5?'½×':eff===2?'2×':eff===4?'4×':eff+'×';
+  const cls = eff===0?'effimmune':eff<1?'effweak':eff>2?'effstrong':'effse';
+  return `<span class="effchip ${cls}">${lab}</span>`;
+}
+// Survival callout: would-otherwise-be OHKO that's blocked by Sash/Sturdy/Disguise
+function survivalNote(r, def){
+  if(!r || r.pctLo<100) return '';
+  const fullHP=(def.hpPct??100)>=100;
+  if(def.item==='Focus Sash' && fullHP) return ' <span class="survive">⛨ Sash · 1 HP</span>';
+  if(def.ability==='Sturdy' && fullHP) return ' <span class="survive">⛨ Sturdy</span>';
+  if(def.ability==='Disguise' && def.forme && def.forme.startsWith('Mimikyu')) return ' <span class="survive">⛨ Disguise</span>';
+  return '';
+}
+function moveListHTML(side,atk,def){
+  const aS=side==='A'?sideA:sideB, dS=side==='A'?sideB:sideA;
+  const rows=(atk.moves||[]).map((mv,i)=>{
+    if(!mv) return null;
+    const info=DEX.moves[mv];
+    const sel=(side==='A'?selA:selB)===i;
+    if(!info) return {i,mv,sel,kind:'unknown',r:null};
+    if(!info.power) return {i,mv,sel,kind:'status',r:null};
+    const r=calcDmg(atk,mv,def,aS,dS);
+    return {i,mv,sel,kind:r?'damage':'nostat',r};
+  }).filter(Boolean);
+  // Sort: damaging moves by pctHi desc (best at top); status/unknown after
+  rows.sort((a,b)=>{
+    const ad=a.kind==='damage'?1:0, bd=b.kind==='damage'?1:0;
+    if(ad!==bd) return bd-ad;
+    if(!a.r||!b.r) return 0;
+    return b.r.pctHi - a.r.pctHi;
+  });
+  if(!rows.length) return '<div class="small">no moves</div>';
+  return rows.map((row,sortIdx)=>{
+    const {i,mv,sel,kind,r}=row;
+    const info=DEX.moves[mv];
+    const selCls=sel?'sel':'';
+    const bestCls=(sortIdx===0 && kind==='damage')?'bestrow':'';
+    const moveMeta=info?`<span class="mvmeta"><span class="mvcat ${info.category}">${info.category==='physical'?'Phys':info.category==='special'?'Spec':'Stat'}</span>${info.power?`<span class="mvbp">${info.power} BP</span>`:''}${info.spread?'<span class="mvbp">· spread</span>':''}</span>`:'';
+    // The detail block follows the row inline when this row is selected.
+    const detailBlock = sel ? moveDetailHTML(side, atk, def, i) : '';
+    if(kind==='status') return `<div class="moverow ${selCls}" data-side="${side}" data-i="${i}"><span class="mvname">${esc(mv)}</span>${moveTypeChip(mv)}${moveMeta}<span class="rpct"><span class="small">status</span></span></div>${detailBlock}`;
+    if(!r) return `<div class="moverow ${selCls}" data-side="${side}" data-i="${i}"><span class="mvname">${esc(mv)}</span>${moveTypeChip(mv)}${moveMeta}<span class="rpct"><span class="small">—</span></span></div>${detailBlock}`;
+    const col=dmgColor(r.pctHi);
+    const koCls=koClass(r);
+    const koLab=koText(r);
+    const eff=effChip(r.eff);
+    const surv=survivalNote(r, def);
+    // HP-after-attack: tooltip on the row
+    const rmin=Math.max(0,100-r.pctHi).toFixed(0);
+    const rmax=Math.max(0,100-r.pctLo).toFixed(0);
+    const after=`Leaves defender at ${rmin}–${rmax}% HP`;
+    return `<div class="moverow ${selCls} ${bestCls} ${koCls}" data-side="${side}" data-i="${i}" title="${after}" data-rmin="${rmin}" data-rmax="${rmax}"><span class="mvname">${esc(mv)}</span>${moveTypeChip(mv)}${moveMeta}${eff}<span class="rpct" style="color:${col}">${r.pctLo.toFixed(1)}–${r.pctHi.toFixed(1)}%</span><span class="kochip ${koCls}">${koLab}</span>${surv}</div>${detailBlock}`;
+  }).join('');
+}
+function boostLabel(n){return n?` <span class="small" style="color:${n>0?'var(--good)':'var(--bad)'}">${n>0?'+':''}${n}</span>`:'';}
+function moveDetailHTML(side,atk,def,i){const mv=atk.moves[i];const info=DEX.moves[mv];
+  if(!info)return '<div class="detail small">Type a move to see its calc.</div>';
+  if(!info.power)return `<div class="detail">${movePill(mv)} — status move (no damage).</div>`;
+  const aS=side==='A'?sideA:sideB, dS=side==='A'?sideB:sideA;
+  const r=calcDmg(atk,mv,def,aS,dS);if(!r)return '<div class="detail small">No stat data for this matchup.</div>';
+  const phys=info.category==='physical';
+  const aBoost=boostLabel(phys?atk.boost?.atk||0:atk.boost?.spa||0);
+  const dBoost=boostLabel(phys?def.boost?.def||0:def.boost?.spd||0);
+  const sp=r.isSpread?(doubles
+      ?` · <span class="small">spread; 1 target ${r.single.pctLo.toFixed(1)}–${r.single.pctHi.toFixed(1)}%</span>`
+      :` · <span class="small">spread in doubles ${r.spreadR.pctLo.toFixed(1)}–${r.spreadR.pctHi.toFixed(1)}%</span>`):'';
+  const ctx=[];if(atk.ability)ctx.push(esc(atk.ability));if(def.ability)ctx.push(esc(def.ability));
+  if(weather!=='none')ctx.push(esc(weather));if(field.terrain!=='none')ctx.push(esc(field.terrain+' terrain'));
+  if(r.isCrit)ctx.push('<span style="color:var(--bad)">crit</span>');
+  if(atk.status!=='ok')ctx.push(esc('atk: '+atk.status));if(def.status!=='ok')ctx.push(esc('def: '+def.status));
+  Object.entries(aS).forEach(([k,v])=>{if(v&&k!=='tailwind'&&k!=='crit')ctx.push('atk '+k);});
+  Object.entries(dS).forEach(([k,v])=>{if(v&&k!=='tailwind'&&k!=='crit')ctx.push('def '+k);});
+  if(r.intimidate&&!ctx.includes('Intimidate (-1 Atk)'))ctx.push('<span style="color:var(--accent2)">Intimidate −1 Atk</span>');
+  const hitLab=r.hits>1?` · <b style="color:var(--accent2)">${r.hits} hits</b>${r.perHit?` (${r.perHit.map(h=>h.l+'–'+h.h).join(' + ')})`:''}`:'';
+  const bpLab=(r.bp!==r.bpRaw)?`${r.bp} BP <span class="small">(${r.bpRaw} base, scaled)</span>`:`${r.bp} BP`;
+  return `<div class="detail">${esc(atk.forme)}${aBoost} <b>${r.isCrit?'(crit) ':''}${esc(mv)}</b> (${bpLab}${r.eff!==1?', '+r.eff+'×':''}${r.moveType!==info.type?' · type→'+esc(r.moveType):''}${hitLab}) vs ${esc(def.forme)}${dBoost}:
+    <b>${r.lo}–${r.hi}</b> (<b style="color:${dmgColor(r.pctHi)}">${r.pctLo.toFixed(1)}–${r.pctHi.toFixed(1)}%</b> of ${r.hp} HP) — ${koNote(r)}${sp}
+    ${ctx.length?`<div class="small" style="margin-top:2px">${ctx.join(' · ')}</div>`:''}
+    <div class="small" style="margin-top:5px">${r.rolls?'rolls: '+r.rolls.join(', '):r.hits>1?'multi-hit · '+r.hits+' hits':''}</div></div>`;}
+function firstDmgIdx(m){return (m.moves||[]).findIndex(mv=>DEX.moves[mv]?.power);}
+// Pick the move that does the most damage (replaces firstDmgIdx for default selection)
+function bestDmgIdx(atk,def,side){
+  const aS=side==='A'?sideA:sideB, dS=side==='A'?sideB:sideA;
+  let bestI=-1, bestHi=-1;
+  (atk.moves||[]).forEach((mv,i)=>{
+    if(!mv) return;
+    const info=DEX.moves[mv];if(!info?.power) return;
+    const r=calcDmg(atk,mv,def,aS,dS);
+    if(r && r.pctHi>bestHi){bestHi=r.pctHi;bestI=i;}
+  });
+  return bestI>=0 ? bestI : firstDmgIdx(atk);
+}
+// Effective in-battle Speed for the ribbon: applies boosts + items + abilities + weather/terrain + side.tailwind
+function effSpeed(m, side){
+  const s=statsOf(m); if(!s) return null;
+  let spe=applyBoost(s.spe, m.boost?.spe||0);
+  if(side?.tailwind) spe*=2;
+  if(m.status==='par' && m.ability!=='Quick Feet') spe=Math.floor(spe*0.5);
+  if(m.item==='Choice Scarf' && !field.magicRoom) spe=Math.floor(spe*1.5);
+  if(m.item==='Iron Ball' && !field.magicRoom) spe=Math.floor(spe*0.5);
+  if(m.ability==='Chlorophyll' && (weather==='sun'||weather==='harshsun')) spe*=2;
+  if(m.ability==='Swift Swim' && (weather==='rain'||weather==='heavyrain')) spe*=2;
+  if(m.ability==='Sand Rush' && weather==='sand') spe*=2;
+  if(m.ability==='Slush Rush' && weather==='snow') spe*=2;
+  if(m.ability==='Surge Surfer' && field.terrain==='electric' && isGrounded(m)) spe*=2;
+  if(m.ability==='Quick Feet' && m.status && m.status!=='ok') spe=Math.floor(spe*1.5);
+  if(m.ability==='Unburden' && !m.item) spe*=2;
+  return Math.floor(spe);
+}
+function renderSpeedRibbon(){
+  const ribbon=g('speedribbon'); if(!ribbon) return;
+  if(!A.forme||!B.forme){ribbon.innerHTML='';return;}
+  const sa=effSpeed(A,sideA), sb=effSpeed(B,sideB);
+  if(sa==null||sb==null){ribbon.innerHTML='';return;}
+  const tr=field.trickRoom;
+  const tie=sa===sb;
+  if(tie){ribbon.innerHTML=`<span class="srpair"><b>A</b> Spe ${sa} <span class="seprator">≡</span> <b>B</b> Spe ${sb}</span> <span class="small">speed tie${tr?' · TR active':''}</span>`;return;}
+  const aFirst = tr ? sa<sb : sa>sb;
+  const fast=aFirst?'A':'B', slow=aFirst?'B':'A';
+  const fastVal=aFirst?sa:sb, slowVal=aFirst?sb:sa;
+  const diff=Math.abs(sa-sb);
+  ribbon.innerHTML=`<span class="srpair"><b class="fast-${fast.toLowerCase()}">${fast} ${fastVal}</b> → <b class="slow-${slow.toLowerCase()}">${slow} ${slowVal}</b></span> <span class="small">+${diff} ${fast} first${tr?' · TR active':''}</span>`;
+}
+// Live header field summary string (e.g. "Sun · Electric terrain · Trick Room")
+function updateFieldSummary(){
+  const el=g('fieldsum'); if(!el) return;
+  const bits=[];
+  if(weather!=='none'){const w=WEATHERS.find(x=>x[0]===weather);if(w)bits.push(w[1]);}
+  else bits.push('No weather');
+  if(field.terrain!=='none'){const t=TERRAINS.find(x=>x[0]===field.terrain);if(t)bits.push(t[1]+' terrain');}
+  else bits.push('No terrain');
+  if(field.trickRoom)bits.push('TR');
+  if(field.gravity)bits.push('Gravity');
+  if(field.magicRoom)bits.push('MagicRoom');
+  if(field.wonderRoom)bits.push('WonderRoom');
+  el.textContent=bits.join(' · ');
+}
+// Reset calc state (field + side effects + status/HP/boosts on both combatants).
+// Deliberately does NOT clear the saved my-team or the opposing-team reference.
+function resetCalc(){
+  doubles=true; weather='none'; field=newField();
+  sideA=newSide(); sideB=newSide();
+  [A,B].forEach(m=>{if(m){m.boost=zeroBoost();m.status='ok';m.hpPct=100;}});
+  if(view==='dmg')renderDmg();
+}
+function updateResults(){const el=g('dmgresults');
+  updateFieldSummary();
+  renderSpeedRibbon();
+  renderMatrix();
+  if(!A.forme||!B.forme){el.innerHTML='<div class="empty">Pick a Pokémon on each side, then click a move to see its calc.</div>';return;}
+  if(selA==null)selA=bestDmgIdx(A,B,'A');if(selB==null)selB=bestDmgIdx(B,A,'B');
+  el.innerHTML=`<div class="rescols">
+    <div class="rescol" data-side="A"><div class="restitle"><span>${esc(A.forme)} → ${esc(B.forme)}</span><span class="restitle-hp">${B.forme?statsOf(B)?.hp+' HP':''}</span></div><div class="resbody">${moveListHTML('A',A,B)}</div></div>
+    <div class="rescol" data-side="B"><div class="restitle"><span>${esc(B.forme)} → ${esc(A.forme)}</span><span class="restitle-hp">${A.forme?statsOf(A)?.hp+' HP':''}</span></div><div class="resbody">${moveListHTML('B',B,A)}</div></div></div>`;
+  el.querySelectorAll('.moverow').forEach(row=>row.onclick=()=>{const i=+row.dataset.i;
+    if(row.dataset.side==='A')selA=i;else selB=i;updateResults();});}
+function loadIntoSlot(p,m,src){m.forme=src.forme;m.item=src.item||'';m.ability=src.ability||'';
+  m.nature=src.nature||'Serious';
+  m.ev={...(src.ev||parseEVs(src.evs||''))};m.boost={...(src.boost||zeroBoost())};
+  m.status=src.status||'ok';m.hpPct=src.hpPct??100;
+  m.moves=(src.moves||[]).slice(0,4);while(m.moves.length<4)m.moves.push('');
+  g(p+'_search').value=src.forme;rebuildSetOptions(p,m);populateSlot(p,m);if(p==='a')selA=null;else selB=null;updateResults();}
+function renderDmg(){
+  g('dmgpad').innerHTML=`
+    <datalist id="formelist">${ALL_FORMES.map(f=>`<option value="${esc(f)}">`).join('')}</datalist>
+    <datalist id="itemlist">${ALL_ITEMS.map(i=>`<option value="${esc(i)}">`).join('')}</datalist>
+    <datalist id="movelist">${ALL_MOVES.map(mv=>`<option value="${esc(mv)}">`).join('')}</datalist>
+    <datalist id="abilitylist">${ALL_ABILITIES.map(a=>`<option value="${esc(a)}">`).join('')}</datalist>
+    <details class="myteam"><summary><strong>My team</strong> <span class="small">${myTeam.length?'loaded: '+myTeam.map(m=>esc(m.forme)).join(', '):'paste a Showdown export — saved in this browser'}</span></summary>
+      <textarea id="myta" placeholder="Garchomp @ Sitrus Berry&#10;Ability: Rough Skin&#10;EVs: 32 Atk / 32 Spe&#10;Jolly Nature&#10;- Earthquake&#10;- Dragon Claw&#10;...">${esc(myTeam.raw||'')}</textarea>
+      <button id="mysave" class="btn">Save my team</button></details>
+    ${fightTeam?renderFightBar():''}
+    <div class="fieldbar">
+      <div class="fline"><span class="flbl">Weather</span><div class="btnrow">
+        ${WEATHERS.map(([k,lab])=>`<button class="optbtn weat-${k} ${weather===k?'active':''}" data-grp="weat" data-v="${k}">${lab}</button>`).join('')}
+      </div></div>
+      <div class="fline"><span class="flbl">Terrain</span><div class="btnrow">
+        ${TERRAINS.map(([k,lab])=>`<button class="optbtn terr-${k} ${field.terrain===k?'active':''}" data-grp="terr" data-v="${k}">${lab}</button>`).join('')}
+      </div></div>
+      <div class="fline"><span class="flbl">Field</span><div class="btnrow">
+        <button class="optbtn ${field.trickRoom?'active':''}" data-grp="rm" data-v="trickRoom">Trick Room</button>
+        <button class="optbtn ${field.gravity?'active':''}" data-grp="rm" data-v="gravity">Gravity</button>
+        <button class="optbtn ${field.magicRoom?'active':''}" data-grp="rm" data-v="magicRoom">Magic Room</button>
+        <button class="optbtn ${field.wonderRoom?'active':''}" data-grp="rm" data-v="wonderRoom">Wonder Room</button>
+      </div></div>
+    </div>
+    <div id="matrixpane"></div>
+    <div id="speedribbon" class="speedribbon"></div>
+    <div class="dmgtop">${slotHTML('a','Attacker')}${slotHTML('b','Defender')}</div>
+    <div id="dmgresults"></div>
+    <div class="small calcfoot"><b>VGC doubles only.</b> Champions ruleset (lv50, IVs max, 1 SP = 8 EV). <b>Modeled:</b> STAB · type chart · spread · stat boosts · status (burn/frostbite/Guts) · current HP (Multiscale) · weather (incl. extremes Harsh Sun/Heavy Rain/Strong Winds) · terrains (Electric/Grassy/Misty/Psychic, grounded only; Grassy halves EQ) · screens (×0.5 singles / ×2/3 doubles, Aurora Veil snow-only; crit bypasses) · Helping Hand · Friend Guard (doubles) · Power Spot · Battery · Steely Spirit · Flower Gift · Crit (ignores +def/-atk boosts; Sniper ×2.25) · Trick/Magic/Wonder Room · Gravity (ground hits Flying, suppresses Levitate) · <b>multi-hit moves</b> (Triple Axel/Triple Kick escalating BP; Population Bomb/Bullet Seed; Skill Link → max hits) · <b>Intimidate auto-apply</b> (with Clear Body / Hyper Cutter / Inner Focus / Scrappy / Own Tempo / Oblivious immunity; Defiant counters; Competitive on special) · <b>contact/flag abilities</b>: Tough Claws ×1.3 (contact) · Iron Fist ×1.2 (punch) · Mega Launcher ×1.5 (pulse) · Strong Jaw ×1.5 (bite) · Sharpness ×1.5 (slicing) · Punk Rock ×1.3 atk / ×0.5 def (sound) · Soundproof immune (sound) · Bulletproof immune (bullet) · Fluffy ×0.5 contact + ×2 fire · -ate abilities (Pixilate/Aerilate/Refrigerate/Galvanize: Normal→type ×1.2 STAB) · Adaptability · Technician · Tinted Lens · Huge/Pure Power · Solar Power · Sand Force · Sniper · Neuroforce · Levitate / type-absorb immunities · Multiscale / Shadow Shield · Filter / Solid Rock / Prism Armor · Thick Fat · Heatproof · Purifying Salt · Fur Coat · Ice Scales · Choice/Specs/Life Orb/AV/Eviolite/type-boost items.</div>`;
+  wireSlot('a',A);wireSlot('b',B);
+  // Field button handlers (single-click). Doubles is hard-pinned (see line ~838) — no Singles toggle in UI.
+  document.querySelectorAll('[data-grp="weat"]').forEach(b=>b.onclick=()=>{weather=b.dataset.v;syncBtnGroup('weat',weather);updateResults();});
+  document.querySelectorAll('[data-grp="terr"]').forEach(b=>b.onclick=()=>{field.terrain=b.dataset.v;syncBtnGroup('terr',field.terrain);updateResults();});
+  document.querySelectorAll('[data-grp="rm"]').forEach(b=>b.onclick=()=>{const k=b.dataset.v;field[k]=field[k]?0:1;b.classList.toggle('active',!!field[k]);updateResults();});
+  g('mysave').onclick=()=>{const raw=g('myta').value;try{localStorage.setItem('vgc_myteam_raw',raw);}catch(e){}
+    myTeam=parseShowdown(raw);myTeam.raw=raw;renderDmg();};
+  // My-team quick picks: respect the pin (loads go to unpinned slot when pin is set)
+  document.querySelectorAll('.mybtn').forEach(b=>b.onclick=()=>{
+    const p=targetSlot(b.dataset.p);
+    loadIntoSlot(p, p==='a'?A:B, myTeam[+b.dataset.i]);
+  });
+  // Fight-team opponent picker: always loads to defender side (or unpinned if pin set)
+  document.querySelectorAll('.ftbtn').forEach(b=>b.onclick=()=>{
+    const p=targetSlot('b');
+    loadIntoSlot(p, p==='a'?A:B, fightTeam.mons[+b.dataset.i]);
+  });
+  // Pin/lock buttons in the slot headers
+  document.querySelectorAll('.pinbtn').forEach(b=>b.onclick=()=>{
+    const p=b.dataset.p;
+    pinned = pinned===p ? null : p;
+    renderDmg();
+  });
+  const ftclear=g('ftclear');if(ftclear)ftclear.onclick=()=>{fightTeam=null;renderDmg();};
+  // restore prior selections if any
+  if(A.forme){g('a_search').value=A.forme;rebuildSetOptions('a',A);populateSlot('a',A);}
+  if(B.forme){g('b_search').value=B.forme;rebuildSetOptions('b',B);populateSlot('b',B);}
+  updateResults();
+}
+// Lead matchup matrix: my team × opposing team. Each cell shows best-move % from
+// that pairing. Click a cell to load both slots and scroll back to the regular view.
+function renderMatrix(){
+  const el=g('matrixpane'); if(!el) return;
+  if(!myTeam.length || !fightTeam){ el.innerHTML=''; return; }
+  let html=`<details class="mxwrap" open><summary><strong>Matchup matrix</strong> <span class="small">${myTeam.length}×${fightTeam.mons.length} · best move % · click any cell to load</span></summary>`;
+  html+=`<table class="mxgrid"><thead><tr><th></th>`;
+  fightTeam.mons.forEach(b=>{html+=`<th>${esc(b.forme||b.name)}</th>`;});
+  html+=`</tr></thead><tbody>`;
+  myTeam.forEach((a,ai)=>{
+    html+=`<tr><th>${esc(a.forme)}</th>`;
+    fightTeam.mons.forEach((b,bi)=>{
+      const aMon={...a, ev:a.ev||parseEVs(a.evs||''), boost:zeroBoost(), status:'ok', hpPct:100};
+      const bMon={...b, forme:b.forme||b.name, ev:b.ev||parseEVs(b.evs||''), boost:zeroBoost(), status:'ok', hpPct:100};
+      let best={pctHi:-1, pctLo:0, mv:'', isImmune:false};
+      (aMon.moves||[]).forEach(mv=>{
+        if(!DEX.moves[mv]?.power) return;
+        const r=calcDmg(aMon,mv,bMon,sideA,sideB);
+        if(r && r.pctHi>best.pctHi){best={pctHi:r.pctHi, pctLo:r.pctLo, mv, isImmune:r.eff===0};}
+      });
+      if(best.pctHi<0){html+=`<td class="mxcell empty">—</td>`;return;}
+      const col=dmgColor(best.pctHi);
+      const ko = best.pctLo>=100 ? 'OHKO' : best.pctHi>=100 ? 'OHKO?' : '';
+      html+=`<td class="mxcell" style="color:${col};border-left:3px solid ${col}" data-ai="${ai}" data-bi="${bi}" title="${esc(best.mv)}: ${best.pctLo.toFixed(0)}–${best.pctHi.toFixed(0)}%">${best.pctHi.toFixed(0)}%${ko?`<div class="small">${ko}</div>`:''}</td>`;
+    });
+    html+=`</tr>`;
+  });
+  html+=`</tbody></table></details>`;
+  el.innerHTML=html;
+  el.querySelectorAll('.mxcell[data-ai]').forEach(c=>c.onclick=()=>{
+    loadIntoSlot('a',A,myTeam[+c.dataset.ai]);
+    loadIntoSlot('b',B,fightTeam.mons[+c.dataset.bi]);
+  });
+}
+function renderFightBar(){
+  if(!fightTeam)return '';
+  return `<div class="fightbar">
+    <div class="fbhdr"><strong>Fighting:</strong> <span>${esc(fightTeam.team.description||fightTeam.team.team_id)}</span>
+      <span class="small">${esc(fightTeam.team.creator||'')}${fightTeam.team.event&&fightTeam.team.event!=='-'?' · '+esc(fightTeam.team.event):''}</span>
+      <button id="ftclear" class="closebtn">×</button></div>
+    <div class="ftrow">${fightTeam.mons.map((m,i)=>`<button class="ftbtn ${B.forme===m.forme?'active':''}" data-i="${i}">${pokeSprite(m.forme||m.name,'24')}${esc(m.forme||m.name)}${m.item?'<span class="small"> @ '+esc(m.item)+'</span>':''}</button>`).join('')}</div>
+  </div>`;}
+
+// ---------- FIND TEAM (team-preview scouting) ----------
+// Given 2-6 Pokémon you saw in the opponent's team preview, find teams that
+// match. Exact (all picks present) first, then partial (highest count down).
+// Matches by base species (mega suffix stripped) so typing "Charizard" finds
+// teams running either Charizard-Mega-X or Y. Honors the current reg scope.
+let findPicks=['','','','','',''];
+function renderFind(){
+  const pad=g('findpad');if(!pad)return;
+  pad.innerHTML=`
+    <div class="findhdr">
+      <h2 style="margin:0 0 4px">Find Team</h2>
+      <div class="small">Type the Pokémon you saw at team preview (2–6 of them). I'll find teams matching them — exact first, then partial.</div>
+      <div class="small" style="margin-top:4px;color:var(--accent2)">Matches the base species, so typing <b>Aerodactyl</b> finds teams running either the base or <b>Aerodactyl-Mega</b> (team preview hides whether a mon megas). Same for Charizard / Garchomp / Raichu / etc.</div>
+    </div>
+    <div class="findbox">
+      ${[0,1,2,3,4,5].map(i=>`<input id="find_${i}" list="formelist" placeholder="Pokémon ${i+1}" value="${esc(findPicks[i]||'')}" autocomplete="off" onfocus="setTimeout(()=>this.select(),0)">`).join('')}
+    </div>
+    <div class="findbtns">
+      <button class="btn" id="findbtn">⌕ Find teams</button>
+      <button class="btn" id="findclear" style="border-color:var(--line);color:var(--dim)">Clear</button>
+      <span class="small" id="findstat"></span>
+    </div>
+    <div id="findresults"></div>`;
+  const inputs=[0,1,2,3,4,5].map(i=>g('find_'+i));
+  inputs.forEach((el,i)=>{
+    el.addEventListener('input',()=>{findPicks[i]=el.value;});
+    el.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();doFind();}});
+  });
+  g('findbtn').onclick=doFind;
+  g('findclear').onclick=()=>{findPicks=['','','','','',''];renderFind();g('find_0').focus();};
+  // Auto-run if there's already content
+  if(findPicks.some(p=>p))doFind();
+}
+function doFind(){
+  // Resolve each typed name -> canonical forme -> base species
+  const picks=findPicks.filter(Boolean);
+  const resolved=[];const labels=[];
+  picks.forEach(p=>{
+    const f=resolveForme(p);
+    const base=baseOf(f||p);
+    if(base && !resolved.includes(base)){resolved.push(base);labels.push(f||p);}
+  });
+  const stat=g('findstat'), out=g('findresults');
+  if(!resolved.length){stat.textContent='— enter at least one Pokémon —';out.innerHTML='';return;}
+  // Score every in-scope team by # of unique picks it contains (base species).
+  const pool=scopeTeams;
+  const scored=pool.map(t=>{
+    const bases=new Set(t.mons.map(m=>baseOf(m.forme||m.name)));
+    const matched=resolved.filter(b=>bases.has(b));
+    return{t,score:matched.length,matched,extras:resolved.length-matched.length};
+  }).filter(x=>x.score>0)
+    .sort((a,b)=>b.score-a.score
+      || (b.t.event&&b.t.event!=='-'?1:0)-(a.t.event&&a.t.event!=='-'?1:0)
+      || setTs(b.t.date)-setTs(a.t.date));
+  const total=resolved.length;
+  const perfect=scored.filter(x=>x.score===total);
+  const partial=scored.filter(x=>x.score<total);
+  stat.innerHTML=`Resolved: ${labels.map(l=>esc(l)).join(' · ')} · <b>${perfect.length}</b> exact match${perfect.length===1?'':'es'}, <b>${partial.length}</b> partial.`;
+  let html='';
+  if(perfect.length){
+    html+=`<h3 class="findh">Exact matches — ${total}/${total} <span class="small">(${perfect.length})</span></h3>`;
+    html+=perfect.slice(0,40).map(x=>teamCard(x.t,null,new Set(resolved))).join('');
+    if(perfect.length>40)html+=`<div class="small empty">+ ${perfect.length-40} more — refine your picks to narrow down.</div>`;
+  }
+  if(partial.length){
+    // Group partials by score (count desc)
+    const groups={};partial.forEach(x=>{(groups[x.score]=groups[x.score]||[]).push(x);});
+    const counts=Object.keys(groups).map(Number).sort((a,b)=>b-a);
+    counts.forEach(c=>{
+      const missCt=total-c;
+      html+=`<h3 class="findh">Partial — ${c}/${total} matched · ${missCt} missing <span class="small">(${groups[c].length} team${groups[c].length===1?'':'s'})</span></h3>`;
+      html+=groups[c].slice(0,15).map(x=>{
+        const missing=resolved.filter(b=>!x.matched.includes(b));
+        return `<div class="findresult"><div class="missline">missing: ${missing.map(esc).join(' · ')}</div>${teamCard(x.t,null,new Set(x.matched))}</div>`;
+      }).join('');
+      if(groups[c].length>15)html+=`<div class="small empty">+ ${groups[c].length-15} more at ${c}/${total}.</div>`;
+    });
+  }
+  if(!perfect.length && !partial.length)html='<div class="empty">no teams matched</div>';
+  out.innerHTML=html;
+}
+
+// ---------- TEAMS VIEW ----------
+function renderTeams(){
+  let f=scopeTeams;if(q)f=scopeTeams.filter(t=>(t.description+' '+t.creator+' '+t.owner_handle+' '+t.event+' '+t.mons.map(m=>m.forme||m.name).join(' ')).toLowerCase().includes(q));
+  document.getElementById('teampad').innerHTML=`<div class="meta" style="margin-bottom:10px">${f.length} teams in scope (${regFilter})</div>`+
+    f.slice(0,250).map(t=>teamCard(t,null)).join('')+(f.length>250?'<div class="empty">Showing first 250 — refine search.</div>':'');
+}
+
+// ---------- wiring ----------
+let view='poke';
+function setView(v){view=v;
+  document.querySelectorAll('.tab').forEach(el=>el.classList.toggle('active',el.dataset.view===v));
+  document.querySelectorAll('.view').forEach(el=>el.classList.toggle('active',el.id==='view-'+v));
+  const ph={poke:'Search a Pokémon (e.g. Charizard-Mega-Y)…',find:'',dmg:'',team:'Search team by player / event / Pokémon…'};
+  document.getElementById('search').placeholder=ph[v]||'';
+  document.getElementById('search').style.visibility=(v==='dmg'||v==='find')?'hidden':'visible';
+  if(v==='poke')renderPokeList();
+  else if(v==='find')renderFind();
+  else if(v==='dmg')renderDmg();
+  else renderTeams();
+}
+// Datalists used by multiple views (Find Team needs formelist before Damage Calc
+// is first rendered). Created once, idempotently overwritten by renderDmg.
+document.body.insertAdjacentHTML('afterbegin',
+  '<datalist id="formelist">'+ALL_FORMES.map(f=>`<option value="${esc(f)}">`).join('')+'</datalist>'+
+  '<datalist id="itemlist">'+ALL_ITEMS.map(i=>`<option value="${esc(i)}">`).join('')+'</datalist>'+
+  '<datalist id="movelist">'+ALL_MOVES.map(m=>`<option value="${esc(m)}">`).join('')+'</datalist>'+
+  '<datalist id="abilitylist">'+ALL_ABILITIES.map(a=>`<option value="${esc(a)}">`).join('')+'</datalist>');
+document.querySelectorAll('.tab').forEach(el=>el.onclick=()=>setView(el.dataset.view));
+document.getElementById('resetbtn').onclick=resetCalc;
+updateFieldSummary();
+// ---------- Hotkeys (active only in Damage Calc view, skipped while typing) ----------
+function swapAB(){const tmp=A;A=B;B=tmp;
+  const ts=selA;selA=selB;selB=ts;
+  const ss=sideA;sideA=sideB;sideB=ss;
+  if(view==='dmg')renderDmg();}
+function cycleArr(arr,cur,dir){const i=arr.findIndex(x=>x[0]===cur);return arr[(i+dir+arr.length)%arr.length][0];}
+function showHelpOverlay(show){const o=document.getElementById('helpoverlay');if(o)o.style.display=show?'flex':'none';}
+document.addEventListener('keydown',e=>{
+  if(e.target.matches('input, textarea, select, [contenteditable]')) return;
+  if(view!=='dmg') return;
+  if(e.key>='1' && e.key<='6'){
+    const i=+e.key-1;
+    const src = (e.shiftKey ? myTeam[i] : (fightTeam?.mons[i] || myTeam[i]));
+    if(!src) return;
+    const tgt = e.shiftKey ? targetSlot('a') : targetSlot('b');
+    loadIntoSlot(tgt, tgt==='a'?A:B, src);
+    e.preventDefault();return;
+  }
+  if(e.key==='Tab' && !e.shiftKey){swapAB();e.preventDefault();return;}
+  if(e.key==='w'||e.key==='W'){weather=cycleArr(WEATHERS,weather,1);syncBtnGroup('weat',weather);updateResults();e.preventDefault();return;}
+  if(e.key==='t'||e.key==='T'){field.terrain=cycleArr(TERRAINS,field.terrain,1);syncBtnGroup('terr',field.terrain);updateResults();e.preventDefault();return;}
+  if(e.key==='r'||e.key==='R'){field.trickRoom=!field.trickRoom;document.querySelector('[data-grp="rm"][data-v="trickRoom"]')?.classList.toggle('active',!!field.trickRoom);updateResults();e.preventDefault();return;}
+  if(e.key==='c'||e.key==='C'){sideA.crit=sideA.crit?0:1;syncFxRow('a',sideA);updateResults();e.preventDefault();return;}
+  if(e.key==='Escape'){if(fightTeam){fightTeam=null;renderDmg();e.preventDefault();}return;}
+  if((e.key==='['||e.key===']') && fightTeam){
+    const idx=fightTeam.mons.findIndex(m=>(m.forme||m.name)===B.forme);
+    const dir=e.key===']'?1:-1, next=((idx>=0?idx:0)+dir+fightTeam.mons.length)%fightTeam.mons.length;
+    loadIntoSlot('b',B,fightTeam.mons[next]);
+    e.preventDefault();return;
+  }
+  if(e.key==='?'){showHelpOverlay(true);e.preventDefault();return;}
+});
+document.addEventListener('click',e=>{if(e.target.id==='helpoverlay'||e.target.closest('#helpoverlay'))showHelpOverlay(false);});
+// Global delegation: "Fight this team" buttons appear on team cards anywhere.
+document.body.addEventListener('click',e=>{
+  const fb=e.target.closest('.fightcardbtn');if(!fb)return;
+  e.preventDefault();e.stopPropagation();
+  const t=TEAMS.find(x=>x.team_id===fb.dataset.tid);if(t)fightThisTeam(t);
+});
+document.querySelectorAll('.regbtn').forEach(el=>el.onclick=()=>{
+  regFilter=el.dataset.reg;
+  document.querySelectorAll('.regbtn').forEach(b=>b.classList.toggle('active',b.dataset.reg===regFilter));
+  selMon=null;rebuildIndex();setView(view);
+});
+document.getElementById('search').addEventListener('input',e=>{q=e.target.value.trim().toLowerCase();
+  if(view==='poke')renderPokeList();else if(view==='speed')renderSpeed();else if(view==='team')renderTeams();});
+document.getElementById('list').addEventListener('click',e=>{const r=e.target.closest('.row');if(!r)return;
+  selMon=r.dataset.name;megaCmp=false;renderPokeList();renderDetail(selMon);});
+setView('poke');
+
+// About modal: open from footer link, close with esc
+document.getElementById('aboutlink')?.addEventListener('click',e=>{
+  e.preventDefault();document.getElementById('aboutoverlay').classList.add('open');});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){document.getElementById('aboutoverlay')?.classList.remove('open');}});
+
+// Console signature — quiet author signal for the curious dev
+try{
+  console.log('%cbacktwo%c\n%cread the back two%c\nbuilt by @Kevv-J — found a bug? https://github.com/Kevv-J/backtwo/issues',
+    'color:#22d3ee;font:600 28px Rajdhani,sans-serif;letter-spacing:-1px;line-height:.85',
+    '',
+    'color:#a78bfa;font:700 28px Rajdhani,sans-serif;letter-spacing:-1px;line-height:.85',
+    'color:#7a8095;font:11px JetBrains Mono,monospace');
+}catch(e){}
+</script>
+</body>
+</html>

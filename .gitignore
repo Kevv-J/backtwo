@@ -1,0 +1,26 @@
+# venv
+venv/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Cached upstream data — regenerable by re-running build_db.py / build_dex.py
+data/cache/
+data/api_cache/
+
+# Build-pipeline intermediates — emitted by build scripts; injected into index.html
+# at build time, so the runtime site does not need them committed.
+data/dex.json
+data/teams.json
+data/og_fonts/
+
+# OS junk
+.DS_Store
+*~
+
+# Figma-generated visual reference (not part of the project)
+Generate UI_UX from Design Doc/
+Generate UI_UX from Design Doc.zip
+
