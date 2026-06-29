@@ -398,12 +398,15 @@
   @keyframes landingIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
   .landing-vec{display:block;margin:0 auto 18px;width:340px;max-width:90%;height:auto}
   .landing-vec .lv-cell{fill:#13161f;stroke:rgba(255,255,255,0.10);stroke-width:1}
-  .landing-vec .lv-q{fill:#3a3f55;font-family:Rajdhani,Inter,sans-serif;font-weight:700;font-size:22px;text-anchor:middle;dominant-baseline:central}
+  .landing-vec .lv-cell.lv-dashed{stroke:rgba(255,255,255,0.18);stroke-dasharray:3 3}
+  .landing-vec .lv-strike{stroke:rgba(255,255,255,0.25);stroke-width:1.2}
+  .landing-vec .lv-q{fill:#3a3f55;font-family:Rajdhani,Inter,sans-serif;font-weight:700;font-size:20px;text-anchor:middle;dominant-baseline:central}
   .landing-vec .lv-front-a{fill:rgba(6,182,212,0.12);stroke:#22d3ee;stroke-width:2;filter:drop-shadow(0 0 14px rgba(34,211,238,0.35))}
   .landing-vec .lv-front-b{fill:rgba(139,92,246,0.12);stroke:#a78bfa;stroke-width:2;filter:drop-shadow(0 0 14px rgba(167,139,250,0.35))}
   .landing-vec .lv-glyph-a{fill:#22d3ee;font-family:Rajdhani,Inter,sans-serif;font-weight:700;font-size:30px;text-anchor:middle;dominant-baseline:central}
   .landing-vec .lv-glyph-b{fill:#a78bfa;font-family:Rajdhani,Inter,sans-serif;font-weight:700;font-size:30px;text-anchor:middle;dominant-baseline:central}
   .landing-vec .lv-caption{fill:var(--muted-foreground);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;letter-spacing:.06em;text-anchor:middle}
+  .landing-vec .lv-caption-strong{fill:var(--foreground);font-weight:600}
   .landing-vec .lv-arrow{stroke:var(--muted-foreground);stroke-width:1.2;fill:none}
   .landing-wm{display:inline-flex;flex-direction:column;line-height:.82;font-family:'Rajdhani','Inter',sans-serif;text-transform:lowercase;letter-spacing:-2px;margin-bottom:14px}
   .landing-wm .wm-a{color:var(--atk-color);font-weight:600;font-size:96px}
@@ -691,28 +694,41 @@ function renderLanding(){
   const nTeams = scopeTeams.length.toLocaleString();
   const nMons = pokeList.length;
   const nMoves = Object.keys(DEX.moves).length;
-  // SVG: a row of 6 team-preview cells with the back two popped forward, cyan / violet.
-  const svg = `<svg class="landing-vec" viewBox="0 0 340 130" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Team preview: four lead mons revealed, the back two hidden">
-    <!-- Four lead-mon cells (revealed, dim) -->
-    <g>
-      ${[0,1,2,3].map(i=>`
-        <rect class="lv-cell" x="${i*46}" y="36" width="40" height="40" rx="5"/>
-        <text class="lv-q" x="${i*46+20}" y="56">?</text>
-      `).join('')}
+  // SVG: a row of 6 team-preview mons split into the real VGC groups —
+  // 2 left behind (dim, dashed), 2 leading (medium), 2 in the back (popped, cyan/violet).
+  // Layout (viewBox 380×140): three pairs, ~14px gap intra-pair, 32px gap inter-pair.
+  // Pair 1 (left behind): x=10,54   Pair 2 (leading): x=130,174   Pair 3 (back): x=250,302
+  const svg = `<svg class="landing-vec" viewBox="0 0 380 140" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Team preview of 6 mons: 2 left behind, 2 leading, 2 in the back">
+    <!-- Pair 1: left behind (dim, dashed border, strikethrough) -->
+    <g opacity="0.32">
+      <rect class="lv-cell lv-dashed" x="10" y="32" width="40" height="40" rx="5"/>
+      <line class="lv-strike" x1="14" y1="68" x2="46" y2="36"/>
+      <rect class="lv-cell lv-dashed" x="56" y="32" width="40" height="40" rx="5"/>
+      <line class="lv-strike" x1="60" y1="68" x2="92" y2="36"/>
     </g>
-    <!-- The "back two": popped forward, cyan + violet -->
-    <g>
-      <rect class="lv-front-a" x="206" y="22" width="52" height="64" rx="7"/>
-      <text class="lv-glyph-a" x="232" y="54">?</text>
-      <rect class="lv-front-b" x="270" y="22" width="52" height="64" rx="7"/>
-      <text class="lv-glyph-b" x="296" y="54">?</text>
-      <!-- Tiny chevrons pointing up to highlight the back two -->
-      <path class="lv-arrow" d="M222 100 L232 92 L242 100"/>
-      <path class="lv-arrow" d="M286 100 L296 92 L306 100"/>
+    <!-- Pair 2: leading (medium, neutral) -->
+    <g opacity="0.85">
+      <rect class="lv-cell" x="130" y="32" width="40" height="40" rx="5"/>
+      <text class="lv-q" x="150" y="52">?</text>
+      <rect class="lv-cell" x="176" y="32" width="40" height="40" rx="5"/>
+      <text class="lv-q" x="196" y="52">?</text>
     </g>
-    <text class="lv-caption" x="264" y="120">the back two</text>
-    <!-- Caption for the lead set -->
-    <text class="lv-caption" x="92" y="120">team preview · 6</text>
+    <!-- Pair 3: the back two — popped forward, cyan + violet, with glow -->
+    <g>
+      <rect class="lv-front-a" x="250" y="18" width="52" height="64" rx="7"/>
+      <text class="lv-glyph-a" x="276" y="50">?</text>
+      <rect class="lv-front-b" x="312" y="18" width="52" height="64" rx="7"/>
+      <text class="lv-glyph-b" x="338" y="50">?</text>
+      <!-- chevrons pointing up at the back two -->
+      <path class="lv-arrow" d="M266 96 L276 88 L286 96"/>
+      <path class="lv-arrow" d="M328 96 L338 88 L348 96"/>
+    </g>
+    <!-- Captions under each pair -->
+    <text class="lv-caption" x="53" y="118">left behind</text>
+    <text class="lv-caption" x="173" y="118">leading</text>
+    <text class="lv-caption lv-caption-strong" x="307" y="118">the back two</text>
+    <!-- Bracket caption: spans all 6 -->
+    <text class="lv-caption" x="190" y="134" style="opacity:0.55">— team preview · 6 mons —</text>
   </svg>`;
   const cards = [
     ['poke', 'Pokémon', 'Browse the meta — usage, sets, speed tiers, teammates.', '', `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 010 18"/></svg>`],
