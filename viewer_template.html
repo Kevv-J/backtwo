@@ -694,39 +694,39 @@ function renderLanding(){
   const nTeams = scopeTeams.length.toLocaleString();
   const nMons = pokeList.length;
   const nMoves = Object.keys(DEX.moves).length;
-  // SVG: a row of 6 team-preview mons split into the real VGC groups —
-  // 2 left behind (dim, dashed), 2 leading (medium), 2 in the back (popped, cyan/violet).
-  // Layout (viewBox 380×140): three pairs, ~14px gap intra-pair, 32px gap inter-pair.
-  // Pair 1 (left behind): x=10,54   Pair 2 (leading): x=130,174   Pair 3 (back): x=250,302
-  const svg = `<svg class="landing-vec" viewBox="0 0 380 140" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Team preview of 6 mons: 2 left behind, 2 leading, 2 in the back">
-    <!-- Pair 1: left behind (dim, dashed border, strikethrough) -->
-    <g opacity="0.32">
-      <rect class="lv-cell lv-dashed" x="10" y="32" width="40" height="40" rx="5"/>
-      <line class="lv-strike" x1="14" y1="68" x2="46" y2="36"/>
-      <rect class="lv-cell lv-dashed" x="56" y="32" width="40" height="40" rx="5"/>
-      <line class="lv-strike" x1="60" y1="68" x2="92" y2="36"/>
-    </g>
-    <!-- Pair 2: leading (medium, neutral) -->
+  // SVG: 6 mons in team preview, split into the VGC bring groups.
+  // Order is leading → back two (centered, popped — the brand) → left behind (dim, unknown).
+  // Strict honesty: "left behind" is dim with "?" because at team preview you DO NOT
+  // know which 2 of the 6 they'll skip. Only leads + back are predicted by the tool.
+  const svg = `<svg class="landing-vec" viewBox="0 0 380 140" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Team preview of 6 mons: 2 leading, 2 in the back, 2 left behind (you don't know which)">
+    <!-- Pair 1: leading (normal style, neutral confidence) -->
     <g opacity="0.85">
-      <rect class="lv-cell" x="130" y="32" width="40" height="40" rx="5"/>
-      <text class="lv-q" x="150" y="52">?</text>
-      <rect class="lv-cell" x="176" y="32" width="40" height="40" rx="5"/>
-      <text class="lv-q" x="196" y="52">?</text>
+      <rect class="lv-cell" x="25" y="32" width="40" height="40" rx="5"/>
+      <text class="lv-q" x="45" y="52">?</text>
+      <rect class="lv-cell" x="70" y="32" width="40" height="40" rx="5"/>
+      <text class="lv-q" x="90" y="52">?</text>
     </g>
-    <!-- Pair 3: the back two — popped forward, cyan + violet, with glow -->
+    <!-- Pair 2: the back two — centered, popped, cyan + violet (brand) -->
     <g>
-      <rect class="lv-front-a" x="250" y="18" width="52" height="64" rx="7"/>
-      <text class="lv-glyph-a" x="276" y="50">?</text>
-      <rect class="lv-front-b" x="312" y="18" width="52" height="64" rx="7"/>
-      <text class="lv-glyph-b" x="338" y="50">?</text>
+      <rect class="lv-front-a" x="135" y="18" width="52" height="64" rx="7"/>
+      <text class="lv-glyph-a" x="161" y="50">?</text>
+      <rect class="lv-front-b" x="193" y="18" width="52" height="64" rx="7"/>
+      <text class="lv-glyph-b" x="219" y="50">?</text>
       <!-- chevrons pointing up at the back two -->
-      <path class="lv-arrow" d="M266 96 L276 88 L286 96"/>
-      <path class="lv-arrow" d="M328 96 L338 88 L348 96"/>
+      <path class="lv-arrow" d="M151 96 L161 88 L171 96"/>
+      <path class="lv-arrow" d="M209 96 L219 88 L229 96"/>
+    </g>
+    <!-- Pair 3: left behind (dim + dashed, but no strikethrough — we don't know which) -->
+    <g opacity="0.32">
+      <rect class="lv-cell lv-dashed" x="270" y="32" width="40" height="40" rx="5"/>
+      <text class="lv-q" x="290" y="52">?</text>
+      <rect class="lv-cell lv-dashed" x="315" y="32" width="40" height="40" rx="5"/>
+      <text class="lv-q" x="335" y="52">?</text>
     </g>
     <!-- Captions under each pair -->
-    <text class="lv-caption" x="53" y="118">left behind</text>
-    <text class="lv-caption" x="173" y="118">leading</text>
-    <text class="lv-caption lv-caption-strong" x="307" y="118">the back two</text>
+    <text class="lv-caption" x="68" y="118">leading</text>
+    <text class="lv-caption lv-caption-strong" x="190" y="118">the back two</text>
+    <text class="lv-caption" x="313" y="118">left behind?</text>
     <!-- Bracket caption: spans all 6 -->
     <text class="lv-caption" x="190" y="134" style="opacity:0.55">— team preview · 6 mons —</text>
   </svg>`;
