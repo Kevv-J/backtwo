@@ -227,9 +227,64 @@ def enrich(team: dict) -> dict:
 
 
 # --------------------------------------------------------------------------- #
+# Schema validation — fail closed so CI doesn't ship a half-broken dataset
+# --------------------------------------------------------------------------- #
+# Thresholds chosen to tolerate normal week-over-week variation (teams being
+# added in the dozens) but catch catastrophic failures (sheet column rename,
+# permission revoke, paste service down).
+VALIDATION_THRESHOLDS = {
+    "min_total_teams": 1200,        # current ~1404; floor at ~85% to absorb weekly drift
+    "min_per_reg_teams": 80,        # M-B is smaller (~300); floor catches "empty tab"
+    "min_resolve_rate": 0.70,       # pokepaste resolve %; current ~97%; alerts on outage
+    "max_empty_team_rate": 0.10,    # teams with zero mons; should be near-zero
+}
+
+
+def validate_scrape(teams: list[dict]) -> list[str]:
+    """Return list of validation errors. Empty list = OK."""
+    errors: list[str] = []
+    n_total = len(teams)
+    th = VALIDATION_THRESHOLDS
+
+    if n_total < th["min_total_teams"]:
+        errors.append(
+            f"team count {n_total} below floor {th['min_total_teams']} "
+            f"(VGCPastes sheet likely changed or permission revoked)"
+        )
+
+    by_reg = {r: sum(1 for t in teams if t.get("reg") == r) for r, _ in REGS}
+    for reg, _ in REGS:
+        if by_reg.get(reg, 0) < th["min_per_reg_teams"]:
+            errors.append(
+                f"reg {reg} has {by_reg.get(reg, 0)} teams, below floor "
+                f"{th['min_per_reg_teams']} (tab gid may have changed)"
+            )
+
+    if n_total > 0:
+        resolved = sum(1 for t in teams if t.get("raw_paste"))
+        rate = resolved / n_total
+        if rate < th["min_resolve_rate"]:
+            errors.append(
+                f"pokepaste resolve rate {rate:.1%} below floor "
+                f"{th['min_resolve_rate']:.0%} (pokepast.es may be down)"
+            )
+
+        empty = sum(1 for t in teams if not t.get("mons"))
+        empty_rate = empty / n_total
+        if empty_rate > th["max_empty_team_rate"]:
+            errors.append(
+                f"{empty}/{n_total} teams ({empty_rate:.1%}) have zero mons, "
+                f"above ceiling {th['max_empty_team_rate']:.0%} "
+                f"(showdown parse likely broken)"
+            )
+
+    return errors
+
+
+# --------------------------------------------------------------------------- #
 # Main
 # --------------------------------------------------------------------------- #
-def main() -> None:
+def main() -> int:
     DATA.mkdir(exist_ok=True)
     CACHE.mkdir(exist_ok=True)
 
@@ -250,9 +305,23 @@ def main() -> None:
     print(f"Resolved full sets for {resolved}/{len(teams)} teams.", flush=True)
     print(f"Breakdown by reg: {by_reg}", flush=True)
 
+    # Validate BEFORE overwriting teams.json so previous good snapshot survives
+    # a bad scrape. CI sees the non-zero exit and opens an issue.
+    errors = validate_scrape(teams)
+    if errors:
+        print("\n::error::Scrape validation failed:", flush=True)
+        for e in errors:
+            print(f"  - {e}", flush=True)
+        print(
+            "\nKeeping last good teams.json on disk; rerun after investigating.",
+            flush=True,
+        )
+        return 1
+
     TEAMS_JSON.write_text(json.dumps(teams, ensure_ascii=False, indent=2))
     print(f"Wrote {TEAMS_JSON}", flush=True)
     print("\nNow run: ./venv/bin/python build_dex.py  (adds stats + builds index.html)", flush=True)
+    return 0
 
 
 if __name__ == "__main__":

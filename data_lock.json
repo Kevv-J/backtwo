@@ -1,0 +1,24 @@
+{
+  "generated_at_utc": "2026-06-29T20:08:21Z",
+  "build_sha": "0a469af",
+  "build_date": "2026-06-30",
+  "scrape": {
+    "team_total": 1404,
+    "by_reg": {
+      "M-A": 1104,
+      "M-B": 300
+    },
+    "resolved_pastes": 1404,
+    "resolve_rate": 1.0
+  },
+  "dex": {
+    "forme_count": 264,
+    "move_count": 363,
+    "type_count": 18
+  },
+  "sources": {
+    "vgcpastes_sheet_id": "1axlwmzPA49rYkqXh7zHvAtSP-TKbM0ijGYBPRflLSWw",
+    "pokeapi_base": "https://pokeapi.co/api/v2",
+    "showdown_moves_url": "https://play.pokemonshowdown.com/data/moves.js"
+  }
+}

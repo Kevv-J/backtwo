@@ -397,6 +397,39 @@ def main() -> None:
     HTML_OUT.write_text(html)
     print(f"Wrote {HTML_OUT} (v{build_sha} · {build_date}). Open it in your browser.", flush=True)
 
+    # data_lock.json: build metadata, committed alongside index.html.
+    # Lets anyone (incl. future you) inspect what the data shape was at any
+    # given build sha. Also serves as the changelog primitive for the cron.
+    by_reg = {}
+    for t in teams:
+        r = t.get("reg") or "?"
+        by_reg[r] = by_reg.get(r, 0) + 1
+    resolved = sum(1 for t in teams if t.get("raw_paste"))
+    lock = {
+        "generated_at_utc": _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "build_sha": build_sha,
+        "build_date": build_date,
+        "scrape": {
+            "team_total": len(teams),
+            "by_reg": by_reg,
+            "resolved_pastes": resolved,
+            "resolve_rate": round(resolved / len(teams), 4) if teams else 0,
+        },
+        "dex": {
+            "forme_count": len(dex.get("formes", {})),
+            "move_count": len(dex.get("moves", {})),
+            "type_count": len(dex.get("typechart", {})),
+        },
+        "sources": {
+            "vgcpastes_sheet_id": "1axlwmzPA49rYkqXh7zHvAtSP-TKbM0ijGYBPRflLSWw",
+            "pokeapi_base": "https://pokeapi.co/api/v2",
+            "showdown_moves_url": "https://play.pokemonshowdown.com/data/moves.js",
+        },
+    }
+    lock_path = ROOT / "data_lock.json"
+    lock_path.write_text(json.dumps(lock, indent=2) + "\n")
+    print(f"Wrote {lock_path}", flush=True)
+
 
 if __name__ == "__main__":
     sys.exit(main())

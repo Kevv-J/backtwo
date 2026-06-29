@@ -1,0 +1,116 @@
+name: Weekly data refresh
+
+# Rebuilds backtwo from the live VGCPastes sheet + PokéAPI + Showdown moves.
+# Runs every Tuesday at 09:00 UTC (after weekend tournament dust settles).
+# Manual trigger always available via Actions → Run workflow.
+
+on:
+  schedule:
+    - cron: '0 9 * * 2'
+  workflow_dispatch:
+
+permissions:
+  contents: write   # commit the regenerated artifacts back to main
+  issues: write     # open an issue if the rebuild fails
+
+concurrency:
+  group: weekly-rebuild
+  cancel-in-progress: false
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install Python dependencies
+        run: pip install --quiet requests Pillow
+
+      - name: Scrape VGCPastes + validate
+        run: python build_db.py
+
+      - name: Build dex + render index.html + data_lock.json
+        run: python build_dex.py
+
+      - name: Render OG card
+        run: python build_og.py
+
+      - name: Artifact size budget
+        # Hard ceiling so a runaway change can't push a 50MB page to Pages.
+        run: |
+          INDEX_BYTES=$(stat -c%s index.html)
+          INDEX_MB=$(( INDEX_BYTES / 1048576 ))
+          MAX_MB=7
+          echo "index.html: ${INDEX_MB} MB ($(( INDEX_BYTES / 1024 )) KB)"
+          if (( INDEX_MB > MAX_MB )); then
+            echo "::error::index.html (${INDEX_MB} MB) exceeds budget (${MAX_MB} MB)"
+            exit 1
+          fi
+          SPRITES_BYTES=$(du -sb data/sprites 2>/dev/null | cut -f1)
+          SPRITES_MB=$(( SPRITES_BYTES / 1048576 ))
+          echo "data/sprites/: ${SPRITES_MB} MB"
+          if (( SPRITES_MB > 10 )); then
+            echo "::error::sprites total (${SPRITES_MB} MB) exceeds budget (10 MB)"
+            exit 1
+          fi
+
+      - name: Commit + push if anything changed
+        run: |
+          git config user.name "backtwo-bot"
+          git config user.email "noreply@github.com"
+          # Stage only the files the cron is allowed to touch.
+          # Intermediates (data/dex.json, data/teams.json, etc.) are gitignored.
+          git add index.html og.png data/sprites/ data_lock.json
+          if git diff --cached --quiet; then
+            echo "::notice::No changes detected. Nothing to commit."
+            exit 0
+          fi
+          STAMP=$(date -u +%F)
+          # [skip ci] prevents accidental re-triggering of other workflows.
+          git commit -m "chore(data): weekly refresh ${STAMP} [skip ci]"
+          git push origin main
+          echo "::notice::Refreshed and pushed at ${STAMP}"
+
+      - name: Open issue on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          STAMP=$(date -u +%F)
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          gh issue create \
+            --title "Weekly rebuild failed (${STAMP})" \
+            --label "automation" \
+            --body "$(cat <<EOF
+          The weekly rebuild workflow failed on ${STAMP}.
+
+          **Run**: ${RUN_URL}
+
+          ### Likely causes
+          - VGCPastes sheet structure changed (column rename, tab gid changed, permission revoked)
+          - PokéAPI rate-limited or returned new schema
+          - Pokepaste service down
+          - Scrape validator threshold tripped (see workflow logs for the specific check that failed)
+          - Artifact size budget exceeded
+
+          ### Fix
+          1. Inspect the run logs at the URL above
+          2. Reproduce locally: \`python build_db.py\`
+          3. If thresholds need adjusting, edit \`VALIDATION_THRESHOLDS\` in \`build_db.py\`
+          4. Re-run via Actions → Run workflow once the underlying issue is resolved
+
+          The last-known-good \`teams.json\` is preserved on the runner but not committed —
+          the live site continues to serve the previously-deployed \`index.html\` until a successful rebuild.
+          EOF
+          )"
