@@ -243,6 +243,12 @@
   .optbtn[data-grp="terr"].active{background:var(--good-bg);border-color:var(--good-border);color:var(--good)}
   /* Room conditions: violet as Figma */
   .optbtn[data-grp="rm"].active{background:var(--violet-bg);border-color:var(--violet-border);color:var(--violet)}
+  /* Inline "+ rare" disclosure for Magic Room / Wonder Room */
+  .rare-fields{display:inline-block}
+  .rare-fields summary{list-style:none;display:inline-block;opacity:.6}
+  .rare-fields summary::-webkit-details-marker{display:none}
+  .rare-fields[open] summary{opacity:1;background:var(--card-elev);color:var(--foreground);border-color:var(--border-strong)}
+  .rare-fields .rare-row{display:inline-flex;gap:4px;margin-left:4px;vertical-align:middle}
   /* Status group active per side-color (handled at slot level via inheritance) */
   .optbtn.critbtn.active{background:rgba(239,68,68,0.18);border-color:rgba(239,68,68,0.40);color:#fca5a5}
   /* HP slider */
@@ -387,6 +393,48 @@
   .hovgrid{display:grid;grid-template-columns:auto 1fr;gap:8px 14px;align-items:baseline;font-size:13px}
   .hovgrid kbd{font-family:ui-monospace,Menlo,monospace;background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:2px 7px;font-size:12px;color:var(--accent);text-align:center;font-weight:600}
   .pill2{display:inline-block;border-radius:3px;padding:1px 6px;font-size:10px;font-weight:700;margin-right:4px;text-transform:uppercase;letter-spacing:.06em;border:1px solid}
+  /* ===== Landing screen (Pokémon view empty state) ===== */
+  .landing{max-width:760px;margin:32px auto 48px;padding:0 28px;text-align:center;animation:landingIn .45s cubic-bezier(.2,.7,.2,1) both}
+  @keyframes landingIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  .landing-vec{display:block;margin:0 auto 18px;width:340px;max-width:90%;height:auto}
+  .landing-vec .lv-cell{fill:#13161f;stroke:rgba(255,255,255,0.10);stroke-width:1}
+  .landing-vec .lv-q{fill:#3a3f55;font-family:Rajdhani,Inter,sans-serif;font-weight:700;font-size:22px;text-anchor:middle;dominant-baseline:central}
+  .landing-vec .lv-front-a{fill:rgba(6,182,212,0.12);stroke:#22d3ee;stroke-width:2;filter:drop-shadow(0 0 14px rgba(34,211,238,0.35))}
+  .landing-vec .lv-front-b{fill:rgba(139,92,246,0.12);stroke:#a78bfa;stroke-width:2;filter:drop-shadow(0 0 14px rgba(167,139,250,0.35))}
+  .landing-vec .lv-glyph-a{fill:#22d3ee;font-family:Rajdhani,Inter,sans-serif;font-weight:700;font-size:30px;text-anchor:middle;dominant-baseline:central}
+  .landing-vec .lv-glyph-b{fill:#a78bfa;font-family:Rajdhani,Inter,sans-serif;font-weight:700;font-size:30px;text-anchor:middle;dominant-baseline:central}
+  .landing-vec .lv-caption{fill:var(--muted-foreground);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;letter-spacing:.06em;text-anchor:middle}
+  .landing-vec .lv-arrow{stroke:var(--muted-foreground);stroke-width:1.2;fill:none}
+  .landing-wm{display:inline-flex;flex-direction:column;line-height:.82;font-family:'Rajdhani','Inter',sans-serif;text-transform:lowercase;letter-spacing:-2px;margin-bottom:14px}
+  .landing-wm .wm-a{color:var(--atk-color);font-weight:600;font-size:96px}
+  .landing-wm .wm-b{color:var(--def-color);font-weight:700;font-size:96px}
+  .landing-mantra{font-family:'Rajdhani','Inter',sans-serif;font-size:24px;font-weight:600;color:var(--foreground);letter-spacing:.01em;margin:0 0 6px}
+  .landing-sub{color:var(--muted-foreground);font-size:13px;margin-bottom:22px;max-width:540px;margin-left:auto;margin-right:auto;line-height:1.5}
+  .landing-stats{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-bottom:30px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--muted-foreground)}
+  .landing-stats .lstat{padding:5px 11px;background:var(--secondary);border:1px solid var(--border);border-radius:6px}
+  .landing-stats .lstat b{color:var(--foreground);font-weight:600}
+  .landing-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;max-width:640px;margin:0 auto}
+  .landing-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;cursor:pointer;text-align:left;transition:all .15s;display:flex;gap:12px;align-items:flex-start;position:relative;overflow:hidden}
+  .landing-card:hover{border-color:var(--border-strong);transform:translateY(-1px);background:var(--card-elev)}
+  .landing-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent-c);transition:width .15s}
+  .landing-card:hover::before{width:5px}
+  .landing-card[data-go="poke"]{--accent-c:var(--atk-color)}
+  .landing-card[data-go="find"]{--accent-c:var(--warning)}
+  .landing-card[data-go="dmg"]{--accent-c:var(--violet)}
+  .landing-card[data-go="team"]{--accent-c:var(--good)}
+  .landing-card .lc-ico{flex-shrink:0;width:36px;height:36px;border-radius:8px;background:var(--secondary);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--accent-c)}
+  .landing-card .lc-ico svg{display:block}
+  .landing-card .lc-body{flex:1;min-width:0}
+  .landing-card .lc-title{font-family:'Rajdhani','Inter',sans-serif;font-weight:700;font-size:13px;color:var(--foreground);text-transform:uppercase;letter-spacing:.10em;margin-bottom:3px}
+  .landing-card .lc-desc{color:var(--muted-foreground);font-size:11.5px;line-height:1.45}
+  .landing-card .lc-hint{margin-top:4px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;color:var(--muted-foreground);opacity:.7}
+  .landing-card .lc-hint kbd{font-family:inherit;background:var(--secondary);border:1px solid var(--border);border-radius:3px;padding:0 4px;color:var(--accent-c)}
+  .landing-tip{margin-top:24px;color:var(--muted-foreground);font-size:11px;font-family:'JetBrains Mono',ui-monospace,monospace}
+  @media (max-width:580px){
+    .landing-grid{grid-template-columns:1fr}
+    .landing-wm .wm-a,.landing-wm .wm-b{font-size:72px}
+    .landing-mantra{font-size:20px}
+  }
   /* Site footer — one muted line: byline · repo · data · disclaimer · build */
   footer.sitefoot{border-top:1px solid var(--border);background:rgba(8,9,13,0.92);padding:8px 16px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;color:var(--muted-foreground);display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;justify-content:flex-start}
   footer.sitefoot a{color:var(--muted-foreground);text-decoration:none;border-bottom:1px dotted rgba(255,255,255,0.18)}
@@ -416,8 +464,9 @@
 <body>
 <div id="helpoverlay" onclick="this.style.display='none'">
   <div class="hovbox" onclick="event.stopPropagation()">
-    <h3>Damage Calc · Hotkeys</h3>
+    <h3>Hotkeys</h3>
     <div class="hovgrid">
+      <kbd style="background:linear-gradient(135deg,rgba(34,211,238,0.18),rgba(167,139,250,0.18));border-color:var(--atk-color);color:var(--foreground)">b 2</kbd><span>Jump to Damage Calc (the brand mark)</span>
       <kbd>1–6</kbd><span>Load opponent's mon (or my team if no opposing team) into B</span>
       <kbd>Shift+1–6</kbd><span>Load my team mon into A</span>
       <kbd>[ / ]</kbd><span>Cycle B through opposing team mons</span>
@@ -453,7 +502,7 @@
 <main>
   <div class="view active" id="view-poke">
     <div id="list"></div>
-    <div id="detail"><div class="empty">Pick a Pokémon on the left, or type to search.</div></div>
+    <div id="detail"></div>
   </div>
   <div class="view" id="view-find"><div class="pad" id="findpad"></div></div>
   <div class="view" id="view-dmg"><div class="pad" id="dmgpad"></div></div>
@@ -635,8 +684,77 @@ function statBlock(forme){
   return `<div class="card"><h3>${esc(forme)} — base stats ${types}</h3>${rows.join('')}
     <div class="small" style="margin-top:6px">BST ${order.reduce((s,[k])=>s+cur[k],0)}${cmp?` · Δ vs ${esc(isMega(forme)?baseL:forme)}`:''}</div></div>`;
 }
+// ---------- Landing screen (shown when no mon is selected) ----------
+function renderLanding(){
+  const det=document.getElementById('detail');
+  if(!det) return;
+  const nTeams = scopeTeams.length.toLocaleString();
+  const nMons = pokeList.length;
+  const nMoves = Object.keys(DEX.moves).length;
+  // SVG: a row of 6 team-preview cells with the back two popped forward, cyan / violet.
+  const svg = `<svg class="landing-vec" viewBox="0 0 340 130" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Team preview: four lead mons revealed, the back two hidden">
+    <!-- Four lead-mon cells (revealed, dim) -->
+    <g>
+      ${[0,1,2,3].map(i=>`
+        <rect class="lv-cell" x="${i*46}" y="36" width="40" height="40" rx="5"/>
+        <text class="lv-q" x="${i*46+20}" y="56">?</text>
+      `).join('')}
+    </g>
+    <!-- The "back two": popped forward, cyan + violet -->
+    <g>
+      <rect class="lv-front-a" x="206" y="22" width="52" height="64" rx="7"/>
+      <text class="lv-glyph-a" x="232" y="54">?</text>
+      <rect class="lv-front-b" x="270" y="22" width="52" height="64" rx="7"/>
+      <text class="lv-glyph-b" x="296" y="54">?</text>
+      <!-- Tiny chevrons pointing up to highlight the back two -->
+      <path class="lv-arrow" d="M222 100 L232 92 L242 100"/>
+      <path class="lv-arrow" d="M286 100 L296 92 L306 100"/>
+    </g>
+    <text class="lv-caption" x="264" y="120">the back two</text>
+    <!-- Caption for the lead set -->
+    <text class="lv-caption" x="92" y="120">team preview · 6</text>
+  </svg>`;
+  const cards = [
+    ['poke', 'Pokémon', 'Browse the meta — usage, sets, speed tiers, teammates.', '', `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 010 18"/></svg>`],
+    ['find', 'Find Team', 'Type the 6 opposing mons — identify the archetype.', '', `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>`],
+    ['dmg', 'Damage Calc', 'Showdown-style, Gen-9 accurate, doubles by default.', 'b 2', `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M9 9l6 6M15 9l-6 6"/></svg>`],
+    ['team', 'Teams', `Browse every team in the dataset — ${nTeams} tournament builds.`, '', `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18M3 12h18M3 17h18"/></svg>`],
+  ];
+  det.innerHTML = `<div class="landing">
+    ${svg}
+    <h1 class="landing-wm"><span class="wm-a">back</span><span class="wm-b">two</span></h1>
+    <div class="landing-mantra">Read the back two.</div>
+    <div class="landing-sub">A VGC doubles companion for Pokémon Champions — built for the climb. Browse a meta cut from real tournament teams, scout an opponent's archetype from team preview, and run damage calcs that match the game you're actually playing.</div>
+    <div class="landing-stats">
+      <span class="lstat"><b>${nTeams}</b> teams</span>
+      <span class="lstat"><b>${nMons}</b> Pokémon</span>
+      <span class="lstat"><b>${nMoves}</b> moves modeled</span>
+      <span class="lstat">VGC <b>doubles</b> · Reg <b>${(regFilter||'').replace(/^M-/,'')}</b></span>
+    </div>
+    <div class="landing-grid">
+      ${cards.map(([go,title,desc,hint,ico])=>`
+        <div class="landing-card" data-go="${go}">
+          <span class="lc-ico">${ico}</span>
+          <span class="lc-body">
+            <div class="lc-title">${esc(title)}</div>
+            <div class="lc-desc">${esc(desc)}</div>
+            ${hint?`<div class="lc-hint">press <kbd>${esc(hint)}</kbd></div>`:''}
+          </span>
+        </div>
+      `).join('')}
+    </div>
+    <div class="landing-tip">tip — anywhere on the page, press <kbd style="font-family:inherit;background:var(--secondary);border:1px solid var(--border);border-radius:3px;padding:0 4px;color:var(--atk-color)">?</kbd> for the full hotkey list</div>
+  </div>`;
+  // Wire feature-card clicks
+  det.querySelectorAll('.landing-card').forEach(c=>c.addEventListener('click',()=>{
+    const go=c.dataset.go;
+    if(go==='poke'){document.getElementById('search')?.focus();return;}
+    setView(go);
+  }));
+}
+
 function renderDetail(name){
-  const e=idx.get(name);if(!e){document.getElementById('detail').innerHTML='<div class="empty">Pick a Pokémon.</div>';return;}
+  const e=idx.get(name);if(!e){renderLanding();return;}
   const pct=(e.count/scopeTeams.length*100).toFixed(1);
   const mega=isMega(name), hasMega=!isMega(name)&&megaBases.has(name);
   const newMB=isNewInMB(name);
@@ -699,13 +817,20 @@ function speedCard(name){
   const faster=speedRank.slice(Math.max(0,pos-5),pos);
   const slower=speedRank.slice(pos+1,pos+6);
   const line=arr=>arr.map(r=>`<div class="bar"><span class="lab">${esc(r.name)}</span><span class="n">${r.common}</span></div>`).join('')||'<div class="meta">—</div>';
+  // Trick Room: order is reversed (slower acts first). Show TR-relative neighbours.
+  const trFaster=slower.slice().reverse();  // people slower than me become "faster" in TR
+  const trSlower=faster.slice().reverse();  // people faster than me become "slower" in TR
   return `<div class="card"><h3>Speed · #${pos+1} of ${speedRank.length}</h3>
     <div class="bar"><span class="lab"><b>Common spread</b></span><span class="n"><b>${me.common}</b></span></div>
     <div class="bar"><span class="lab">Max (32 SP +nat)</span><span class="n">${me.max}</span></div>
     <div class="bar"><span class="lab">+Choice Scarf</span><span class="n">${Math.floor(me.common*1.5)}</span></div>
     <div class="bar"><span class="lab">+Tailwind</span><span class="n">${me.common*2}</span></div>
     <div class="small" style="margin:8px 0 2px;color:var(--bad)">Outspeeds you ↑</div>${line(faster)}
-    <div class="small" style="margin:8px 0 2px;color:var(--good)">You outspeed ↓</div>${line(slower)}</div>`;
+    <div class="small" style="margin:8px 0 2px;color:var(--good)">You outspeed ↓</div>${line(slower)}
+    <details style="margin-top:10px"><summary class="small" style="cursor:pointer;color:var(--violet);font-weight:600">Under Trick Room ↕</summary>
+      <div class="small" style="margin:8px 0 2px;color:var(--bad)">Moves first in TR ↑</div>${line(trFaster)}
+      <div class="small" style="margin:8px 0 2px;color:var(--good)">You move first in TR ↓</div>${line(trSlower)}
+    </details></div>`;
 }
 
 // ---------- DAMAGE CALC (1v1, Showdown-style) ----------
@@ -770,6 +895,13 @@ const ABILITY_DESC = {
   'Bulletproof':'Immune to bullet/bomb moves',
   'Shell Armor':'Cannot be critically hit',
   'Battle Armor':'Cannot be critically hit',
+  'Friend Guard':'[ally] ×0.75 incoming damage to ally (doubles)',
+  'Power Spot':'[ally] ×1.3 ally damage (doubles)',
+  'Battery':'[ally] ×1.3 ally special damage (doubles)',
+  'Steely Spirit':'[ally] ×1.5 ally Steel-type moves (doubles)',
+  'Flower Gift':'[ally] +50% Atk and ally SpD in Sun (doubles)',
+  'Telepathy':'[ally] Immune to damaging moves from ally (doubles)',
+  'Symbiosis':'[ally] Passes its item to ally when ally consumes its own (doubles; not modeled)',
   'Intimidate':'Lowers opposing Atk by 1 stage on switch-in',
   'Defiant':'Atk +2 stages when any stat is lowered',
   'Competitive':'SpA +2 stages when any stat is lowered',
@@ -1398,9 +1530,9 @@ function moveDetailHTML(side,atk,def,i){const mv=atk.moves[i];const info=DEX.mov
   const phys=info.category==='physical';
   const aBoost=boostLabel(phys?atk.boost?.atk||0:atk.boost?.spa||0);
   const dBoost=boostLabel(phys?def.boost?.def||0:def.boost?.spd||0);
-  const sp=r.isSpread?(doubles
-      ?` · <span class="small">spread; 1 target ${r.single.pctLo.toFixed(1)}–${r.single.pctHi.toFixed(1)}%</span>`
-      :` · <span class="small">spread in doubles ${r.spreadR.pctLo.toFixed(1)}–${r.spreadR.pctHi.toFixed(1)}%</span>`):'';
+  // Doubles is hard-pinned. For spread moves, the headline IS the 0.75× spread range;
+  // show the single-target range as a secondary line in case the move lands solo.
+  const sp=r.isSpread?` · <span class="small">if single-target ${r.single.pctLo.toFixed(1)}–${r.single.pctHi.toFixed(1)}%</span>`:'';
   const ctx=[];if(atk.ability)ctx.push(esc(atk.ability));if(def.ability)ctx.push(esc(def.ability));
   if(weather!=='none')ctx.push(esc(weather));if(field.terrain!=='none')ctx.push(esc(field.terrain+' terrain'));
   if(r.isCrit)ctx.push('<span style="color:var(--bad)">crit</span>');
@@ -1517,8 +1649,10 @@ function renderDmg(){
       <div class="fline"><span class="flbl">Field</span><div class="btnrow">
         <button class="optbtn ${field.trickRoom?'active':''}" data-grp="rm" data-v="trickRoom">Trick Room</button>
         <button class="optbtn ${field.gravity?'active':''}" data-grp="rm" data-v="gravity">Gravity</button>
-        <button class="optbtn ${field.magicRoom?'active':''}" data-grp="rm" data-v="magicRoom">Magic Room</button>
-        <button class="optbtn ${field.wonderRoom?'active':''}" data-grp="rm" data-v="wonderRoom">Wonder Room</button>
+        <details class="rare-fields"><summary class="optbtn rare-summary" title="Magic Room / Wonder Room — &lt;1% of VGC games">+ rare</summary><div class="rare-row">
+          <button class="optbtn ${field.magicRoom?'active':''}" data-grp="rm" data-v="magicRoom">Magic Room</button>
+          <button class="optbtn ${field.wonderRoom?'active':''}" data-grp="rm" data-v="wonderRoom">Wonder Room</button>
+        </div></details>
       </div></div>
     </div>
     <div id="matrixpane"></div>
@@ -1695,7 +1829,7 @@ function setView(v){view=v;
   const ph={poke:'Search a Pokémon (e.g. Charizard-Mega-Y)…',find:'',dmg:'',team:'Search team by player / event / Pokémon…'};
   document.getElementById('search').placeholder=ph[v]||'';
   document.getElementById('search').style.visibility=(v==='dmg'||v==='find')?'hidden':'visible';
-  if(v==='poke')renderPokeList();
+  if(v==='poke'){renderPokeList(); if(!selMon) renderLanding(); else renderDetail(selMon);}
   else if(v==='find')renderFind();
   else if(v==='dmg')renderDmg();
   else renderTeams();
@@ -1743,6 +1877,30 @@ document.addEventListener('keydown',e=>{
   if(e.key==='?'){showHelpOverlay(true);e.preventDefault();return;}
 });
 document.addEventListener('click',e=>{if(e.target.id==='helpoverlay'||e.target.closest('#helpoverlay'))showHelpOverlay(false);});
+
+// Global hotkeys (work outside the dmg view too). Handles the brand 'b 2' sequence
+// (type 'b' then '2' within 600ms → jump to Damage Calc) and global '?' help.
+(function(){
+  let bArmed = 0;
+  document.addEventListener('keydown', e=>{
+    if(e.target.matches('input, textarea, select, [contenteditable]')) return;
+    // The 'b 2' brand jump — works from any view
+    if((e.key==='b'||e.key==='B') && !e.metaKey && !e.ctrlKey && !e.altKey){
+      bArmed = Date.now();
+      e.preventDefault();
+      return;
+    }
+    if(e.key==='2' && bArmed && (Date.now() - bArmed) < 600){
+      bArmed = 0;
+      setView('dmg');
+      e.preventDefault();
+      return;
+    }
+    bArmed = 0;
+    // '?' opens help overlay from any view (dmg view already handles this; this catches the rest)
+    if(e.key==='?' && view!=='dmg'){showHelpOverlay(true);e.preventDefault();return;}
+  });
+})();
 // Global delegation: "Fight this team" buttons appear on team cards anywhere.
 document.body.addEventListener('click',e=>{
   const fb=e.target.closest('.fightcardbtn');if(!fb)return;

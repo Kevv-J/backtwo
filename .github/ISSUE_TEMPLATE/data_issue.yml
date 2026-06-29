@@ -1,0 +1,45 @@
+name: Data issue
+description: A Pokémon / team / move is missing, mislabeled, or wrong
+title: "[data] "
+labels: ["data"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for: missing teams from VGCPastes, wrong base stats / types / moves, mega resolution bugs, wrong region tag, etc. For viewer / calc bugs, use the bug report template instead.
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What's wrong?
+      options:
+        - Team is missing from the dataset
+        - Team is present but data is wrong (player / date / region / pokepaste link)
+        - Pokémon base stats / types are wrong
+        - Move data is wrong (BP / type / category / flags)
+        - Ability / item description or behavior is wrong
+        - Mega forme not resolving correctly
+        - Other (describe below)
+    validations:
+      required: true
+  - type: input
+    id: subject
+    attributes:
+      label: Which Pokémon / move / team?
+      placeholder: "Garchomp-Mega / Tera Blast / PC1234 / 'Logan's Calyrex-S team'"
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: What's the correct value, and what's there now?
+      placeholder: |
+        Expected: Floette-Eternal-Mega base Spe = 92
+        Got: base Spe = 75
+        Source: Pikalytics / PokéAPI / VGCPastes paste link
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: Source link (pokepaste / Pikalytics / etc.)
+      placeholder: "https://pokepast.es/..."

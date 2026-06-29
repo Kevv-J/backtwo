@@ -1,0 +1,52 @@
+name: Bug report
+description: Something broken in the viewer or calc?
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Solo maintainer here — I read every issue, but please don't expect an SLA.
+  - type: input
+    id: build
+    attributes:
+      label: Build version
+      description: Find this in the footer (e.g. `v0a469af 2026-06-30`)
+      placeholder: "v0a469af 2026-06-30"
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where did it happen?
+      options:
+        - Pokémon view (meta browser)
+        - Find Team
+        - Damage Calc
+        - Teams browser
+        - Landing screen
+        - Something else (describe below)
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: What did you click / type / search? What did you expect vs. what happened?
+      placeholder: |
+        1. Open Damage Calc
+        2. Set attacker to Garchomp @ Choice Scarf
+        3. Pick Earthquake
+        4. Expected: ... / Got: ...
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser
+      placeholder: "Chrome 132 on Linux / Safari iOS 18 / etc."
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Screenshots, console errors, the team you were testing — drop them here.
