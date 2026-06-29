@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>backtwo — VGC doubles companion</title>
 <meta name="description" content="A VGC doubles companion for Pokémon Champions — damage calc, team finder over 1,400+ tournament teams, and meta browser. Built for your climb through every regulation.">
 <meta name="author" content="Kevin John">
@@ -54,13 +54,17 @@
   body{margin:0;font-family:'Inter','Segoe UI',system-ui,sans-serif;font-size:13px;line-height:1.5;background:var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased;font-feature-settings:"cv02","cv03","cv04","cv11"}
   .display,h1,h2,h3,.section-title,.slbl,.flbl{font-family:'Rajdhani','Inter',sans-serif;font-weight:600;letter-spacing:.04em}
   .mono,.num,.tabnum{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
-  header{padding:0 16px;height:46px;border-bottom:1px solid var(--border);display:flex;gap:14px;align-items:center;flex-wrap:nowrap;position:sticky;top:0;background:rgba(8,9,13,0.88);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:10}
+  header{padding:0 16px;padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right));height:46px;border-bottom:1px solid var(--border);display:flex;gap:14px;align-items:center;flex-wrap:nowrap;position:sticky;top:0;background:rgba(8,9,13,0.88);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:10}
   /* backtwo wordmark: two-line stacked lockup, cyan over violet */
   h1.wordmark{margin:0;display:inline-flex;flex-direction:column;line-height:.82;font-family:'Rajdhani','Inter',sans-serif;letter-spacing:0;text-transform:lowercase}
   h1.wordmark .wm-a{color:var(--atk-color);font-weight:600;font-size:15px}
   h1.wordmark .wm-b{color:var(--def-color);font-weight:700;font-size:15px}
   .byline{color:var(--dim);font-size:10px;font-family:'JetBrains Mono',ui-monospace,monospace;opacity:.55;text-decoration:none}
   .byline:hover{opacity:1;color:var(--foreground)}
+  .freshness{color:var(--good);font-size:9px;font-family:'JetBrains Mono',ui-monospace,monospace;border:1px solid var(--good-border);background:var(--good-bg);padding:2px 6px;border-radius:4px;white-space:nowrap;letter-spacing:.04em}
+  .freshness:empty{display:none}
+  .freshness.stale{color:var(--warning);border-color:var(--warning-border);background:var(--warning-bg)}
+  .freshness.very-stale{color:var(--muted-foreground);border-color:var(--border);background:transparent}
   .sub{color:var(--dim);font-size:10px;font-family:'JetBrains Mono',ui-monospace,monospace;border:1px solid var(--border);padding:2px 7px;border-radius:4px;white-space:nowrap}
   .applogo{width:22px;height:22px;border-radius:5px;background:linear-gradient(135deg,var(--atk-color) 50%,var(--def-color) 50%);display:inline-flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;font-family:'Rajdhani','Inter',sans-serif;line-height:1}
   .fieldsum{color:var(--muted-foreground);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;margin-left:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -438,8 +442,22 @@
     .landing-wm .wm-a,.landing-wm .wm-b{font-size:72px}
     .landing-mantra{font-size:20px}
   }
+  /* First-visit hotkey toast — bottom-right, dismissible, auto-fades after 8s */
+  #hotkeytoast{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:calc(40px + max(8px,env(safe-area-inset-bottom)));z-index:90;background:var(--card-elev);border:1px solid var(--atk-border);border-radius:10px;padding:10px 14px;display:none;align-items:center;gap:10px;font-size:12px;color:var(--foreground);box-shadow:0 8px 24px rgba(0,0,0,0.5);max-width:320px;animation:toastIn .35s cubic-bezier(.2,.7,.2,1)}
+  #hotkeytoast.show{display:flex}
+  #hotkeytoast kbd{font-family:'JetBrains Mono',ui-monospace,monospace;background:var(--secondary);border:1px solid var(--atk-border);color:var(--atk-color);border-radius:4px;padding:1px 7px;font-size:11px;font-weight:600}
+  #hotkeytoast .dismiss{margin-left:6px;background:transparent;border:1px solid var(--border);color:var(--muted-foreground);border-radius:4px;padding:2px 8px;font-size:11px;font-family:inherit;cursor:pointer}
+  #hotkeytoast .dismiss:hover{border-color:var(--foreground);color:var(--foreground)}
+  @keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  /* Touch-target sweep: WCAG 2.5.5 wants >=44x44 on touch devices.
+     On coarse-pointer devices (phones, tablets), expand hit areas while
+     keeping the visual size unchanged. */
+  @media (pointer:coarse){
+    .optbtn,.regbtn,.tab,.reset-btn,.mybtn,.ftbtn,.pinbtn{min-height:44px;padding-top:8px;padding-bottom:8px}
+    .landing-card{min-height:44px}
+  }
   /* Site footer — one muted line: byline · repo · data · disclaimer · build */
-  footer.sitefoot{border-top:1px solid var(--border);background:rgba(8,9,13,0.92);padding:8px 16px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;color:var(--muted-foreground);display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;justify-content:flex-start}
+  footer.sitefoot{border-top:1px solid var(--border);background:rgba(8,9,13,0.92);padding:8px 16px;padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right));padding-bottom:max(8px,env(safe-area-inset-bottom));font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;color:var(--muted-foreground);display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;justify-content:flex-start}
   footer.sitefoot a{color:var(--muted-foreground);text-decoration:none;border-bottom:1px dotted rgba(255,255,255,0.18)}
   footer.sitefoot a:hover{color:var(--foreground);border-bottom-color:var(--foreground)}
   footer.sitefoot .sep{opacity:.4}
@@ -460,6 +478,18 @@
   #aboutoverlay .abox .close{position:sticky;float:right;background:transparent;border:1px solid var(--border);color:var(--muted-foreground);border-radius:6px;padding:2px 9px;cursor:pointer;font-family:inherit;font-size:11px}
   #aboutoverlay .abox .close:hover{color:var(--foreground);border-color:var(--foreground)}
   #aboutoverlay .abox .disclaim{margin-top:14px;padding:10px 12px;background:var(--muted);border:1px solid var(--border);border-radius:8px;color:var(--dim);font-size:11px;line-height:1.55}
+  #aboutoverlay .abox .share-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  #aboutoverlay .share-btn{display:inline-flex;align-items:center;gap:5px;padding:7px 13px;border-radius:6px;border:1px solid var(--border);background:var(--secondary);color:var(--foreground);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;text-decoration:none;transition:all .12s}
+  #aboutoverlay .share-btn:hover{border-color:var(--border-strong);transform:translateY(-1px)}
+  #aboutoverlay .share-wa{border-color:rgba(37,211,102,0.45);color:#25d366}
+  #aboutoverlay .share-wa:hover{background:rgba(37,211,102,0.10);border-color:#25d366}
+  #aboutoverlay .share-x{border-color:rgba(255,255,255,0.20);color:var(--foreground)}
+  #aboutoverlay .share-x:hover{background:rgba(255,255,255,0.05)}
+  #aboutoverlay .share-copy{border-color:var(--atk-border);color:var(--atk-color)}
+  #aboutoverlay .share-copy:hover{background:var(--atk-bg);border-color:var(--atk-color)}
+  #aboutoverlay .share-copy.copied{background:var(--good-bg);border-color:var(--good-border);color:var(--good)}
+  #aboutoverlay .share-qr{display:flex;align-items:center;gap:14px;margin-bottom:6px}
+  #aboutoverlay .share-qr img{background:#fff;padding:6px;border-radius:6px;flex-shrink:0}
   /* Adjust main height to make room for footer */
   main{height:calc(100vh - 46px - 34px)}
 </style>
@@ -488,6 +518,7 @@
   <span class="applogo" title="backtwo">2</span>
   <h1 class="wordmark" title="Read the back two."><span class="wm-a">back</span><span class="wm-b">two</span></h1>
   <span class="sub" id="stat">VGC · Reg M-A/B</span>
+  <span class="freshness" id="freshness" title="Data refreshed from VGCPastes on this build"></span>
   <span class="fieldsum" id="fieldsum"></span>
   <input id="search" placeholder="Search…">
   <div class="regs" title="Reg A shows only that reg's teams. Later regs are additive: each pill includes prior-reg teams still legal in that reg.">
@@ -549,12 +580,28 @@
     <h3>License</h3>
     <p>Code is MIT — fork it, learn from it, build your own. Pokémon names, sprites, and game data remain the property of their respective owners (see NOTICE.md in the repo).</p>
 
+    <h3>Share backtwo</h3>
+    <div class="share-row">
+      <a class="share-btn share-wa" id="share-wa" href="#" target="_blank" rel="noopener" title="Share via WhatsApp">WhatsApp</a>
+      <a class="share-btn share-x" id="share-x" href="#" target="_blank" rel="noopener" title="Share via X / Twitter">X / Twitter</a>
+      <button class="share-btn share-copy" id="share-copy" title="Copy link">Copy link</button>
+    </div>
+    <div class="share-qr">
+      <img id="share-qr-img" alt="QR code linking to backtwo" width="120" height="120">
+      <span class="atag" style="margin:0">scan to open on phone</span>
+    </div>
+
     <div class="disclaim">
       <b>Fan project.</b> backtwo is an unofficial fan tool. It is not affiliated with, endorsed by, or sponsored by Nintendo, The Pokémon Company, Game Freak, or the publishers of Pokémon Champions. All Pokémon-related trademarks belong to their respective owners.
     </div>
 
-    <div class="atag" style="margin-top:14px">build v{{BUILD_SHA}} · {{BUILD_DATE}}</div>
+    <div class="atag" style="margin-top:14px"><span id="freshness-about"></span> · build v{{BUILD_SHA}} · {{BUILD_DATE}}</div>
   </div>
+</div>
+
+<div id="hotkeytoast">
+  <span>tip — press <kbd>?</kbd> anywhere for hotkeys, or <kbd>b 2</kbd> to jump to the damage calc</span>
+  <button class="dismiss" id="toastdismiss">got it</button>
 </div>
 
 <script>
@@ -1934,9 +1981,66 @@ document.getElementById('list').addEventListener('click',e=>{const r=e.target.cl
   selMon=r.dataset.name;megaCmp=false;renderPokeList();renderDetail(selMon);});
 setView('poke');
 
-// About modal: open from footer link, close with esc
+// Freshness badge — compute "X days ago" from BUILD_DATE and color-code.
+(function(){
+  const fresh=document.getElementById('freshness');
+  if(!fresh)return;
+  const buildDate='{{BUILD_DATE}}';
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(buildDate)){fresh.remove();return;}
+  const built=new Date(buildDate+'T00:00:00Z');
+  const days=Math.floor((Date.now()-built.getTime())/86400000);
+  let label;
+  if(days<=0)label='updated today';
+  else if(days===1)label='updated yesterday';
+  else if(days<14)label=`updated ${days}d ago`;
+  else if(days<60)label=`updated ${Math.floor(days/7)}w ago`;
+  else label=`updated ${Math.floor(days/30)}mo ago`;
+  fresh.textContent=label;
+  if(days>=21)fresh.classList.add('stale');
+  if(days>=60)fresh.classList.add('very-stale');
+})();
+
+// First-visit hotkey toast — show once per browser, gated by localStorage.
+(function(){
+  try{
+    if(localStorage.getItem('bt_toast_seen'))return;
+  }catch(e){return;}
+  const t=document.getElementById('hotkeytoast');if(!t)return;
+  const dismiss=()=>{
+    t.classList.remove('show');
+    try{localStorage.setItem('bt_toast_seen','1');}catch(e){}
+  };
+  setTimeout(()=>t.classList.add('show'),1200);
+  setTimeout(dismiss,9200);
+  document.getElementById('toastdismiss')?.addEventListener('click',dismiss);
+})();
+
+// About modal: open from footer link, close with esc; populate share + QR on open.
+function setupShareUI(){
+  const url=location.origin+location.pathname;
+  const msg='backtwo — read the back two. VGC doubles companion for Pokémon Champions: damage calc + team finder + meta browser.';
+  const wa=document.getElementById('share-wa');
+  const tw=document.getElementById('share-x');
+  const cp=document.getElementById('share-copy');
+  const qr=document.getElementById('share-qr-img');
+  const fr=document.getElementById('freshness-about');
+  if(wa) wa.href='https://wa.me/?text='+encodeURIComponent(msg+' '+url);
+  if(tw) tw.href='https://twitter.com/intent/tweet?text='+encodeURIComponent(msg)+'&url='+encodeURIComponent(url);
+  if(qr) qr.src='https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=0&data='+encodeURIComponent(url);
+  if(cp && !cp._wired){cp._wired=true;cp.addEventListener('click',async()=>{
+    try{await navigator.clipboard.writeText(url);cp.classList.add('copied');cp.textContent='copied!';
+      setTimeout(()=>{cp.classList.remove('copied');cp.textContent='Copy link';},1600);}
+    catch(e){cp.textContent='copy failed';}
+  });}
+  // mirror the freshness badge into the About modal
+  const fresh=document.getElementById('freshness');
+  if(fr && fresh) fr.textContent=fresh.textContent||'';
+}
 document.getElementById('aboutlink')?.addEventListener('click',e=>{
-  e.preventDefault();document.getElementById('aboutoverlay').classList.add('open');});
+  e.preventDefault();
+  setupShareUI();
+  document.getElementById('aboutoverlay').classList.add('open');
+});
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){document.getElementById('aboutoverlay')?.classList.remove('open');}});
 
