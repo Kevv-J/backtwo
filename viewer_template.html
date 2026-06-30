@@ -183,9 +183,21 @@
   .ko{outline:2px solid var(--bad)}
   .small{font-size:11px;color:var(--dim)}
   .dmgtop{display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap}
-  /* Ally bar — sits above the attacker/defender row. The ally boosts the
-     attacker (helping hand, power spot, battery, steely spirit, flower gift). */
-  .allybar{background:var(--card);border:1px solid var(--atk-border);border-radius:10px;padding:9px 13px;margin-bottom:12px;display:flex;flex-direction:column;gap:7px}
+  /* Ally bar — collapsible by default. Sits above the attacker/defender row.
+     Picking an ally boosts the attacker calc (HH, Power Spot, Battery,
+     Steely Spirit, Flower Gift, Friend Guard from the ally's ability/moves). */
+  .allybar-section{background:var(--card);border:1px solid var(--border);border-radius:10px;margin-bottom:12px;overflow:hidden}
+  .allybar-section[open]{border-color:var(--atk-border)}
+  .allybar-section .allybar-summary{list-style:none;cursor:pointer;padding:9px 13px;display:flex;align-items:center;gap:10px;font-size:12px;user-select:none}
+  .allybar-section .allybar-summary::-webkit-details-marker{display:none}
+  .allybar-section .allybar-summary::before{content:'▸';color:var(--muted-foreground);font-size:10px;transition:transform .12s;display:inline-block}
+  .allybar-section[open] .allybar-summary::before{transform:rotate(90deg)}
+  .allybar-section .ally-summary-lbl{font-family:'Rajdhani','Inter',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--atk-color)}
+  .allybar-section .ally-summary-status{flex:1;color:var(--foreground);font-weight:600;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .allybar-section .ally-summary-status:empty,.allybar-section[open] .ally-summary-status{color:var(--muted-foreground);font-weight:400}
+  .allybar-section .ally-summary-help{width:18px;height:18px;border-radius:50%;background:var(--secondary);border:1px solid var(--border);color:var(--muted-foreground);display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;cursor:help;flex-shrink:0}
+  .allybar-section .ally-summary-help:hover{color:var(--atk-color);border-color:var(--atk-color)}
+  .allybar{background:transparent;border:none;border-top:1px solid var(--border);border-radius:0;padding:11px 13px;margin-bottom:0;display:flex;flex-direction:column;gap:7px}
   .allybar .allyhd{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
   .allybar .allylbl{font-family:'Rajdhani','Inter',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--atk-color);min-width:46px}
   .allybar .ally-current{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--foreground)}
@@ -1334,6 +1346,10 @@ function renderAllyBar(){
 function refreshAllyBar(){
   const el=document.getElementById('allybar');
   if(el)el.innerHTML=renderAllyBar();
+  // Update the collapsed summary line so the user can see who their ally is
+  // without expanding the bar.
+  const sum=document.getElementById('ally-summary-status');
+  if(sum)sum.textContent=ally?ally.forme+(ally.ability?' · '+ally.ability:''):'— optional, click to expand —';
   syncFxRow('a',sideA);
   wireAllyBar();
   updateResults();
@@ -2062,7 +2078,14 @@ function renderDmg(){
     </div>
     <div id="matrixpane"></div>
     <div id="speedribbon" class="speedribbon"></div>
-    <div class="allybar" id="allybar">${renderAllyBar()}</div>
+    <details class="allybar-section" id="allybar-section">
+      <summary class="allybar-summary">
+        <span class="ally-summary-lbl">Ally</span>
+        <span class="ally-summary-status" id="ally-summary-status">${ally?esc(ally.forme)+(ally.ability?' · '+esc(ally.ability):''):'— optional, click to expand —'}</span>
+        <span class="ally-summary-help" title="Pick a teammate to auto-apply their Helping Hand, Power Spot, Battery, Steely Spirit, Flower Gift or Friend Guard boost to your attacker's damage calc. Most other abilities (Pixilate, Rough Skin, etc.) are self-only and won't affect the calc when picked as ally.">?</span>
+      </summary>
+      <div class="allybar" id="allybar">${renderAllyBar()}</div>
+    </details>
     <div class="dmgtop">${slotHTML('a','Attacker')}${slotHTML('b','Defender')}</div>
     <div id="dmgresults"></div>
     <div class="small calcfoot"><b>VGC doubles only.</b> Champions ruleset (lv50, IVs max, 1 SP = 8 EV). <b>Modeled:</b> STAB · type chart · spread · stat boosts · status (burn/frostbite/Guts) · current HP (Multiscale) · weather (incl. extremes Harsh Sun/Heavy Rain/Strong Winds) · terrains (Electric/Grassy/Misty/Psychic, grounded only; Grassy halves EQ) · screens (×0.5 singles / ×2/3 doubles, Aurora Veil snow-only; crit bypasses) · Helping Hand · Friend Guard (doubles) · Power Spot · Battery · Steely Spirit · Flower Gift · Crit (ignores +def/-atk boosts; Sniper ×2.25) · Trick/Magic/Wonder Room · Gravity (ground hits Flying, suppresses Levitate) · <b>multi-hit moves</b> (Triple Axel/Triple Kick escalating BP; Population Bomb/Bullet Seed; Skill Link → max hits) · <b>Intimidate auto-apply</b> (with Clear Body / Hyper Cutter / Inner Focus / Scrappy / Own Tempo / Oblivious immunity; Defiant counters; Competitive on special) · <b>contact/flag abilities</b>: Tough Claws ×1.3 (contact) · Iron Fist ×1.2 (punch) · Mega Launcher ×1.5 (pulse) · Strong Jaw ×1.5 (bite) · Sharpness ×1.5 (slicing) · Punk Rock ×1.3 atk / ×0.5 def (sound) · Soundproof immune (sound) · Bulletproof immune (bullet) · Fluffy ×0.5 contact + ×2 fire · -ate abilities (Pixilate/Aerilate/Refrigerate/Galvanize: Normal→type ×1.2 STAB) · Adaptability · Technician · Tinted Lens · Huge/Pure Power · Solar Power · Sand Force · Sniper · Neuroforce · Levitate / type-absorb immunities · Multiscale / Shadow Shield · Filter / Solid Rock / Prism Armor · Thick Fat · Heatproof · Purifying Salt · Fur Coat · Ice Scales · Choice/Specs/Life Orb/AV/Eviolite/type-boost items.</div>`;
@@ -2539,16 +2562,17 @@ function autoFocusForView(v){
       const i=findPicks.findIndex(p=>!p);
       openFindSlot(i>=0?i:0);
     } else if(v==='dmg'){
-      // If My Team has mons and no ally is set yet, auto-pick the first as ally.
-      if(myTeam.length>0 && !ally){
-        pickAlly(allyFromMyTeam(myTeam[0]));
-        refreshAllyBar();
+      // Auto-load myTeam[0] into the ATTACKER slot if A is empty — the most
+      // common workflow is "calc MY mon vs THEIR mon". Don't touch ally
+      // (collapsed by default, user opens it if they want HH / Power Spot / etc).
+      if(myTeam.length>0 && !A.forme){
+        loadIntoSlot('a', A, myTeam[0]);
       }
-      // Focus target: ally search if user has no team (need to pick one);
-      // otherwise jump straight to the defender (most common next action).
-      const target=(myTeam.length===0)
-        ? document.getElementById('allysearch')
-        : document.getElementById('b_search');
+      // Focus target: defender search if attacker is set (jump to next step);
+      // otherwise attacker search (need to pick something).
+      const target=(A.forme)
+        ? document.getElementById('b_search')
+        : document.getElementById('a_search');
       if(target){target.focus();target.select?.();}
     }
   }, 0);
