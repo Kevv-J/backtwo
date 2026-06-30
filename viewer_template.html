@@ -17,6 +17,11 @@
 <meta name="twitter:description" content="Read the back two. A VGC doubles companion for your climb.">
 <meta name="twitter:image" content="og.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='50%25' stop-color='%2322d3ee'/%3E%3Cstop offset='50%25' stop-color='%23a78bfa'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='32' cy='32' r='30' fill='url(%23g)'/%3E%3Ctext x='32' y='44' text-anchor='middle' font-family='Rajdhani,Inter,sans-serif' font-weight='700' font-size='38' fill='%23ffffff'%3E2%3C/text%3E%3C/svg%3E">
+<!-- Telemetry: GoatCounter — free, cookieless, GDPR-safe. The data-goatcounter
+     URL is the user's own site (set up at https://www.goatcounter.com/signup).
+     Until that URL is filled in, the script tag is harmless (it just 404s on the
+     count endpoint). The 5 custom events are wired in the inline script below. -->
+<script data-goatcounter="https://backtwo.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
   /* === Figma-ported design tokens (cyan/violet dichotomy, translucent chips) === */
@@ -278,9 +283,23 @@
   /* Status group active per side-color (handled at slot level via inheritance) */
   .optbtn.critbtn.active{background:rgba(239,68,68,0.18);border-color:rgba(239,68,68,0.40);color:#fca5a5}
   /* HP slider */
-  .hpbar{width:100%;height:18px;-webkit-appearance:none;background:transparent}
+  .hpbar{flex:1;height:18px;-webkit-appearance:none;background:transparent}
   .hpbar::-webkit-slider-runnable-track{height:8px;border-radius:4px;background:linear-gradient(to right,var(--good),var(--accent2),var(--bad))}
   .hpbar::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--txt);margin-top:-3px;cursor:pointer}
+  .hprow{display:flex;align-items:center;gap:8px}
+  .hpv{width:64px;font-size:12px;padding:5px 7px;font-variant-numeric:tabular-nums;text-align:right}
+  .hplabel{font-family:'JetBrains Mono',ui-monospace,monospace;font-weight:500;font-size:10px;color:var(--muted-foreground)}
+  /* Stateful counter rows (Last Respects fainted teammates, Rage Fist times-hit) */
+  .counters{margin:7px 0}
+  .counterrow{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 8px;background:var(--muted);border:1px solid var(--border);border-radius:6px;margin-bottom:4px;font-size:11px}
+  .counterrow[hidden]{display:none}
+  .counters[hidden]{display:none}
+  .counterlbl{font-family:'Rajdhani','Inter',sans-serif;font-size:11px;font-weight:600;color:var(--foreground);letter-spacing:.04em;cursor:help}
+  .counterstep{display:flex;align-items:center;gap:2px}
+  .counterstep button{width:24px;height:24px;border-radius:4px;border:1px solid var(--border);background:var(--secondary);color:var(--foreground);cursor:pointer;font-family:inherit;font-weight:700;font-size:13px;line-height:1;padding:0}
+  .counterstep button:hover{border-color:var(--atk-color);color:var(--atk-color)}
+  .counterstep button:active{background:var(--atk-bg)}
+  .counterval{min-width:24px;text-align:center;font-family:'JetBrains Mono',ui-monospace,monospace;font-weight:700;color:var(--atk-color);font-size:13px;font-variant-numeric:tabular-nums}
   /* Field section */
   .fieldbar{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:12px}
   .fline{display:grid;grid-template-columns:64px 1fr;gap:8px;align-items:start;margin:5px 0}
@@ -1094,6 +1113,17 @@ function effectiveBP(move, atk, def){
     for(const[t,p] of FLAIL_TABLE){if(h<=t){found=p;break;}}
     bp=found;
   }
+  // Stateful counter moves — VGC has two:
+  //   Last Respects (Basculegion-M): 50 × (1 + fainted teammates), max 5 in VGC bring-of-4
+  //   Rage Fist     (Annihilape):    50 + 50 × times hit, capped at 350 BP (6 hits)
+  if(move==='Last Respects'){
+    const fa=Math.max(0,Math.min(5, atk.faintedAllies||0));
+    bp=50*(1+fa);
+  }
+  if(move==='Rage Fist'){
+    const th=Math.max(0,Math.min(6, atk.timesHit||0));
+    bp=Math.min(350, 50+50*th);
+  }
   // Power doublers
   const dStatus=def.status||'ok';
   if(move==='Hex' && dStatus!=='ok') bp*=2;
@@ -1275,7 +1305,7 @@ function wireAllyBar(){
 function targetSlot(defaultP){return pinned==='a'?'b':pinned==='b'?'a':defaultP;}
 function zeroEV(){return{hp:0,atk:0,def:0,spa:0,spd:0,spe:0};}
 function zeroBoost(){return{atk:0,def:0,spa:0,spd:0,spe:0};}
-function newMon(){return{forme:'',item:'',ability:'',nature:'Serious',ev:zeroEV(),boost:zeroBoost(),moves:['','','',''],status:'ok',hpPct:100};}
+function newMon(){return{forme:'',item:'',ability:'',nature:'Serious',ev:zeroEV(),boost:zeroBoost(),moves:['','','',''],status:'ok',hpPct:100,faintedAllies:0,timesHit:0};}
 function statsOf(m){return m.forme?statline(m.forme,m.ev,m.nature):null;}
 // Grounded check: defender takes terrain effects only if grounded. Flying type
 // or Levitate ability mean ungrounded (unless Gravity overrides them).
@@ -1556,8 +1586,21 @@ function slotHTML(p,title){
     </tr>`).join('')}
   </tbody></table>
   <div class="movegrid">${[0,1,2,3].map(i=>`<input id="${p}_mv${i}" list="movelist" placeholder="move ${i+1}" autocomplete="off" onfocus="setTimeout(()=>this.select(),0)">`).join('')}</div>
-  <div class="seclabel">HP <span id="${p}_hppct">100%</span></div>
-  <input id="${p}_hp" type="range" min="0" max="100" value="100" class="hpbar">
+  <div class="counters" id="${p}_counters" hidden>
+    <div class="counterrow" data-counter="faintedAllies" hidden>
+      <span class="counterlbl" title="Last Respects: +50 BP per fainted teammate (max ~5 in VGC bring-of-4)">Fainted teammates</span>
+      <div class="counterstep"><button data-step="-1">−</button><span class="counterval" id="${p}_cnt_fa">0</span><button data-step="+1">+</button></div>
+    </div>
+    <div class="counterrow" data-counter="timesHit" hidden>
+      <span class="counterlbl" title="Rage Fist: +50 BP per time this Pokémon has been hit (capped at 350 BP)">Times hit</span>
+      <div class="counterstep"><button data-step="-1">−</button><span class="counterval" id="${p}_cnt_th">0</span><button data-step="+1">+</button></div>
+    </div>
+  </div>
+  <div class="seclabel">HP <span id="${p}_hplabel" class="hplabel">100% · — / —</span></div>
+  <div class="hprow">
+    <input id="${p}_hp" type="range" min="0" max="100" value="100" class="hpbar">
+    <input id="${p}_hpv" type="number" min="0" class="hpv" inputmode="numeric" placeholder="HP" title="Type the exact current HP (auto-converts to %)">
+  </div>
   <div class="seclabel">Status</div>
   <div class="btnrow">${STATUSES.map(([k,lab])=>`<button class="optbtn" data-grp="${p}_st" data-v="${k}">${lab}</button>`).join('')}</div>
   <div class="seclabel">Battle effects (${tag})</div>
@@ -1605,7 +1648,8 @@ function populateSlot(p,m){
   g(p+'_nature').value=m.nature||'Serious';
   STAT_KEYS.forEach(([k])=>{const v=m.ev?.[k]??0;const sp=g(p+'_sp_'+k);if(sp)sp.value=v;const spv=g(p+'_spv_'+k);if(spv)spv.value=v;});
   [0,1,2,3].forEach(i=>g(p+'_mv'+i).value=m.moves[i]||'');
-  const hp=g(p+'_hp');if(hp){hp.value=m.hpPct??100;g(p+'_hppct').textContent=(m.hpPct??100)+'%';}
+  syncHPUI(p,m);
+  syncCounters(p,m);
   syncBtnGroup(p+'_st',m.status||'ok');
   syncFxRow(p,p==='a'?sideA:sideB);
   renderFinals(p,m);}
@@ -1613,8 +1657,40 @@ function readSlot(p,m){m.item=g(p+'_item').value.trim();m.ability=g(p+'_ability'
   if(!m.ev)m.ev=zeroEV();if(!m.boost)m.boost=zeroBoost();
   STAT_KEYS.forEach(([k])=>{const sp=g(p+'_sp_'+k);if(sp){m.ev[k]=Math.max(0,Math.min(32,+sp.value||0));const spv=g(p+'_spv_'+k);if(spv && +spv.value!==m.ev[k])spv.value=m.ev[k];}});
   m.moves=[0,1,2,3].map(i=>g(p+'_mv'+i).value.trim());
-  const hp=g(p+'_hp');if(hp){m.hpPct=+hp.value;g(p+'_hppct').textContent=m.hpPct+'%';}
+  syncHPUI(p,m);     // re-sync since maxHP can change with EVs
+  syncCounters(p,m); // re-evaluate counter visibility based on current moveset
   renderFinals(p,m);}
+
+// HP: bidirectional sync between the % slider, the actual-HP number input,
+// and the label. maxHP is derived from current stats (changes with HP EVs).
+function syncHPUI(p,m){
+  const hp=g(p+'_hp'), hpv=g(p+'_hpv'), lbl=g(p+'_hplabel');
+  if(!hp||!hpv||!lbl)return;
+  const pct=m.hpPct??100;
+  const stats=statsOf(m);
+  const max=stats?.hp||0;
+  const cur=max?Math.round(max*pct/100):0;
+  hp.value=pct;
+  hpv.value=cur;
+  hpv.max=max||999;
+  lbl.textContent=max?`${pct}% · ${cur} / ${max}`:`${pct}%`;
+}
+
+// Show/hide counter rows based on which moves are in the current set.
+function syncCounters(p,m){
+  const wrap=document.getElementById(p+'_counters');if(!wrap)return;
+  const moves=m.moves||[];
+  const showFA=moves.includes('Last Respects');
+  const showTH=moves.includes('Rage Fist');
+  wrap.hidden=!(showFA||showTH);
+  const faRow=wrap.querySelector('[data-counter="faintedAllies"]');
+  const thRow=wrap.querySelector('[data-counter="timesHit"]');
+  if(faRow)faRow.hidden=!showFA;
+  if(thRow)thRow.hidden=!showTH;
+  const faVal=g(p+'_cnt_fa'), thVal=g(p+'_cnt_th');
+  if(faVal)faVal.textContent=m.faintedAllies||0;
+  if(thVal)thVal.textContent=m.timesHit||0;
+}
 function rebuildSetOptions(p,m){const ss=setsFor(m.forme).slice(0,10);
   g(p+'_set').innerHTML=`<option value="-1">Most recent / default</option>`+
     ss.map((s,i)=>`<option value="${i}">${esc(s.evs||'no EVs')} · ${esc(s.nature||'neutral')}${s.item&&s.item!=='-'?' · '+esc(s.item):''}${s.date?' · '+esc(s.date):''}</option>`).join('');}
@@ -1655,8 +1731,27 @@ function wireSlot(p,m){
   const side=p==='a'?sideA:sideB;
   document.querySelectorAll(`[data-grp="${p}_fx"]`).forEach(btn=>btn.onclick=()=>{
     const k=btn.dataset.v;side[k]=side[k]?0:1;btn.classList.toggle('active',!!side[k]);updateResults();});
-  // HP slider
-  g(p+'_hp').addEventListener('input',()=>{m.hpPct=+g(p+'_hp').value;g(p+'_hppct').textContent=m.hpPct+'%';updateResults();});
+  // HP slider drives the %; the number input drives actual HP (auto-converts).
+  g(p+'_hp').addEventListener('input',()=>{
+    m.hpPct=+g(p+'_hp').value;syncHPUI(p,m);updateResults();
+  });
+  g(p+'_hpv').addEventListener('input',()=>{
+    const stats=statsOf(m);const max=stats?.hp||0;
+    if(!max)return;
+    const cur=Math.max(0,Math.min(max, +g(p+'_hpv').value||0));
+    m.hpPct=Math.round((cur/max)*100);
+    syncHPUI(p,m);updateResults();
+  });
+  // Counter steppers — show/hide tracked via syncCounters; values clamp here
+  document.querySelectorAll(`#${p}_counters .counterrow`).forEach(row=>{
+    const key=row.dataset.counter;
+    const cap=key==='faintedAllies'?5:6;
+    row.querySelectorAll('button[data-step]').forEach(btn=>btn.onclick=()=>{
+      const delta=+btn.dataset.step;
+      m[key]=Math.max(0,Math.min(cap,(m[key]||0)+delta));
+      syncCounters(p,m);updateResults();
+    });
+  });
   [0,1,2,3].forEach(i=>g(p+'_mv'+i).addEventListener('input',()=>{readSlot(p,m);updateResults();}));
 }
 // KO chip classification — green/orange/blue/gray tiers
@@ -2139,6 +2234,42 @@ document.getElementById('list').addEventListener('click',e=>{const r=e.target.cl
   selMon=r.dataset.name;megaCmp=false;renderPokeList();renderDetail(selMon);});
 setView('poke');
 
+// Telemetry — GoatCounter custom event helper. Fails silently when the
+// script hasn't loaded yet (or when the user is offline). No PII; the path
+// string is the only signal sent.
+function tcount(path, title){
+  try{ if(window.goatcounter && window.goatcounter.count)
+    window.goatcounter.count({path:path, title:title||path, event:true}); }
+  catch(e){}
+}
+// Hook 1: view switch — wrap setView so every tab change pings telemetry.
+(function(){
+  const _orig=setView;
+  setView=function(v){_orig(v);tcount('view/'+v,'view: '+v);};
+})();
+// Hook 2: reg toggle — re-attach on top of the existing handler. The original
+// handler is set with onclick=; we wrap it.
+document.querySelectorAll('.regbtn').forEach(el=>{
+  const _orig=el.onclick;
+  el.onclick=function(){if(_orig)_orig.call(this);tcount('reg/'+el.dataset.reg,'reg: '+el.dataset.reg);};
+});
+// Hook 3: search query — debounce 800ms after last keystroke. Only sends the
+// query string (no per-keystroke noise) so popular searches surface in GC's
+// top paths without spamming.
+(function(){
+  const s=document.getElementById('search');
+  if(!s)return;
+  let t;
+  s.addEventListener('input',()=>{
+    clearTimeout(t);
+    t=setTimeout(()=>{
+      const q=s.value.trim();
+      if(q.length>=2) tcount('search/'+encodeURIComponent(q.toLowerCase().slice(0,40)),'search: '+q.slice(0,40));
+    }, 800);
+  });
+})();
+// Hook 4 (share clicks): wired inside setupShareUI() in the About modal.
+
 // Freshness badge — compute "X days ago" from BUILD_DATE and color-code.
 (function(){
   const fresh=document.getElementById('freshness');
@@ -2182,11 +2313,14 @@ function setupShareUI(){
   const cp=document.getElementById('share-copy');
   const qr=document.getElementById('share-qr-img');
   const fr=document.getElementById('freshness-about');
-  if(wa) wa.href='https://wa.me/?text='+encodeURIComponent(msg+' '+url);
-  if(tw) tw.href='https://twitter.com/intent/tweet?text='+encodeURIComponent(msg)+'&url='+encodeURIComponent(url);
+  if(wa){wa.href='https://wa.me/?text='+encodeURIComponent(msg+' '+url);
+    if(!wa._twired){wa._twired=true;wa.addEventListener('click',()=>tcount('share/whatsapp','share: whatsapp'));}}
+  if(tw){tw.href='https://twitter.com/intent/tweet?text='+encodeURIComponent(msg)+'&url='+encodeURIComponent(url);
+    if(!tw._twired){tw._twired=true;tw.addEventListener('click',()=>tcount('share/twitter','share: twitter'));}}
   if(qr) qr.src='https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=0&data='+encodeURIComponent(url);
   if(cp && !cp._wired){cp._wired=true;cp.addEventListener('click',async()=>{
     try{await navigator.clipboard.writeText(url);cp.classList.add('copied');cp.textContent='copied!';
+      tcount('share/copy','share: copy link');
       setTimeout(()=>{cp.classList.remove('copied');cp.textContent='Copy link';},1600);}
     catch(e){cp.textContent='copy failed';}
   });}

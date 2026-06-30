@@ -52,6 +52,21 @@ python build_dex.py    # fetch dex + emit index.html
 - **[Pokémon Showdown](https://play.pokemonshowdown.com/data/moves.js)** —
   move flags, multi-hit data, edge-case metadata.
 
+## Telemetry
+
+backtwo uses [GoatCounter](https://www.goatcounter.com) — free, cookieless,
+GDPR-safe, no PII collected. To enable on your fork:
+
+1. Sign up at https://www.goatcounter.com/signup (pick `backtwo` or your own
+   slug as the site code; the free plan covers anything backtwo will hit).
+2. Replace `https://backtwo.goatcounter.com/count` in `viewer_template.html`
+   `<head>` with your GoatCounter site URL.
+3. Rebuild + push. Stats appear in your GoatCounter dashboard within seconds.
+
+Five signals are tracked beyond the default pageview: view-switch (which tab),
+reg toggle (M-A / M-B preference), pokemon search (top queries), share clicks
+(WhatsApp / X / copy link). No mon-level tracking, no IPs stored.
+
 ## Found a bug?
 
 Open an issue on this repo. Solo maintainer — I don't promise an SLA, but I do

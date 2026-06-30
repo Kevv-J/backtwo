@@ -4,6 +4,28 @@
 > (features, mobile/perf, sharing/virality, data automation, community)
 > after the v1.0 launch.
 
+## Currently shipped
+
+- v1.0 launch (Jun 2026): wordmark, favicon, OG card, footer + About + LICENSE + NOTICE + README
+- Quick wins: freshness badge, hotkey toast, QR + share buttons, touch targets, ROADMAP.md
+- Self-sustaining cron: weekly Tue 09:00 UTC rebuild + scrape validator + `data_lock.json` + size budget + auto-issue on failure
+- Ally slot phase 1: My Team quick-pick + dataset search + auto-wire (Power Spot / Battery / Steely Spirit / Flower Gift / Helping Hand) + transparency badge
+
+## User-curated next (priority order)
+
+Maintainer's call: focus on what HE will use on laptop until there's
+evidence others are using the tool. Mobile deferred until we have signal.
+
+| Order | Item | Effort | Why now |
+|---|---|---|---|
+| 1 | **GoatCounter telemetry** (5 events, no PII) | trivial | Answers the "is anyone using this?" question. Required input for every other decision. |
+| 2 | **Team finder overhaul** | small-medium | Maintainer uses this for opponent scouting. UI is currently primitive — needs autocomplete-with-sprite, autoselect-first-match, click-to-add, "+" icon styling. |
+| 3 | **Color theme** | small | Maintainer's design ask. *(Clarify scope first — see below.)* |
+| 4 | **Casual-friendly team builder** | large | A modal team builder for users who don't know pokepaste. 6 slots, mon + item + ability + moves + nature + EVs picker. Bidirectional convert: builder ↔ pokepaste text. Defer until the team finder + telemetry land — we'll know whether casuals are even arriving. |
+| ⏸ | **Mobile view** | medium | Deferred — most-wanted but no signal yet. Push past 100 weekly visitors before designing for it. |
+
+---
+
 ## Executive call
 
 backtwo's edge over Pikalytics, Showdown calc, and VGCPastes is that it's
