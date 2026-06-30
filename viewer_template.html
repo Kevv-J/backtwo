@@ -2497,10 +2497,14 @@ function setView(v){view=v;
   if(rb)rb.style.display=(v==='dmg')?'':'none';
   if(v==='poke'){
     renderPokeList();
-    // Auto-select first mon if nothing's loaded yet — saves the click.
-    // The landing screen is still reachable via the explicit empty state.
-    if(!selMon && pokeList.length){selMon=pokeList[0].name;}
     if(selMon) renderDetail(selMon); else renderLanding();
+    // Auto-highlight the top row in the sidebar (browse mode only — no detail
+    // render). User commits with Enter or click. Landing screen stays visible
+    // until they do. Mirrors a file browser cursor sitting on the first row.
+    if(!selMon && pokeList.length){
+      _pendingMon=pokeList[0].name;
+      document.querySelector('#list .row')?.classList.add('sel');
+    }
   }
   else if(v==='find')renderFind();
   else if(v==='dmg')renderDmg();
@@ -2647,9 +2651,10 @@ document.getElementById('search').addEventListener('keydown',e=>{
   if(e.key==='ArrowUp'){e.preventDefault();moveListSelection(-1);return;}
   if(e.key==='Enter'){
     e.preventDefault();
-    if(!selMon){
+    // Fallback: if neither pending nor committed, grab the first visible row
+    if(!_pendingMon && !selMon){
       const firstRow=document.querySelector('#list .row');
-      if(firstRow){selMon=firstRow.dataset.name;firstRow.classList.add('sel');}
+      if(firstRow){_pendingMon=firstRow.dataset.name;firstRow.classList.add('sel');}
     }
     flushSelection();
     e.target.blur();
