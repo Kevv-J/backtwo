@@ -74,14 +74,14 @@
   .freshness.very-stale{color:var(--muted-foreground);border-color:var(--border);background:transparent}
   .sub{color:var(--dim);font-size:10px;font-family:'JetBrains Mono',ui-monospace,monospace;border:1px solid var(--border);padding:2px 7px;border-radius:4px;white-space:nowrap}
   .applogo{width:22px;height:22px;border-radius:5px;background:linear-gradient(135deg,var(--atk-color) 50%,var(--def-color) 50%);display:inline-flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;font-family:'Rajdhani','Inter',sans-serif;line-height:1}
-  .fieldsum{color:var(--muted-foreground);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;margin-left:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .fieldsum{color:var(--muted-foreground);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .reset-btn{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--border);background:transparent;color:var(--muted-foreground);padding:4px 10px;border-radius:4px;font-size:10px;font-weight:600;cursor:pointer;text-transform:uppercase;letter-spacing:.06em}
   .reset-btn:hover{border-color:var(--border-strong);color:var(--foreground)}
   .tabs{display:flex;gap:2px;padding:2px;background:var(--secondary);border-radius:6px}
   .tab{padding:5px 12px;border:none;border-radius:4px;background:transparent;color:var(--muted-foreground);cursor:pointer;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-family:'Rajdhani','Inter',sans-serif;transition:all .12s}
   .tab:hover{color:var(--foreground)}
   .tab.active{color:var(--primary);background:var(--card-elev);box-shadow:0 0 0 1px var(--atk-border)}
-  .regs{display:flex;gap:2px;padding:2px;background:var(--secondary);border-radius:6px}
+  .regs{display:flex;gap:2px;padding:2px;background:var(--secondary);border-radius:6px;margin-left:auto}
   .regbtn{padding:5px 9px;border:none;border-radius:4px;background:transparent;color:var(--muted-foreground);cursor:pointer;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-family:'Rajdhani','Inter',sans-serif}
   .regbtn:hover{color:var(--foreground)}
   /* Reg pills anchor the brand: M-A = cyan (attacker side), M-B = violet (defender).
@@ -2442,18 +2442,65 @@ document.querySelectorAll('.regbtn').forEach(el=>el.onclick=()=>{
 });
 document.getElementById('search').addEventListener('input',e=>{q=e.target.value.trim().toLowerCase();
   if(view==='poke')renderPokeList();else if(view==='speed')renderSpeed();else if(view==='team')renderTeams();});
-// Enter on the global search box (Pokémon view) picks the first matching mon
-// from the sidebar list and loads its detail — saves the click.
+// Move selection in the Pokémon-view sidebar list by `dir` (-1 up / +1 down).
+// Cheap: toggles .sel on the two affected rows (no full sidebar rebuild).
+// Defers the heavy renderDetail by 120ms so rapid arrow presses don't lag —
+// popular mons like Garchomp have 500+ team cards in the detail pane.
+let _arrowRenderTimer=null;
+function moveListSelection(dir){
+  if(view!=='poke')return;
+  const rows=Array.from(document.querySelectorAll('#list .row'));
+  if(!rows.length)return;
+  let i=rows.findIndex(r=>r.dataset.name===selMon);
+  if(i<0)i=(dir>0?-1:rows.length);
+  i=Math.max(0,Math.min(rows.length-1, i+dir));
+  // Cheap sidebar update — strip .sel from current, add to next.
+  const prev=rows.find(r=>r.classList.contains('sel'));
+  if(prev)prev.classList.remove('sel');
+  rows[i].classList.add('sel');
+  rows[i].scrollIntoView({block:'nearest'});
+  selMon=rows[i].dataset.name;
+  megaCmp=false;
+  // Debounce the heavy detail render
+  if(_arrowRenderTimer)clearTimeout(_arrowRenderTimer);
+  _arrowRenderTimer=setTimeout(()=>{_arrowRenderTimer=null;renderDetail(selMon);},120);
+}
+// Flush any pending detail render (called on Enter to feel instant).
+function flushSelection(){
+  if(_arrowRenderTimer){clearTimeout(_arrowRenderTimer);_arrowRenderTimer=null;}
+  if(selMon)renderDetail(selMon);
+}
+// Enter on the global search box (Pokémon view) picks the currently-selected
+// mon (or the first one if none selected). Arrow keys navigate the filtered list.
 document.getElementById('search').addEventListener('keydown',e=>{
-  if(e.key!=='Enter'||view!=='poke')return;
-  e.preventDefault();
-  const firstRow=document.querySelector('#list .row');
-  if(!firstRow)return;
-  selMon=firstRow.dataset.name;megaCmp=false;renderPokeList();renderDetail(selMon);
-  e.target.blur();
+  if(view!=='poke')return;
+  if(e.key==='ArrowDown'){e.preventDefault();moveListSelection(1);return;}
+  if(e.key==='ArrowUp'){e.preventDefault();moveListSelection(-1);return;}
+  if(e.key==='Enter'){
+    e.preventDefault();
+    if(!selMon){
+      const firstRow=document.querySelector('#list .row');
+      if(firstRow){selMon=firstRow.dataset.name;firstRow.classList.add('sel');}
+    }
+    flushSelection();
+    e.target.blur();
+  }
 });
-document.getElementById('list').addEventListener('click',e=>{const r=e.target.closest('.row');if(!r)return;
-  selMon=r.dataset.name;megaCmp=false;renderPokeList();renderDetail(selMon);});
+// Global arrow-key nav when not typing in an input — for fast browsing.
+document.addEventListener('keydown',e=>{
+  if(view!=='poke')return;
+  if(e.target?.matches?.('input, textarea, select, [contenteditable]'))return;
+  if(e.key==='ArrowDown'){e.preventDefault();moveListSelection(1);}
+  else if(e.key==='ArrowUp'){e.preventDefault();moveListSelection(-1);}
+});
+document.getElementById('list').addEventListener('click',e=>{
+  const r=e.target.closest('.row');if(!r)return;
+  // Cheap selection update — only toggle .sel, skip the full sidebar rebuild
+  document.querySelectorAll('#list .row.sel').forEach(x=>x.classList.remove('sel'));
+  r.classList.add('sel');
+  selMon=r.dataset.name;megaCmp=false;
+  renderDetail(selMon);
+});
 setView('poke');
 
 // Telemetry — GoatCounter custom event helper. Fails silently when the
