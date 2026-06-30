@@ -2441,34 +2441,31 @@ document.querySelectorAll('.regbtn').forEach(el=>el.onclick=()=>{
   selMon=null;rebuildIndex();setView(view);
 });
 document.getElementById('search').addEventListener('input',e=>{q=e.target.value.trim().toLowerCase();
+  _pendingMon=null;  // filter changed; arrow-key highlight no longer valid
   if(view==='poke')renderPokeList();else if(view==='speed')renderSpeed();else if(view==='team')renderTeams();});
-// Move selection in the Pokémon-view sidebar list by `dir` (-1 up / +1 down).
-// Cheap: toggles .sel on the two affected rows (no full sidebar rebuild).
-// Defers the heavy renderDetail by 120ms so rapid arrow presses don't lag —
-// popular mons like Garchomp have 500+ team cards in the detail pane.
-let _arrowRenderTimer=null;
+// Move highlight in the Pokémon-view sidebar list by `dir` (-1 up / +1 down).
+// Browse-mode: only toggles .sel + scrolls — does NOT render the detail pane.
+// The detail pane re-renders on Enter (or row click) — see flushSelection.
+// `_pendingMon` holds the highlighted-but-not-committed mon name.
+let _pendingMon=null;
 function moveListSelection(dir){
   if(view!=='poke')return;
   const rows=Array.from(document.querySelectorAll('#list .row'));
   if(!rows.length)return;
-  let i=rows.findIndex(r=>r.dataset.name===selMon);
+  const cur=_pendingMon||selMon;
+  let i=rows.findIndex(r=>r.dataset.name===cur);
   if(i<0)i=(dir>0?-1:rows.length);
   i=Math.max(0,Math.min(rows.length-1, i+dir));
-  // Cheap sidebar update — strip .sel from current, add to next.
   const prev=rows.find(r=>r.classList.contains('sel'));
   if(prev)prev.classList.remove('sel');
   rows[i].classList.add('sel');
   rows[i].scrollIntoView({block:'nearest'});
-  selMon=rows[i].dataset.name;
-  megaCmp=false;
-  // Debounce the heavy detail render
-  if(_arrowRenderTimer)clearTimeout(_arrowRenderTimer);
-  _arrowRenderTimer=setTimeout(()=>{_arrowRenderTimer=null;renderDetail(selMon);},120);
+  _pendingMon=rows[i].dataset.name;
 }
-// Flush any pending detail render (called on Enter to feel instant).
+// Commit the currently-highlighted mon and render its detail (called on Enter).
 function flushSelection(){
-  if(_arrowRenderTimer){clearTimeout(_arrowRenderTimer);_arrowRenderTimer=null;}
-  if(selMon)renderDetail(selMon);
+  if(_pendingMon){selMon=_pendingMon;_pendingMon=null;megaCmp=false;renderDetail(selMon);}
+  else if(selMon){renderDetail(selMon);}
 }
 // Enter on the global search box (Pokémon view) picks the currently-selected
 // mon (or the first one if none selected). Arrow keys navigate the filtered list.
@@ -2498,7 +2495,7 @@ document.getElementById('list').addEventListener('click',e=>{
   // Cheap selection update — only toggle .sel, skip the full sidebar rebuild
   document.querySelectorAll('#list .row.sel').forEach(x=>x.classList.remove('sel'));
   r.classList.add('sel');
-  selMon=r.dataset.name;megaCmp=false;
+  selMon=r.dataset.name;_pendingMon=null;megaCmp=false;
   renderDetail(selMon);
 });
 setView('poke');
