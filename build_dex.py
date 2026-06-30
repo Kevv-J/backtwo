@@ -132,6 +132,16 @@ def get_json(url: str, cache_key: str) -> dict | None:
     return data
 
 
+def _slug_to_ability(slug: str) -> str:
+    """PokeAPI ability slug → display name (Showdown-style).
+    'lightning-rod' -> 'Lightning Rod', 'rks-system' -> 'RKS System'."""
+    SPECIALS = {"rks-system": "RKS System", "as-one-glastrier": "As One (Glastrier)",
+                "as-one-spectrier": "As One (Spectrier)"}
+    if slug in SPECIALS:
+        return SPECIALS[slug]
+    return " ".join(w.capitalize() for w in slug.split("-"))
+
+
 def fetch_pokemon(slugs: list[str]) -> dict | None:
     for slug in slugs:
         d = get_json(f"https://pokeapi.co/api/v2/pokemon/{slug}", f"mon_{slug}")
@@ -146,6 +156,19 @@ def fetch_pokemon(slugs: list[str]) -> dict | None:
                 other = sprites.get("other") or {}
                 home = other.get("home") or {}
                 sprite_url = home.get("front_default")
+            # PokeAPI abilities — used by the viewer to set the correct ability
+            # for mega formes (player pastes list the pre-mega ability since the
+            # mega ability auto-applies on evolve in-game; we need the post-mega).
+            abilities = []
+            for ab_entry in d.get("abilities", []):
+                slug_ab = (ab_entry.get("ability") or {}).get("name")
+                if not slug_ab:
+                    continue
+                abilities.append({
+                    "name": _slug_to_ability(slug_ab),
+                    "hidden": bool(ab_entry.get("is_hidden")),
+                    "slot": ab_entry.get("slot", 0),
+                })
             return {
                 "types": [t["type"]["name"] for t in d["types"]],
                 "stats": {
@@ -154,6 +177,7 @@ def fetch_pokemon(slugs: list[str]) -> dict | None:
                     "spe": st["speed"],
                 },
                 "sprite_url": sprite_url,
+                "abilities": abilities,
             }
     return None
 

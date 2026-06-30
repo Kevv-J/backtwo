@@ -1705,7 +1705,9 @@ function rebuildSetOptions(p,m){const ss=setsFor(m.forme).slice(0,10);
     ss.map((s,i)=>`<option value="${i}">${esc(s.evs||'no EVs')} · ${esc(s.nature||'neutral')}${s.item&&s.item!=='-'?' · '+esc(s.item):''}${s.date?' · '+esc(s.date):''}</option>`).join('');}
 function wireSlot(p,m){
   function applyForme(v){
-    Object.assign(m,defaultSet(v));rebuildSetOptions(p,m);
+    Object.assign(m,defaultSet(v));
+    correctMegaAbility(m);  // calc-side only
+    rebuildSetOptions(p,m);
     g(p+'_search').value=v;populateSlot(p,m);
     if(p==='a')selA=null;else selB=null;
     afterSlotChange(p,m);
@@ -1721,6 +1723,7 @@ function wireSlot(p,m){
   g(p+'_set').addEventListener('change',e=>{const ss=setsFor(m.forme).slice(0,10),i=+e.target.value;
     if(i<0||!ss[i])Object.assign(m,defaultSet(m.forme));
     else{const s=ss[i];m.item=s.item||'';m.ability=s.ability||'';m.nature=s.nature||'Serious';m.ev=parseEVs(s.evs);m.boost=zeroBoost();m.moves=(s.moves||[]).slice(0,4);while(m.moves.length<4)m.moves.push('');m.status='ok';m.hpPct=100;}
+    correctMegaAbility(m);  // calc-side only
     populateSlot(p,m);if(p==='a')selA=null;else selB=null;
     afterSlotChange(p,m);
     updateResults();});
@@ -1994,9 +1997,21 @@ function loadIntoSlot(p,m,src){m.forme=src.forme;m.item=src.item||'';m.ability=s
   m.ev={...(src.ev||parseEVs(src.evs||''))};m.boost={...(src.boost||zeroBoost())};
   m.status=src.status||'ok';m.hpPct=src.hpPct??100;
   m.moves=(src.moves||[]).slice(0,4);while(m.moves.length<4)m.moves.push('');
+  correctMegaAbility(m);  // calc-side only — teams view keeps raw paste ability
   g(p+'_search').value=src.forme;rebuildSetOptions(p,m);populateSlot(p,m);if(p==='a')selA=null;else selB=null;
   afterSlotChange(p,m);
   updateResults();}
+// For mega formes, the dataset's "most common ability" is the PRE-mega
+// ability (pastes list base ability since mega ability auto-applies in-game).
+// PokéAPI gives the post-mega ability. Override on load so calc + auto-wires
+// use the correct ability (e.g. Charizard-Mega-Y → Drought, Raichu-Mega-X →
+// Electric Surge, Blastoise-Mega → Mega Launcher, etc.).
+// Only fires for -Mega formes; non-megas keep the dataset-derived ability.
+function correctMegaAbility(m){
+  if(!m.forme || !isMega(m.forme))return;
+  const apiAb=DEX.formes[m.forme]?.abilities?.[0]?.name;
+  if(apiAb)m.ability=apiAb;
+}
 // Single helper that runs after a slot's mon (or ability) changes. Keeps
 // all the side-effects in one place so every load path (loadIntoSlot,
 // applyForme via search smart picker, set-picker change, ability change)
