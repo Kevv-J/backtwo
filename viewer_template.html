@@ -389,6 +389,23 @@
   .findhdr{margin-bottom:14px}
   .findbox{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-bottom:10px}
   .findbox input{width:100%;font-size:14px;padding:9px 12px}
+  /* Unified smart-picker dropdown — used for every search input in the dmg
+     calc (slot search, item, ability, moves) + the ally search. Fixed-position
+     so it floats above any layout; same style across all input types for
+     consistency. */
+  .smartpicker-dropdown{position:fixed;z-index:80;background:var(--card-elev);border:1px solid var(--atk-color);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.5);max-height:300px;overflow-y:auto;min-width:220px;max-width:380px}
+  .smartpicker-option{display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .08s;font-size:12px;color:var(--foreground)}
+  .smartpicker-option:last-child{border-bottom:none}
+  .smartpicker-option.highlighted,.smartpicker-option:hover{background:var(--atk-bg)}
+  .smartpicker-option .sp-name{flex:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .smartpicker-option .sp-meta{color:var(--muted-foreground);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;flex-shrink:0}
+  .smartpicker-option .sp-itemicon{flex-shrink:0;width:22px;height:22px;border-radius:4px;background:var(--secondary);border:1px solid var(--border);display:inline-flex;align-items:center;justify-content:center;color:var(--warning);font-size:11px}
+  .smartpicker-option .sp-cat{flex-shrink:0;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;text-transform:uppercase;letter-spacing:.04em}
+  .smartpicker-option .sp-cat.physical{background:rgba(251,146,60,0.18);color:var(--cat-phys);border:1px solid rgba(251,146,60,0.35)}
+  .smartpicker-option .sp-cat.special{background:rgba(96,165,250,0.18);color:var(--cat-spec);border:1px solid rgba(96,165,250,0.35)}
+  .smartpicker-option .sp-cat.status{background:rgba(148,163,184,0.15);color:var(--cat-stat);border:1px solid rgba(148,163,184,0.30)}
+  .smartpicker-option .sp-bp{flex-shrink:0;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;color:var(--muted-foreground);min-width:32px;text-align:right}
+  .smartpicker-empty{padding:8px 12px;color:var(--muted-foreground);font-size:11px;font-style:italic}
   /* Find Team slot grid — 1×6 compact row. Slot height fixed; dropdown floats
      absolutely below the editing slot so siblings never resize. */
   .find-slot-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;margin-bottom:14px}
@@ -1319,14 +1336,20 @@ function wireAllyBar(){
   const clr=document.getElementById('allyclear');
   if(clr)clr.onclick=()=>{pickAlly(null);refreshAllyBar();};
   const sr=document.getElementById('allysearch');
-  if(sr)sr.addEventListener('change',()=>{
-    const v=sr.value.trim();
-    if(!v){pickAlly(null);refreshAllyBar();return;}
-    if(!DEX.formes[v]){return;}  // invalid forme — ignore
-    pickAlly(allyFromForme(v));
-    sr.value='';  // clear input after pick
-    refreshAllyBar();
-  });
+  if(sr){
+    attachSmartPicker(sr,{
+      source:()=>ALL_FORMES,
+      usage:(n)=>idx.get(n)?.count||0,
+      defaultEmpty:()=>pokeList.slice(0,10).map(e=>e.name),
+      renderOption:spRenderForme,
+      onPick:v=>{
+        const r=resolveForme(v);if(!r||!DEX.formes[r])return;
+        pickAlly(allyFromForme(r));
+        sr.value='';  // clear input after pick
+        refreshAllyBar();
+      },
+    });
+  }
   // Allow click on an auto-wired chip to manually disable that boost
   document.querySelectorAll('.allyboost-chip[data-wirek]').forEach(chip=>chip.onclick=()=>{
     const k=chip.dataset.wirek;
@@ -1732,25 +1755,35 @@ function wireSlot(p,m){
     Object.assign(m,defaultSet(v));rebuildSetOptions(p,m);
     g(p+'_search').value=v;populateSlot(p,m);
     if(p==='a')selA=null;else selB=null;updateResults();}
-  g(p+'_search').addEventListener('change',e=>{const v=resolveForme(e.target.value);if(v)applyForme(v);});
-  // Enter handling on slot search: prevent form-submit on keydown, then resolve
-  // on keyup so the browser's datalist popup has time to commit any
-  // highlighted suggestion to the input value first (which is why Enter used
-  // to need to be pressed twice).
-  g(p+'_search').addEventListener('keydown',e=>{if(e.key==='Enter')e.preventDefault();});
-  g(p+'_search').addEventListener('keyup',e=>{
-    if(e.key!=='Enter')return;
-    const v=resolveForme(g(p+'_search').value);
-    if(v){applyForme(v);g(p+'_search').blur();}
+  // Slot Pokémon search — smart picker (replaces native datalist)
+  attachSmartPicker(g(p+'_search'),{
+    source:()=>ALL_FORMES,
+    usage:(n)=>idx.get(n)?.count||0,
+    defaultEmpty:()=>pokeList.slice(0,10).map(e=>e.name),
+    renderOption:spRenderForme,
+    onPick:v=>{const r=resolveForme(v); if(r)applyForme(r);},
   });
   g(p+'_set').addEventListener('change',e=>{const ss=setsFor(m.forme).slice(0,10),i=+e.target.value;
     if(i<0||!ss[i])Object.assign(m,defaultSet(m.forme));
     else{const s=ss[i];m.item=s.item||'';m.ability=s.ability||'';m.nature=s.nature||'Serious';m.ev=parseEVs(s.evs);m.boost=zeroBoost();m.moves=(s.moves||[]).slice(0,4);while(m.moves.length<4)m.moves.push('');m.status='ok';m.hpPct=100;}
     populateSlot(p,m);if(p==='a')selA=null;else selB=null;updateResults();});
-  ['_item','_ability'].forEach(x=>g(p+x).addEventListener('input',()=>{
-    readSlot(p,m); updateResults();
-    const el=g(p+x); el.title=descFor(x==='_item'?'item':'ability', el.value) || (x==='_item'?'Held item':'Ability');
-  }));
+  // Item + Ability inputs — smart pickers (replaces datalists)
+  attachSmartPicker(g(p+'_item'),{
+    source:()=>ALL_ITEMS,
+    usage:(n)=>0,  // no usage stat for items; alphabetical via stable sort
+    renderOption:spRenderItem,
+    onPick:v=>{m.item=v;readSlot(p,m);updateResults();
+      const el=g(p+'_item'); el.title=descFor('item',v)||'Held item';},
+    onClear:()=>{m.item='';readSlot(p,m);updateResults();},
+  });
+  attachSmartPicker(g(p+'_ability'),{
+    source:()=>ALL_ABILITIES,
+    usage:(n)=>0,
+    renderOption:spRenderAbility,
+    onPick:v=>{m.ability=v;readSlot(p,m);updateResults();
+      const el=g(p+'_ability'); el.title=descFor('ability',v)||'Ability';},
+    onClear:()=>{m.ability='';readSlot(p,m);updateResults();},
+  });
   g(p+'_nature').addEventListener('change',()=>{readSlot(p,m);updateResults();});
   STAT_KEYS.forEach(([k])=>{
     const sp=g(p+'_sp_'+k);
@@ -1792,7 +1825,15 @@ function wireSlot(p,m){
       syncCounters(p,m);updateResults();
     });
   });
-  [0,1,2,3].forEach(i=>g(p+'_mv'+i).addEventListener('input',()=>{readSlot(p,m);updateResults();}));
+  [0,1,2,3].forEach(i=>{
+    attachSmartPicker(g(p+'_mv'+i),{
+      source:()=>ALL_MOVES,
+      usage:(n)=>DEX.moves[n]?.power||0,  // prioritize damaging moves
+      renderOption:spRenderMove,
+      onPick:v=>{m.moves[i]=v;readSlot(p,m);updateResults();},
+      onClear:()=>{m.moves[i]='';readSlot(p,m);updateResults();},
+    });
+  });
 }
 // KO chip classification — green/orange/blue/gray tiers
 function koClass(r){
@@ -2200,15 +2241,16 @@ function refreshFindSlot(i){
   wireFindSlots();
 }
 
-function findMatches(q){
+function findMatches(q){return smartMatches(q, ALL_FORMES, n=>idx.get(n)?.count||0, ()=>pokeList.slice(0,10).map(e=>e.name));}
+
+// Generic prefix > substring matcher, sorted by usage (desc).
+// `q` = query string, `source` = list to search, `usage` = (name)->count for sorting,
+// `defaultEmpty` = function returning the list shown when q is empty.
+function smartMatches(q, source, usage, defaultEmpty){
   q=(q||'').trim().toLowerCase();
-  if(!q)return pokeList.slice(0,10).map(e=>e.name);
-  // Search ALL dex formes so rare mons still surface. Prefer prefix matches;
-  // sort each tier by usage count in the current scope (mons with no usage end
-  // up after the in-scope ones but are still pickable).
-  const usage=(n)=>idx.get(n)?.count||0;
+  if(!q)return defaultEmpty?defaultEmpty():source.slice(0,10);
   const prefix=[],sub=[];
-  for(const name of ALL_FORMES){
+  for(const name of source){
     const n=name.toLowerCase();
     if(n.startsWith(q))prefix.push(name);
     else if(n.includes(q))sub.push(name);
@@ -2216,6 +2258,102 @@ function findMatches(q){
   prefix.sort((a,b)=>usage(b)-usage(a));
   sub.sort((a,b)=>usage(b)-usage(a));
   return prefix.concat(sub).slice(0,10);
+}
+
+// Attach a unified smart-picker dropdown to an input element. Replaces the
+// browser-native datalist with a reactive, sprite/icon-rich custom dropdown
+// with keyboard nav (arrow/Enter/Tab/Esc).
+//   opts: {
+//     source:        ()=>string[],          // list of valid options
+//     usage?:        (val)=>number,          // for sort ordering (default: 0)
+//     defaultEmpty?: ()=>string[],           // shown on focus when input is empty
+//     renderOption:  (val)=>html,            // row HTML (sprite/icon + name + meta)
+//     onPick:        (val)=>void,            // committed pick
+//     onClear?:      ()=>void,               // called when input is cleared
+//   }
+function attachSmartPicker(input, opts){
+  if(!input || input._smartPicker)return;
+  input._smartPicker=true;
+  // Datalist would conflict with our custom dropdown — drop it.
+  input.removeAttribute('list');
+  let dd=null, highlight=0, matches=[];
+
+  function ensureDD(){
+    if(dd)return dd;
+    dd=document.createElement('div');
+    dd.className='smartpicker-dropdown';
+    document.body.appendChild(dd);
+    return dd;
+  }
+  function position(){
+    if(!dd)return;
+    const r=input.getBoundingClientRect();
+    dd.style.left=r.left+'px';
+    dd.style.top=(r.bottom+4)+'px';
+    dd.style.width=Math.max(r.width, 240)+'px';
+  }
+  function render(){
+    if(!dd)return;
+    if(!matches.length){dd.innerHTML='<div class="smartpicker-empty">no match — keep typing</div>';return;}
+    dd.innerHTML=matches.map((val,k)=>`<div class="smartpicker-option ${k===highlight?'highlighted':''}" data-val="${esc(val)}" data-idx="${k}">${opts.renderOption(val)}</div>`).join('');
+    dd.querySelectorAll('.smartpicker-option').forEach(opt=>{
+      opt.addEventListener('mousedown',e=>{e.preventDefault();commit(opt.dataset.val);});
+    });
+  }
+  function update(){
+    matches=smartMatches(input.value, opts.source(), opts.usage||(()=>0), opts.defaultEmpty);
+    highlight=0;
+    render();
+  }
+  function open(){ensureDD();position();update();}
+  function close(){if(dd){dd.remove();dd=null;}}
+  function commit(val){
+    if(!val)val=matches[highlight]||matches[0];
+    if(val){input.value=val;opts.onPick(val);}
+    close();
+    // Blur so the dropdown doesn't pop back open immediately.
+    input.blur();
+  }
+  input.addEventListener('focus',open);
+  input.addEventListener('blur',()=>setTimeout(close,150));
+  input.addEventListener('input',()=>{
+    if(input.value.trim()===''){opts.onClear?.();}
+    update();
+  });
+  input.addEventListener('keydown',e=>{
+    if(!dd)return;
+    if(e.key==='ArrowDown'){e.preventDefault();highlight=Math.min(matches.length-1,highlight+1);render();dd.querySelectorAll('.smartpicker-option')[highlight]?.scrollIntoView({block:'nearest'});}
+    else if(e.key==='ArrowUp'){e.preventDefault();highlight=Math.max(0,highlight-1);render();dd.querySelectorAll('.smartpicker-option')[highlight]?.scrollIntoView({block:'nearest'});}
+    else if(e.key==='Enter'){e.preventDefault();commit();}
+    else if(e.key==='Tab'){commit();}
+    else if(e.key==='Escape'){e.preventDefault();close();}
+  });
+  // Reposition on scroll/resize so the dropdown follows the input.
+  window.addEventListener('scroll',()=>{if(dd)position();},true);
+  window.addEventListener('resize',()=>{if(dd)position();});
+}
+
+// Per-input-type render templates for the smart picker dropdown.
+function spRenderForme(name){
+  const ct=idx.get(name)?.count||'';
+  return `${pokeSprite(name,'28')}<span class="sp-name">${esc(name)}</span>${ct?`<span class="sp-meta">${ct}</span>`:''}`;
+}
+function spRenderItem(name){
+  // Show a generic accent dot until item sprites are added in a future build.
+  return `<span class="sp-itemicon">◆</span><span class="sp-name">${esc(name)}</span>`;
+}
+function spRenderAbility(name){
+  const desc=ABILITY_DESC[name]||'';
+  const trimmed=desc.length>48?desc.slice(0,45)+'…':desc;
+  return `<span class="sp-name">${esc(name)}</span>${trimmed?`<span class="sp-meta">${esc(trimmed)}</span>`:''}`;
+}
+function spRenderMove(name){
+  const info=DEX.moves[name]||{};
+  const catLab=info.category==='physical'?'Phys':info.category==='special'?'Spec':'Stat';
+  const cat=info.category||'status';
+  const bp=info.power?`<span class="sp-bp">${info.power} BP</span>`:'';
+  const chip=info.type?`<span class="mv typeonly t-${info.type}" style="font-size:9px;padding:1px 5px">${info.type.slice(0,3).toUpperCase()}</span>`:'';
+  return `${chip}<span class="sp-name">${esc(name)}</span><span class="sp-cat ${cat}">${catLab}</span>${bp}`;
 }
 
 function updateFindDropdown(i){
@@ -2357,7 +2495,13 @@ function setView(v){view=v;
   const fs=document.getElementById('fieldsum'), rb=document.getElementById('resetbtn');
   if(fs)fs.style.display=(v==='dmg')?'':'none';
   if(rb)rb.style.display=(v==='dmg')?'':'none';
-  if(v==='poke'){renderPokeList(); if(!selMon) renderLanding(); else renderDetail(selMon);}
+  if(v==='poke'){
+    renderPokeList();
+    // Auto-select first mon if nothing's loaded yet — saves the click.
+    // The landing screen is still reachable via the explicit empty state.
+    if(!selMon && pokeList.length){selMon=pokeList[0].name;}
+    if(selMon) renderDetail(selMon); else renderLanding();
+  }
   else if(v==='find')renderFind();
   else if(v==='dmg')renderDmg();
   else renderTeams();
