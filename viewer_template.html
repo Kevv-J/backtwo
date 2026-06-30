@@ -1238,11 +1238,8 @@ let pinned=null;     // 'a' | 'b' | null — which slot is pinned (locked from q
 // calcDmg and toggled via the Battle effects button row inside each slot.)
 
 // ===== Slot-driven auto-wire =====
-// When a mon is loaded into a slot via loadIntoSlot (My Team click, fight-team
-// pick, search), and its ability is one of the team-buff abilities below, the
-// corresponding side flag is auto-enabled. Loading a different mon into the
-// same slot clears the previous auto-wire (only the flags we set — manual
-// toggles by the user are preserved).
+// When a mon is loaded into a slot, its ability triggers automatic state on
+// the field/side based on these maps:
 const SIDE_BUFF_ABILITY={
   'Power Spot':'powerSpot',
   'Battery':'battery',
@@ -1250,21 +1247,55 @@ const SIDE_BUFF_ABILITY={
   'Flower Gift':'flowerGift',   // sun-conditional
   'Friend Guard':'friendGuard',
 };
-let _autoWiredA=[], _autoWiredB=[];
+const WEATHER_SETTER={
+  'Drought':'sun', 'Desolate Land':'harshsun',
+  'Drizzle':'rain', 'Primordial Sea':'heavyrain',
+  'Sand Stream':'sand',
+  'Snow Warning':'snow',
+  'Delta Stream':'strongwinds',
+};
+const TERRAIN_SETTER={
+  'Electric Surge':'electric',
+  'Grassy Surge':'grassy',
+  'Misty Surge':'misty',
+  'Psychic Surge':'psychic',
+};
+// Tracker remembers what THIS slot auto-set so loading a different mon
+// cleanly clears the previous auto-set (only what we set; user manual
+// changes are preserved).
+let _autoWiredA={flags:[], weather:null, terrain:null};
+let _autoWiredB={flags:[], weather:null, terrain:null};
 function applySlotAutoWire(p, m){
   const side=p==='a'?sideA:sideB;
   const tracker=p==='a'?_autoWiredA:_autoWiredB;
-  // Clear previously-set auto-wires (only those we set; user-toggled flags stay).
-  tracker.forEach(k=>{side[k]=0;});
-  tracker.length=0;
+  // Clear previously-set side flags (only those we set; user-toggled flags stay)
+  tracker.flags.forEach(k=>{side[k]=0;});
+  tracker.flags=[];
+  // Clear previously-set weather/terrain if it's still the value we set
+  // (don't override the user's manual change).
+  if(tracker.weather && weather===tracker.weather){weather='none';}
+  tracker.weather=null;
+  if(tracker.terrain && field.terrain===tracker.terrain){field.terrain='none';}
+  tracker.terrain=null;
   if(!m||!m.ability)return;
-  const key=SIDE_BUFF_ABILITY[m.ability];
-  if(!key)return;
-  if(key==='flowerGift' && weather!=='sun' && weather!=='harshsun')return;
-  if(!side[key]){  // don't take credit if user already had it on
-    side[key]=1;
-    tracker.push(key);
+  // Side-buff abilities (Power Spot, Battery, etc.)
+  const sk=SIDE_BUFF_ABILITY[m.ability];
+  if(sk){
+    if(!(sk==='flowerGift' && weather!=='sun' && weather!=='harshsun')){
+      if(!side[sk]){side[sk]=1;tracker.flags.push(sk);}
+    }
   }
+  // Weather-setter abilities — overwrite weather (matches in-game switch-in behavior)
+  const wk=WEATHER_SETTER[m.ability];
+  if(wk){weather=wk;tracker.weather=wk;}
+  // Terrain-setter abilities
+  const tk=TERRAIN_SETTER[m.ability];
+  if(tk){field.terrain=tk;tracker.terrain=tk;}
+}
+// After applying auto-wires, refresh the field-bar UI to reflect new state.
+function syncFieldUI(){
+  syncBtnGroup('weat', weather);
+  syncBtnGroup('terr', field.terrain);
 }
 function targetSlot(defaultP){return pinned==='a'?'b':pinned==='b'?'a':defaultP;}
 function zeroEV(){return{hp:0,atk:0,def:0,spa:0,spd:0,spe:0};}
@@ -1532,7 +1563,7 @@ const g=id=>document.getElementById(id);
 function slotHTML(p,title){
   const tag=p==='a'?'A':'B';
   return `<div class="dmgslot" data-p="${p}"><div class="slothd"><h3>${title} <button class="pinbtn ${pinned===p?'locked':''}" data-p="${p}" title="Lock this slot — quick-picks go to the other slot">${pinned===p?'🔒':'🔓'}</button></h3><div class="slothd-right"><span id="${p}_slotsprite" class="slotsprite"></span><span id="${p}_typeline" class="small"></span></div></div><div class="slotbody">
-  ${myTeam.length?`<div class="myrow"><span class="small">My team:</span> ${myTeam.map((mon,i)=>`<button class="mybtn" data-p="${p}" data-i="${i}">${pokeSprite(mon.forme,'24')}${esc(mon.forme)}</button>`).join('')}</div>`:''}
+  ${(myTeam.length && p==='a')?`<div class="myrow"><span class="small">My team:</span> ${myTeam.map((mon,i)=>`<button class="mybtn" data-p="${p}" data-i="${i}">${pokeSprite(mon.forme,'24')}${esc(mon.forme)}</button>`).join('')}</div>`:''}
   <input id="${p}_search" placeholder="search any Pokémon…" list="formelist" autocomplete="off" onfocus="setTimeout(()=>this.select(),0)">
   <select id="${p}_set"><option>— pick a Pokémon first —</option></select>
   <div class="fld3">
@@ -1580,13 +1611,27 @@ function renderFinals(p,m){const s=statsOf(m);
     lbl.classList.toggle('natup',nm>1);
     lbl.classList.toggle('natdown',nm<1);
   });
+  // Intimidate from the OTHER slot's mon adds a virtual -1 Atk that's only
+  // applied in the calc engine (not stored on m.boost). Show it on the Atk
+  // row so the user can see the effective Atk in the stat panel.
+  const other = p==='a' ? B : A;
+  const intimidated = other?.ability==='Intimidate' && !INTIMIDATE_IMMUNE.has(m.ability||'') && m.forme;
   STAT_KEYS.forEach(([k])=>{const cell=g(p+'_fin_'+k);if(!cell)return;
     if(!s){cell.textContent='';return;}
-    const v=s[k],b=k==='hp'?0:(m.boost?.[k]||0);
-    if(b){
-      const boosted=applyBoost(v,b);
-      const sign=b>0?'up':'down';
-      cell.innerHTML=`<b class="${sign}">${boosted}</b> <span class="finbase">(${v})</span> <span class="bsign ${sign}">${b>0?'+'+b:b}</span>`;
+    let v=s[k];
+    let b=k==='hp'?0:(m.boost?.[k]||0);
+    // Virtual Intimidate stage (visual only — calc engine still computes it itself)
+    let virtIntim=0;
+    if(k==='atk' && intimidated){
+      virtIntim=-1;
+      if(m.ability==='Defiant')virtIntim=+1;  // -1 + 2 = +1 net
+    }
+    const effB=b+virtIntim;
+    if(effB){
+      const boosted=applyBoost(v,effB);
+      const sign=effB>0?'up':'down';
+      const intimTag=virtIntim?` <span class="bsign down" title="Intimidate from opposing ${esc(other.forme)}">↓Intim</span>`:'';
+      cell.innerHTML=`<b class="${sign}">${boosted}</b> <span class="finbase">(${v})</span> <span class="bsign ${sign}">${effB>0?'+'+effB:effB}</span>${intimTag}`;
     } else cell.innerHTML=`<b>${v}</b>`;
     // Sync stage chip active state
     if(k!=='hp'){const row=document.querySelector(`.stagerow[data-p="${p}"][data-k="${k}"]`);
@@ -1689,11 +1734,15 @@ function wireSlot(p,m){
     usage:(n)=>0,
     renderOption:spRenderAbility,
     onPick:v=>{m.ability=v;readSlot(p,m);
-      applySlotAutoWire(p,m);syncFxRow(p,p==='a'?sideA:sideB);
+      applySlotAutoWire(p,m);syncFxRow(p,p==='a'?sideA:sideB);syncFieldUI();
+      const other=p==='a'?'b':'a', otherM=p==='a'?B:A;
+      if(otherM.forme)renderFinals(other,otherM);
       updateResults();
       const el=g(p+'_ability'); el.title=descFor('ability',v)||'Ability';},
     onClear:()=>{m.ability='';readSlot(p,m);
-      applySlotAutoWire(p,m);syncFxRow(p,p==='a'?sideA:sideB);
+      applySlotAutoWire(p,m);syncFxRow(p,p==='a'?sideA:sideB);syncFieldUI();
+      const other=p==='a'?'b':'a', otherM=p==='a'?B:A;
+      if(otherM.forme)renderFinals(other,otherM);
       updateResults();},
   });
   g(p+'_nature').addEventListener('change',()=>{readSlot(p,m);updateResults();});
@@ -1948,6 +1997,10 @@ function loadIntoSlot(p,m,src){m.forme=src.forme;m.item=src.item||'';m.ability=s
   g(p+'_search').value=src.forme;rebuildSetOptions(p,m);populateSlot(p,m);if(p==='a')selA=null;else selB=null;
   applySlotAutoWire(p,m);
   syncFxRow(p,p==='a'?sideA:sideB);
+  syncFieldUI();
+  // Refresh the OTHER slot's stats so Intimidate indicator updates there too
+  const other=p==='a'?'b':'a', otherM=p==='a'?B:A;
+  if(otherM.forme)renderFinals(other,otherM);
   updateResults();}
 function renderDmg(){
   g('dmgpad').innerHTML=`
