@@ -205,6 +205,11 @@
   .allyboost-chip:hover{background:rgba(239,68,68,0.18);border-color:rgba(239,68,68,0.40);color:#fca5a5}
   .allyboost-chip:hover::after{content:' ×'}
   .allyboost-note{color:var(--muted-foreground);font-size:10px;font-style:italic}
+  /* Loud "no calc effect" notice — shown when picked ally has no ally-boost
+     ability/move, so the user knows the strip is working and they just picked
+     a mon whose ability is self-only. */
+  .allyboosts.no-effect{background:var(--warning-bg);border:1px solid var(--warning-border);color:var(--warning);border-radius:6px;padding:7px 11px;font-size:11.5px;line-height:1.45}
+  .allyboosts.no-effect b{color:var(--warning)}
   .dmgslot{flex:1;min-width:320px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:0;overflow:hidden;display:flex;flex-direction:column}
   .dmgslot[data-p="a"]{border-color:var(--atk-border)}
   .dmgslot[data-p="b"]{border-color:var(--def-border)}
@@ -1292,19 +1297,29 @@ function renderAllyBar(){
   } else {
     current=`<span class="ally-current empty">— none —</span>`;
   }
-  // Boosts-applied transparency badge
+  // Boosts-applied transparency badge.
+  // Only 5 abilities + Helping Hand actually buff teammates from the ally
+  // position. For every other pick (most of the dex), picking an ally has NO
+  // CALC EFFECT — surface that clearly so the user doesn't think the
+  // selection is broken.
   let boostsRow='';
   if(ally){
     if(allyAutoWired.length){
       const chips=allyAutoWired.map(k=>`<button class="allyboost-chip" data-wirek="${k}" title="Click to disable">${esc(ALLY_BOOST_LABELS[k]||k)}</button>`).join('');
       boostsRow=`<div class="allyboosts"><span class="boostslbl">Boosts from ally →</span>${chips}</div>`;
     } else {
-      // Ally picked but nothing auto-wired (e.g. Flower Gift but no sun, or
-      // an ally whose ability/moves don't trigger anything).
-      let note='no auto-wires for this ally';
-      if(ally.ability==='Flower Gift'&&weather!=='sun'&&weather!=='harshsun')
-        note='Flower Gift waits on Sun';
-      boostsRow=`<div class="allyboosts"><span class="allyboost-note">${esc(note)} — toggle Battle effects on the attacker side as needed</span></div>`;
+      // Ally picked but nothing auto-wired. Explain WHY (some abilities are
+      // self-only, some are conditional on weather, etc.) so the user knows
+      // it's working as designed and not silently broken.
+      let note;
+      if(ally.ability==='Flower Gift'&&weather!=='sun'&&weather!=='harshsun'){
+        note=`<b>Flower Gift waits on Sun</b> — set Sun above and the +50% Atk auto-wires.`;
+      } else if(ally.ability){
+        note=`<b>${esc(ally.ability)}</b> doesn't buff teammates — picking ${esc(ally.forme)} as ally has no calc effect. Use the Battle effects row in the attacker slot if you need to manually add Helping Hand / Power Spot / etc.`;
+      } else {
+        note=`No ally-boost ability or Helping Hand on this mon — picking it has no calc effect. Toggle the Battle effects row on the attacker side manually if needed.`;
+      }
+      boostsRow=`<div class="allyboosts no-effect">${note}</div>`;
     }
   }
   return `<div class="allyhd">
@@ -2025,7 +2040,7 @@ function renderDmg(){
     <datalist id="itemlist">${ALL_ITEMS.map(i=>`<option value="${esc(i)}">`).join('')}</datalist>
     <datalist id="movelist">${ALL_MOVES.map(mv=>`<option value="${esc(mv)}">`).join('')}</datalist>
     <datalist id="abilitylist">${ALL_ABILITIES.map(a=>`<option value="${esc(a)}">`).join('')}</datalist>
-    <details class="myteam"><summary><strong>My team</strong> <span class="small">${myTeam.length?'loaded: '+myTeam.map(m=>esc(m.forme)).join(', '):'paste a Showdown export — saved in this browser'}</span></summary>
+    <details class="myteam" ${myTeam.length?'':'open'}><summary>${myTeam.length?'<span class="small" style="color:var(--muted-foreground)">✎ edit my team</span>':'<strong>Paste your team</strong> <span class="small">Showdown export — saved in this browser, used for quick-picks</span>'}</summary>
       <textarea id="myta" placeholder="Garchomp @ Sitrus Berry&#10;Ability: Rough Skin&#10;EVs: 32 Atk / 32 Spe&#10;Jolly Nature&#10;- Earthquake&#10;- Dragon Claw&#10;...">${esc(myTeam.raw||'')}</textarea>
       <button id="mysave" class="btn">Save my team</button></details>
     ${fightTeam?renderFightBar():''}
