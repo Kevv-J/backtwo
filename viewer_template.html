@@ -54,6 +54,8 @@
     --bg:var(--background); --panel:var(--card); --panel2:var(--secondary);
     --line:var(--border); --txt:var(--foreground); --dim:var(--muted-foreground);
     --accent:var(--primary); --accent2:var(--warning);
+    /* Move category tokens — physical=orange, special=blue, status=muted */
+    --cat-phys:#fb923c; --cat-spec:#60a5fa; --cat-stat:var(--muted-foreground);
   }
   *{box-sizing:border-box}
   body{margin:0;font-family:'Inter','Segoe UI',system-ui,sans-serif;font-size:13px;line-height:1.5;background:var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased;font-feature-settings:"cv02","cv03","cv04","cv11"}
@@ -82,7 +84,11 @@
   .regs{display:flex;gap:2px;padding:2px;background:var(--secondary);border-radius:6px}
   .regbtn{padding:5px 9px;border:none;border-radius:4px;background:transparent;color:var(--muted-foreground);cursor:pointer;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-family:'Rajdhani','Inter',sans-serif}
   .regbtn:hover{color:var(--foreground)}
+  /* Reg pills anchor the brand: M-A = cyan (attacker side), M-B = violet (defender).
+     Falls back to warning for any new reg until it's brand-assigned. */
   .regbtn.active{color:var(--warning);background:var(--card-elev);box-shadow:0 0 0 1px var(--warning-border)}
+  .regbtn.active[data-reg="M-A"]{color:var(--atk-color);box-shadow:0 0 0 1px var(--atk-border);background:var(--card-elev)}
+  .regbtn.active[data-reg="M-B"]{color:var(--def-color);box-shadow:0 0 0 1px var(--def-border);background:var(--card-elev)}
   .regbadge{display:inline-block;font-size:9px;background:rgba(34,211,238,0.10);color:var(--primary);border:1px solid rgba(34,211,238,0.25);border-radius:3px;padding:1px 5px;margin-left:6px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
   .regbadge.mb{background:rgba(245,158,11,0.10);color:var(--warning);border-color:rgba(245,158,11,0.30)}
   .newbadge{display:inline-block;font-size:9px;background:rgba(16,185,129,0.10);color:var(--good);border:1px solid rgba(16,185,129,0.30);border-radius:3px;padding:1px 5px;margin-left:6px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
@@ -117,7 +123,7 @@
   .meta{color:var(--dim);font-size:12px}
   .chip{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:1px 7px;margin:2px 4px 2px 0;font-size:12px}
   .chip.rank{border-color:var(--accent2);color:var(--accent2)}
-  .badge{font-size:10px;background:#3a2d12;color:var(--accent2);border:1px solid #5a4a1e;border-radius:5px;padding:0 5px;margin-left:6px;white-space:nowrap}
+  .badge{font-size:10px;background:var(--warning-bg);color:var(--warning);border:1px solid var(--warning-border);border-radius:5px;padding:0 5px;margin-left:6px;white-space:nowrap}
   .mons{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-top:9px}
   .mon{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
   .mon .nm{font-weight:700}
@@ -360,10 +366,10 @@
   .moverow.koimmune{opacity:0.65}
   .survive{color:var(--accent2);font-size:11px;margin-left:6px;font-weight:600}
   /* Speed-tier ribbon */
-  .speedribbon{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 14px;margin-bottom:10px;text-align:center;font-size:14px;font-weight:600}
+  .speedribbon{background:linear-gradient(90deg,var(--atk-bg) 0%,var(--card) 50%,var(--def-bg) 100%);border:1px solid var(--line);border-radius:8px;padding:8px 14px;margin-bottom:10px;text-align:center;font-size:14px;font-weight:600}
   .speedribbon:empty{display:none}
-  .speedribbon .fast-a,.speedribbon .slow-b{color:var(--accent)}
-  .speedribbon .fast-b,.speedribbon .slow-a{color:var(--accent2)}
+  .speedribbon .fast-a,.speedribbon .slow-b{color:var(--atk-color)}
+  .speedribbon .fast-b,.speedribbon .slow-a{color:var(--def-color)}
   .speedribbon .srpair{font-size:15px}
   .speedribbon .seprator{color:var(--dim)}
   /* Pin button on slot header */
@@ -383,13 +389,40 @@
   .findhdr{margin-bottom:14px}
   .findbox{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-bottom:10px}
   .findbox input{width:100%;font-size:14px;padding:9px 12px}
+  /* Find Team slot grid — 1×6 compact row. Slot height fixed; dropdown floats
+     absolutely below the editing slot so siblings never resize. */
+  .find-slot-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;margin-bottom:14px}
+  .find-slot{position:relative;background:var(--card);border:1.5px dashed var(--border);border-radius:8px;padding:6px 8px;height:56px;display:flex;align-items:center;gap:8px;cursor:pointer;transition:all .12s;overflow:hidden}
+  .find-slot:hover{border-color:var(--atk-border);background:var(--card-elev)}
+  .find-slot.filled{border-style:solid;border-color:var(--atk-border);background:var(--card-elev);cursor:default}
+  .find-slot.filled:hover{border-color:var(--atk-color)}
+  .find-slot.editing{border-style:solid;border-color:var(--atk-color);background:var(--card-elev);cursor:default;padding:0;gap:0;overflow:visible}
+  .find-slot .find-plus{width:24px;height:24px;border-radius:50%;background:rgba(34,211,238,0.10);border:1px solid var(--atk-border);color:var(--atk-color);font-size:16px;font-weight:300;display:flex;align-items:center;justify-content:center;flex-shrink:0;line-height:1}
+  .find-slot .find-plus-lbl{color:var(--muted-foreground);font-size:11px;font-weight:600;font-family:'Rajdhani','Inter',sans-serif;letter-spacing:.04em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:uppercase}
+  .find-slot.filled .find-name{font-weight:700;color:var(--foreground);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+  .find-slot.filled .find-clear{background:transparent;border:1px solid var(--border);color:var(--muted-foreground);border-radius:4px;width:20px;height:20px;cursor:pointer;font-size:12px;line-height:1;padding:0;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .find-slot.filled .find-clear:hover{border-color:var(--bad);color:var(--bad)}
+  .find-slot .find-sprite{flex-shrink:0;display:flex;align-items:center;justify-content:center;width:36px;height:36px;line-height:0}
+  .find-slot .find-sprite .psprite{width:36px;height:36px}
+  .find-slot.editing .find-input{width:100%;height:100%;font-size:13px;padding:0 10px;border:none;background:transparent;color:var(--foreground);outline:none;border-radius:8px}
+  /* Dropdown: absolute positioned below the editing slot so it doesn't grow
+     the grid row height. Slightly wider than the slot when there's room. */
+  .find-dropdown{position:absolute;top:calc(100% + 4px);left:0;min-width:100%;width:max(100%,240px);max-width:320px;max-height:280px;overflow-y:auto;background:var(--card-elev);border:1px solid var(--atk-color);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.5);z-index:30}
+  .find-dropdown:empty{display:none}
+  .find-option{display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .08s;font-size:13px}
+  .find-option:last-child{border-bottom:none}
+  .find-option:hover,.find-option.highlighted{background:var(--atk-bg)}
+  .find-option .find-option-name{flex:1;font-weight:600;color:var(--foreground)}
+  .find-option .find-option-count{color:var(--muted-foreground);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px}
+  .find-option .psprite{width:28px;height:28px;flex-shrink:0}
+  .find-empty-dropdown{padding:10px 12px;color:var(--muted-foreground);font-size:12px;font-style:italic}
   .findbtns{display:flex;align-items:center;gap:10px;margin-bottom:14px}
   .findh{color:var(--accent);font-size:13px;text-transform:uppercase;letter-spacing:.6px;margin:18px 0 8px;border-bottom:1px solid var(--line);padding-bottom:4px}
   .findh .small{color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0}
   #findresults{margin-top:4px}
   .findresult{position:relative;margin-bottom:11px}
-  .findresult .tcard{margin-bottom:0;border-color:#3a2415}
-  .missline{display:inline-block;padding:3px 10px;background:#3a2415;color:#ffb070;border:1px solid #5a3520;border-top-left-radius:8px;border-top-right-radius:8px;border-bottom:none;font-size:12px;font-weight:600;margin-bottom:-1px}
+  .findresult .tcard{margin-bottom:0;border-color:var(--warning-border)}
+  .missline{display:inline-block;padding:3px 10px;background:var(--warning-bg);color:var(--warning);border:1px solid var(--warning-border);border-top-left-radius:8px;border-top-right-radius:8px;border-bottom:none;font-size:12px;font-weight:600;margin-bottom:-1px}
   .missline::before{content:"⚠ "}
   /* Pokémon sprite icons (PokeAPI front_default, 96×96 or 512×512 home renders) */
   .psprite{display:inline-block;width:32px;height:32px;vertical-align:middle;flex-shrink:0;object-fit:contain;line-height:0}
@@ -420,9 +453,9 @@
   /* Move-row sub-meta: type chip + Phys/Spec + BP */
   .moverow .mvmeta{display:flex;gap:5px;align-items:center;font-size:10px;color:var(--muted-foreground)}
   .moverow .mvcat{font-family:'JetBrains Mono',ui-monospace,monospace;text-transform:capitalize}
-  .moverow .mvcat.physical{color:#fb923c}
-  .moverow .mvcat.special{color:#60a5fa}
-  .moverow .mvcat.status{color:#94a3b8}
+  .moverow .mvcat.physical{color:var(--cat-phys)}
+  .moverow .mvcat.special{color:var(--cat-spec)}
+  .moverow .mvcat.status{color:var(--cat-stat)}
   .moverow .mvbp{font-family:'JetBrains Mono',ui-monospace,monospace;color:var(--muted-foreground)}
   .restitle-hp{font-family:'JetBrains Mono',ui-monospace,monospace;color:var(--muted-foreground);font-size:10px;font-weight:500;letter-spacing:0;text-transform:none}
   /* SP-total counter (shows N/66, red when over) */
@@ -446,8 +479,8 @@
   .landing-vec .lv-cell.lv-dashed{stroke:rgba(255,255,255,0.18);stroke-dasharray:3 3}
   .landing-vec .lv-strike{stroke:rgba(255,255,255,0.25);stroke-width:1.2}
   .landing-vec .lv-q{fill:#3a3f55;font-family:Rajdhani,Inter,sans-serif;font-weight:700;font-size:20px;text-anchor:middle;dominant-baseline:central}
-  .landing-vec .lv-front-a{fill:rgba(6,182,212,0.12);stroke:#22d3ee;stroke-width:2;filter:drop-shadow(0 0 14px rgba(34,211,238,0.35))}
-  .landing-vec .lv-front-b{fill:rgba(139,92,246,0.12);stroke:#a78bfa;stroke-width:2;filter:drop-shadow(0 0 14px rgba(167,139,250,0.35))}
+  .landing-vec .lv-front-a{fill:var(--atk-bg);stroke:var(--atk-color);stroke-width:2;filter:drop-shadow(0 0 14px rgba(34,211,238,0.35))}
+  .landing-vec .lv-front-b{fill:var(--def-bg);stroke:var(--def-color);stroke-width:2;filter:drop-shadow(0 0 14px rgba(167,139,250,0.35))}
   .landing-vec .lv-glyph-a{fill:#22d3ee;font-family:Rajdhani,Inter,sans-serif;font-weight:700;font-size:30px;text-anchor:middle;dominant-baseline:central}
   .landing-vec .lv-glyph-b{fill:#a78bfa;font-family:Rajdhani,Inter,sans-serif;font-weight:700;font-size:30px;text-anchor:middle;dominant-baseline:central}
   .landing-vec .lv-caption{fill:var(--muted-foreground);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;letter-spacing:.06em;text-anchor:middle}
@@ -1700,9 +1733,16 @@ function wireSlot(p,m){
     g(p+'_search').value=v;populateSlot(p,m);
     if(p==='a')selA=null;else selB=null;updateResults();}
   g(p+'_search').addEventListener('change',e=>{const v=resolveForme(e.target.value);if(v)applyForme(v);});
-  g(p+'_search').addEventListener('keydown',e=>{
-    if(e.key==='Enter'){e.preventDefault();const v=resolveForme(e.target.value);
-      if(v){applyForme(v);g(p+'_search').blur();}}});
+  // Enter handling on slot search: prevent form-submit on keydown, then resolve
+  // on keyup so the browser's datalist popup has time to commit any
+  // highlighted suggestion to the input value first (which is why Enter used
+  // to need to be pressed twice).
+  g(p+'_search').addEventListener('keydown',e=>{if(e.key==='Enter')e.preventDefault();});
+  g(p+'_search').addEventListener('keyup',e=>{
+    if(e.key!=='Enter')return;
+    const v=resolveForme(g(p+'_search').value);
+    if(v){applyForme(v);g(p+'_search').blur();}
+  });
   g(p+'_set').addEventListener('change',e=>{const ss=setsFor(m.forme).slice(0,10),i=+e.target.value;
     if(i<0||!ss[i])Object.assign(m,defaultSet(m.forme));
     else{const s=ss[i];m.item=s.item||'';m.ability=s.ability||'';m.nature=s.nature||'Serious';m.ev=parseEVs(s.evs);m.boost=zeroBoost();m.moves=(s.moves||[]).slice(0,4);while(m.moves.length<4)m.moves.push('');m.status='ok';m.hpPct=100;}
@@ -2054,32 +2094,200 @@ function renderFightBar(){
 // Matches by base species (mega suffix stripped) so typing "Charizard" finds
 // teams running either Charizard-Mega-X or Y. Honors the current reg scope.
 let findPicks=['','','','','',''];
+// findSlotState tracks per-slot editing mode (which slot has the dropdown open).
+// findPicks is the source of truth for selected mons (existing global).
+let findSlotState=Array(6).fill('display'); // 'display' | 'editing'
+let findDropdownHighlight=0;
+let findLiveTimer=null;
+
 function renderFind(){
   const pad=g('findpad');if(!pad)return;
   pad.innerHTML=`
     <div class="findhdr">
       <h2 style="margin:0 0 4px">Find Team</h2>
-      <div class="small">Type the Pokémon you saw at team preview (2–6 of them). I'll find teams matching them — exact first, then partial.</div>
+      <div class="small">Tap a slot, type the Pokémon you saw at team preview (2–6 of them). I'll find teams matching them — exact first, then partial.</div>
       <div class="small" style="margin-top:4px;color:var(--accent2)">Matches the base species, so typing <b>Aerodactyl</b> finds teams running either the base or <b>Aerodactyl-Mega</b> (team preview hides whether a mon megas). Same for Charizard / Garchomp / Raichu / etc.</div>
     </div>
-    <div class="findbox">
-      ${[0,1,2,3,4,5].map(i=>`<input id="find_${i}" list="formelist" placeholder="Pokémon ${i+1}" value="${esc(findPicks[i]||'')}" autocomplete="off" onfocus="setTimeout(()=>this.select(),0)">`).join('')}
+    <div class="find-slot-grid" id="findslots">
+      ${[0,1,2,3,4,5].map(i=>renderFindSlot(i)).join('')}
     </div>
     <div class="findbtns">
       <button class="btn" id="findbtn">⌕ Find teams</button>
-      <button class="btn" id="findclear" style="border-color:var(--line);color:var(--dim)">Clear</button>
+      <button class="btn" id="findclear" style="border-color:var(--line);color:var(--dim)">Clear all</button>
       <span class="small" id="findstat"></span>
     </div>
     <div id="findresults"></div>`;
-  const inputs=[0,1,2,3,4,5].map(i=>g('find_'+i));
-  inputs.forEach((el,i)=>{
-    el.addEventListener('input',()=>{findPicks[i]=el.value;});
-    el.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();doFind();}});
-  });
+  wireFindSlots();
   g('findbtn').onclick=doFind;
-  g('findclear').onclick=()=>{findPicks=['','','','','',''];renderFind();g('find_0').focus();};
+  g('findclear').onclick=()=>{findPicks=['','','','','',''];findSlotState=Array(6).fill('display');renderFind();};
   // Auto-run if there's already content
   if(findPicks.some(p=>p))doFind();
+}
+
+// Render a single slot in its current state (display empty / display filled / editing).
+function renderFindSlot(i){
+  const v=findPicks[i]||'';
+  const state=findSlotState[i];
+  if(state==='editing'){
+    return `<div class="find-slot editing" data-slot="${i}">
+      <input class="find-input" id="find_input_${i}" placeholder="search Pokémon…" value="${esc(v)}" autocomplete="off" />
+      <div class="find-dropdown" id="find_dropdown_${i}"></div>
+    </div>`;
+  }
+  if(v){
+    return `<div class="find-slot filled" data-slot="${i}">
+      <span class="find-sprite">${pokeSprite(v,'40')}</span>
+      <span class="find-name">${esc(v)}</span>
+      <button class="find-clear" data-slot="${i}" title="Clear this slot">×</button>
+    </div>`;
+  }
+  return `<div class="find-slot" data-slot="${i}">
+    <span class="find-plus">+</span>
+    <span class="find-plus-lbl">Add Pokémon</span>
+  </div>`;
+}
+
+function wireFindSlots(){
+  document.querySelectorAll('#findslots .find-slot').forEach(slot=>{
+    const i=+slot.dataset.slot;
+    const state=findSlotState[i];
+    if(state==='editing'){
+      const input=g('find_input_'+i);
+      if(input){
+        input.addEventListener('input',()=>updateFindDropdown(i));
+        input.addEventListener('keydown',e=>handleFindKeydown(e,i));
+        input.addEventListener('blur',()=>setTimeout(()=>closeFindSlot(i,false),120));
+        setTimeout(()=>{input.focus();input.select();updateFindDropdown(i);},10);
+      }
+    } else if(findPicks[i]){
+      // Click anywhere on the filled slot (except ×) re-opens it for editing
+      slot.addEventListener('click',e=>{
+        if(e.target.classList.contains('find-clear'))return;
+        openFindSlot(i);
+      });
+      const clr=slot.querySelector('.find-clear');
+      if(clr)clr.addEventListener('click',e=>{e.stopPropagation();findPicks[i]='';refreshFindSlot(i);scheduleLiveFind();});
+    } else {
+      // Empty slot — click anywhere to open
+      slot.addEventListener('click',()=>openFindSlot(i));
+    }
+  });
+}
+
+function openFindSlot(i){
+  findSlotState[i]='editing';
+  findDropdownHighlight=0;
+  refreshFindSlot(i);
+}
+
+function closeFindSlot(i, commit){
+  if(commit){
+    const matches=findMatches(g('find_input_'+i)?.value||'');
+    if(matches.length){findPicks[i]=matches[0];}
+  }
+  findSlotState[i]='display';
+  refreshFindSlot(i);
+  scheduleLiveFind();
+}
+
+function refreshFindSlot(i){
+  const slot=document.querySelector(`#findslots .find-slot[data-slot="${i}"]`);
+  if(!slot)return;
+  const wrap=document.createElement('div');
+  wrap.innerHTML=renderFindSlot(i);
+  const fresh=wrap.firstElementChild;
+  slot.replaceWith(fresh);
+  wireFindSlots();
+}
+
+function findMatches(q){
+  q=(q||'').trim().toLowerCase();
+  if(!q)return pokeList.slice(0,10).map(e=>e.name);
+  // Search ALL dex formes so rare mons still surface. Prefer prefix matches;
+  // sort each tier by usage count in the current scope (mons with no usage end
+  // up after the in-scope ones but are still pickable).
+  const usage=(n)=>idx.get(n)?.count||0;
+  const prefix=[],sub=[];
+  for(const name of ALL_FORMES){
+    const n=name.toLowerCase();
+    if(n.startsWith(q))prefix.push(name);
+    else if(n.includes(q))sub.push(name);
+  }
+  prefix.sort((a,b)=>usage(b)-usage(a));
+  sub.sort((a,b)=>usage(b)-usage(a));
+  return prefix.concat(sub).slice(0,10);
+}
+
+function updateFindDropdown(i){
+  const input=g('find_input_'+i);
+  const drop=g('find_dropdown_'+i);
+  if(!input||!drop)return;
+  const matches=findMatches(input.value);
+  if(!matches.length){
+    drop.innerHTML='<div class="find-empty-dropdown">no match — keep typing</div>';
+    return;
+  }
+  findDropdownHighlight=0;
+  drop.innerHTML=matches.map((name,k)=>{
+    const ct=idx.get(name)?.count||'';
+    return `<div class="find-option ${k===0?'highlighted':''}" data-forme="${esc(name)}" data-idx="${k}">
+      ${pokeSprite(name,'28')}
+      <span class="find-option-name">${esc(name)}</span>
+      ${ct?`<span class="find-option-count">${ct}</span>`:''}
+    </div>`;
+  }).join('');
+  drop.querySelectorAll('.find-option').forEach(opt=>{
+    opt.addEventListener('mousedown',e=>{
+      e.preventDefault();
+      findPicks[i]=opt.dataset.forme;
+      closeFindSlot(i,false);
+      // auto-focus next empty slot if any
+      const next=findPicks.findIndex(p=>!p);
+      if(next>=0)openFindSlot(next);
+    });
+  });
+}
+
+function handleFindKeydown(e,i){
+  const drop=g('find_dropdown_'+i);if(!drop)return;
+  const opts=drop.querySelectorAll('.find-option');
+  if(e.key==='ArrowDown'){
+    e.preventDefault();
+    findDropdownHighlight=Math.min(opts.length-1, findDropdownHighlight+1);
+    opts.forEach((o,k)=>o.classList.toggle('highlighted',k===findDropdownHighlight));
+    opts[findDropdownHighlight]?.scrollIntoView({block:'nearest'});
+  } else if(e.key==='ArrowUp'){
+    e.preventDefault();
+    findDropdownHighlight=Math.max(0,findDropdownHighlight-1);
+    opts.forEach((o,k)=>o.classList.toggle('highlighted',k===findDropdownHighlight));
+    opts[findDropdownHighlight]?.scrollIntoView({block:'nearest'});
+  } else if(e.key==='Enter'){
+    e.preventDefault();
+    const pick=opts[findDropdownHighlight]?.dataset.forme;
+    if(pick){
+      findPicks[i]=pick;
+      closeFindSlot(i,false);
+      const next=findPicks.findIndex(p=>!p);
+      if(next>=0)openFindSlot(next);
+    }
+  } else if(e.key==='Escape'){
+    e.preventDefault();
+    closeFindSlot(i,false);
+  } else if(e.key==='Tab'){
+    // tab commits the first match and moves to next slot naturally via blur
+    const pick=opts[0]?.dataset.forme;
+    if(pick)findPicks[i]=pick;
+    closeFindSlot(i,false);
+  }
+}
+
+// Debounced live-find — once 2+ slots are filled, results auto-update.
+function scheduleLiveFind(){
+  if(findLiveTimer)clearTimeout(findLiveTimer);
+  findLiveTimer=setTimeout(()=>{
+    if(findPicks.filter(Boolean).length>=2)doFind();
+    else{const out=g('findresults');const stat=g('findstat');if(out)out.innerHTML='';if(stat)stat.textContent='';}
+  },400);
 }
 function doFind(){
   // Resolve each typed name -> canonical forme -> base species
@@ -2145,6 +2353,10 @@ function setView(v){view=v;
   const ph={poke:'Search a Pokémon (e.g. Charizard-Mega-Y)…',find:'',dmg:'',team:'Search team by player / event / Pokémon…'};
   document.getElementById('search').placeholder=ph[v]||'';
   document.getElementById('search').style.visibility=(v==='dmg'||v==='find')?'hidden':'visible';
+  // Field summary + Reset button only make sense in the Damage Calc.
+  const fs=document.getElementById('fieldsum'), rb=document.getElementById('resetbtn');
+  if(fs)fs.style.display=(v==='dmg')?'':'none';
+  if(rb)rb.style.display=(v==='dmg')?'':'none';
   if(v==='poke'){renderPokeList(); if(!selMon) renderLanding(); else renderDetail(selMon);}
   else if(v==='find')renderFind();
   else if(v==='dmg')renderDmg();
@@ -2230,6 +2442,16 @@ document.querySelectorAll('.regbtn').forEach(el=>el.onclick=()=>{
 });
 document.getElementById('search').addEventListener('input',e=>{q=e.target.value.trim().toLowerCase();
   if(view==='poke')renderPokeList();else if(view==='speed')renderSpeed();else if(view==='team')renderTeams();});
+// Enter on the global search box (Pokémon view) picks the first matching mon
+// from the sidebar list and loads its detail — saves the click.
+document.getElementById('search').addEventListener('keydown',e=>{
+  if(e.key!=='Enter'||view!=='poke')return;
+  e.preventDefault();
+  const firstRow=document.querySelector('#list .row');
+  if(!firstRow)return;
+  selMon=firstRow.dataset.name;megaCmp=false;renderPokeList();renderDetail(selMon);
+  e.target.blur();
+});
 document.getElementById('list').addEventListener('click',e=>{const r=e.target.closest('.row');if(!r)return;
   selMon=r.dataset.name;megaCmp=false;renderPokeList();renderDetail(selMon);});
 setView('poke');
@@ -2334,7 +2556,12 @@ document.getElementById('aboutlink')?.addEventListener('click',e=>{
   document.getElementById('aboutoverlay').classList.add('open');
 });
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape'){document.getElementById('aboutoverlay')?.classList.remove('open');}});
+  if(e.key==='Escape'){
+    document.getElementById('aboutoverlay')?.classList.remove('open');
+    const ho=document.getElementById('helpoverlay');
+    if(ho && ho.style.display!=='none')ho.style.display='none';
+  }
+});
 
 // Console signature — quiet author signal for the curious dev
 try{
