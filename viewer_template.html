@@ -2361,6 +2361,34 @@ function setView(v){view=v;
   else if(v==='find')renderFind();
   else if(v==='dmg')renderDmg();
   else renderTeams();
+  autoFocusForView(v);
+}
+
+// Drop the user where they're most likely to start typing for each view.
+function autoFocusForView(v){
+  // setTimeout 0 to let the view's render() finish + DOM settle first.
+  setTimeout(()=>{
+    if(v==='poke' || v==='team'){
+      const s=document.getElementById('search');
+      if(s && s.style.visibility!=='hidden'){s.focus();s.select?.();}
+    } else if(v==='find'){
+      // Open the first empty slot (or slot 0 if all full — user is likely re-picking).
+      const i=findPicks.findIndex(p=>!p);
+      openFindSlot(i>=0?i:0);
+    } else if(v==='dmg'){
+      // If My Team has mons and no ally is set yet, auto-pick the first as ally.
+      if(myTeam.length>0 && !ally){
+        pickAlly(allyFromMyTeam(myTeam[0]));
+        refreshAllyBar();
+      }
+      // Focus target: ally search if user has no team (need to pick one);
+      // otherwise jump straight to the defender (most common next action).
+      const target=(myTeam.length===0)
+        ? document.getElementById('allysearch')
+        : document.getElementById('b_search');
+      if(target){target.focus();target.select?.();}
+    }
+  }, 0);
 }
 // Datalists used by multiple views (Find Team needs formelist before Damage Calc
 // is first rendered). Created once, idempotently overwritten by renderDmg.
