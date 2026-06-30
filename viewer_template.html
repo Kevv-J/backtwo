@@ -1563,7 +1563,7 @@ const g=id=>document.getElementById(id);
 function slotHTML(p,title){
   const tag=p==='a'?'A':'B';
   return `<div class="dmgslot" data-p="${p}"><div class="slothd"><h3>${title} <button class="pinbtn ${pinned===p?'locked':''}" data-p="${p}" title="Lock this slot — quick-picks go to the other slot">${pinned===p?'🔒':'🔓'}</button></h3><div class="slothd-right"><span id="${p}_slotsprite" class="slotsprite"></span><span id="${p}_typeline" class="small"></span></div></div><div class="slotbody">
-  ${(myTeam.length && p==='a')?`<div class="myrow"><span class="small">My team:</span> ${myTeam.map((mon,i)=>`<button class="mybtn" data-p="${p}" data-i="${i}">${pokeSprite(mon.forme,'24')}${esc(mon.forme)}</button>`).join('')}</div>`:''}
+  ${myTeam.length?(p==='a'?`<div class="myrow"><span class="small">My team:</span> ${myTeam.map((mon,i)=>`<button class="mybtn" data-p="${p}" data-i="${i}">${pokeSprite(mon.forme,'24')}${esc(mon.forme)}</button>`).join('')}</div>`:`<div class="myrow" aria-hidden="true" style="visibility:hidden"><span class="small">My team:</span><button class="mybtn">${pokeSprite(myTeam[0].forme,'24')}placeholder</button></div>`):''}
   <input id="${p}_search" placeholder="search any Pokémon…" list="formelist" autocomplete="off" onfocus="setTimeout(()=>this.select(),0)">
   <select id="${p}_set"><option>— pick a Pokémon first —</option></select>
   <div class="fld3">
@@ -1707,7 +1707,9 @@ function wireSlot(p,m){
   function applyForme(v){
     Object.assign(m,defaultSet(v));rebuildSetOptions(p,m);
     g(p+'_search').value=v;populateSlot(p,m);
-    if(p==='a')selA=null;else selB=null;updateResults();}
+    if(p==='a')selA=null;else selB=null;
+    afterSlotChange(p,m);
+    updateResults();}
   // Slot Pokémon search — smart picker (replaces native datalist)
   attachSmartPicker(g(p+'_search'),{
     source:()=>ALL_FORMES,
@@ -1719,7 +1721,9 @@ function wireSlot(p,m){
   g(p+'_set').addEventListener('change',e=>{const ss=setsFor(m.forme).slice(0,10),i=+e.target.value;
     if(i<0||!ss[i])Object.assign(m,defaultSet(m.forme));
     else{const s=ss[i];m.item=s.item||'';m.ability=s.ability||'';m.nature=s.nature||'Serious';m.ev=parseEVs(s.evs);m.boost=zeroBoost();m.moves=(s.moves||[]).slice(0,4);while(m.moves.length<4)m.moves.push('');m.status='ok';m.hpPct=100;}
-    populateSlot(p,m);if(p==='a')selA=null;else selB=null;updateResults();});
+    populateSlot(p,m);if(p==='a')selA=null;else selB=null;
+    afterSlotChange(p,m);
+    updateResults();});
   // Item + Ability inputs — smart pickers (replaces datalists)
   attachSmartPicker(g(p+'_item'),{
     source:()=>ALL_ITEMS,
@@ -1734,15 +1738,11 @@ function wireSlot(p,m){
     usage:(n)=>0,
     renderOption:spRenderAbility,
     onPick:v=>{m.ability=v;readSlot(p,m);
-      applySlotAutoWire(p,m);syncFxRow(p,p==='a'?sideA:sideB);syncFieldUI();
-      const other=p==='a'?'b':'a', otherM=p==='a'?B:A;
-      if(otherM.forme)renderFinals(other,otherM);
+      afterSlotChange(p,m);
       updateResults();
       const el=g(p+'_ability'); el.title=descFor('ability',v)||'Ability';},
     onClear:()=>{m.ability='';readSlot(p,m);
-      applySlotAutoWire(p,m);syncFxRow(p,p==='a'?sideA:sideB);syncFieldUI();
-      const other=p==='a'?'b':'a', otherM=p==='a'?B:A;
-      if(otherM.forme)renderFinals(other,otherM);
+      afterSlotChange(p,m);
       updateResults();},
   });
   g(p+'_nature').addEventListener('change',()=>{readSlot(p,m);updateResults();});
@@ -1995,13 +1995,21 @@ function loadIntoSlot(p,m,src){m.forme=src.forme;m.item=src.item||'';m.ability=s
   m.status=src.status||'ok';m.hpPct=src.hpPct??100;
   m.moves=(src.moves||[]).slice(0,4);while(m.moves.length<4)m.moves.push('');
   g(p+'_search').value=src.forme;rebuildSetOptions(p,m);populateSlot(p,m);if(p==='a')selA=null;else selB=null;
+  afterSlotChange(p,m);
+  updateResults();}
+// Single helper that runs after a slot's mon (or ability) changes. Keeps
+// all the side-effects in one place so every load path (loadIntoSlot,
+// applyForme via search smart picker, set-picker change, ability change)
+// triggers the same auto-wires, field sync, and other-slot re-render.
+function afterSlotChange(p, m){
   applySlotAutoWire(p,m);
   syncFxRow(p,p==='a'?sideA:sideB);
   syncFieldUI();
-  // Refresh the OTHER slot's stats so Intimidate indicator updates there too
+  // Refresh the OTHER slot's stats so Intimidate indicator updates there
+  // when this slot's mon becomes/stops-being an Intimidator.
   const other=p==='a'?'b':'a', otherM=p==='a'?B:A;
   if(otherM.forme)renderFinals(other,otherM);
-  updateResults();}
+}
 function renderDmg(){
   g('dmgpad').innerHTML=`
     <datalist id="formelist">${ALL_FORMES.map(f=>`<option value="${esc(f)}">`).join('')}</datalist>
