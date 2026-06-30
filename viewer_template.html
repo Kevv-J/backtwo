@@ -183,45 +183,6 @@
   .ko{outline:2px solid var(--bad)}
   .small{font-size:11px;color:var(--dim)}
   .dmgtop{display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap}
-  /* Ally bar — collapsible by default. Sits above the attacker/defender row.
-     Picking an ally boosts the attacker calc (HH, Power Spot, Battery,
-     Steely Spirit, Flower Gift, Friend Guard from the ally's ability/moves). */
-  .allybar-section{background:var(--card);border:1px solid var(--border);border-radius:10px;margin-bottom:12px;overflow:hidden}
-  .allybar-section[open]{border-color:var(--atk-border)}
-  .allybar-section .allybar-summary{list-style:none;cursor:pointer;padding:9px 13px;display:flex;align-items:center;gap:10px;font-size:12px;user-select:none}
-  .allybar-section .allybar-summary::-webkit-details-marker{display:none}
-  .allybar-section .allybar-summary::before{content:'▸';color:var(--muted-foreground);font-size:10px;transition:transform .12s;display:inline-block}
-  .allybar-section[open] .allybar-summary::before{transform:rotate(90deg)}
-  .allybar-section .ally-summary-lbl{font-family:'Rajdhani','Inter',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--atk-color)}
-  .allybar-section .ally-summary-status{flex:1;color:var(--foreground);font-weight:600;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .allybar-section .ally-summary-status:empty,.allybar-section[open] .ally-summary-status{color:var(--muted-foreground);font-weight:400}
-  .allybar-section .ally-summary-help{width:18px;height:18px;border-radius:50%;background:var(--secondary);border:1px solid var(--border);color:var(--muted-foreground);display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;cursor:help;flex-shrink:0}
-  .allybar-section .ally-summary-help:hover{color:var(--atk-color);border-color:var(--atk-color)}
-  .allybar{background:transparent;border:none;border-top:1px solid var(--border);border-radius:0;padding:11px 13px;margin-bottom:0;display:flex;flex-direction:column;gap:7px}
-  .allybar .allyhd{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-  .allybar .allylbl{font-family:'Rajdhani','Inter',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--atk-color);min-width:46px}
-  .allybar .ally-current{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--foreground)}
-  .allybar .ally-current.empty{color:var(--muted-foreground);font-weight:400;font-style:italic}
-  .allybar .ally-source{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:9px;color:var(--muted-foreground);background:var(--secondary);padding:1px 5px;border-radius:3px;letter-spacing:.04em;text-transform:uppercase}
-  .allybar .allyclear{background:transparent;border:1px solid var(--border);color:var(--muted-foreground);border-radius:4px;padding:2px 8px;font-family:inherit;font-size:11px;cursor:pointer;margin-left:auto}
-  .allybar .allyclear:hover{border-color:var(--bad);color:var(--bad)}
-  .allybar .allypicks{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-  .allybtn{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:6px;border:1px solid var(--line);background:var(--panel2);color:var(--foreground);cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;transition:all .12s}
-  .allybtn:hover{border-color:var(--atk-color);color:var(--atk-color)}
-  .allybtn.picked{background:var(--atk-bg);border-color:var(--atk-color);color:var(--atk-color)}
-  .allysearch{flex:1;min-width:160px;font-size:12px;padding:5px 10px}
-  /* Boosts-applied badge — transparency layer; click a chip to override (turn off) */
-  .allyboosts{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11px}
-  .allyboosts .boostslbl{font-family:'Rajdhani','Inter',sans-serif;font-size:10px;text-transform:uppercase;letter-spacing:.10em;color:var(--muted-foreground);font-weight:700}
-  .allyboost-chip{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:4px;border:1px solid var(--good-border);background:var(--good-bg);color:var(--good);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;cursor:pointer;font-family:inherit}
-  .allyboost-chip:hover{background:rgba(239,68,68,0.18);border-color:rgba(239,68,68,0.40);color:#fca5a5}
-  .allyboost-chip:hover::after{content:' ×'}
-  .allyboost-note{color:var(--muted-foreground);font-size:10px;font-style:italic}
-  /* Loud "no calc effect" notice — shown when picked ally has no ally-boost
-     ability/move, so the user knows the strip is working and they just picked
-     a mon whose ability is self-only. */
-  .allyboosts.no-effect{background:var(--warning-bg);border:1px solid var(--warning-border);color:var(--warning);border-radius:6px;padding:7px 11px;font-size:11.5px;line-height:1.45}
-  .allyboosts.no-effect b{color:var(--warning)}
   .dmgslot{flex:1;min-width:320px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:0;overflow:hidden;display:flex;flex-direction:column}
   .dmgslot[data-p="a"]{border-color:var(--atk-border)}
   .dmgslot[data-p="b"]{border-color:var(--def-border)}
@@ -1170,6 +1131,36 @@ const ESCALATING_BP={'Triple Axel':[20,40,60],'Triple Kick':[10,20,30]};
 const HP_USER_SCALE=new Set(['Water Spout','Eruption','Dragon Energy']);
 // Reversal/Flail BP table (attacker's HP%; uses the FIRST row where hpPct ≤ threshold, else 20)
 const FLAIL_TABLE=[[1,200],[4,150],[10,100],[21,80],[35,40]];
+// Recoil tables. RECOIL_DAMAGE is fraction of damage dealt — Rock Head and
+// Magic Guard prevent it. RECOIL_HP is fraction of attacker's max HP — only
+// Magic Guard prevents it (Rock Head doesn't help against these).
+const RECOIL_DAMAGE={
+  'Brave Bird':1/3,'Wood Hammer':1/3,'Flare Blitz':1/3,'Volt Tackle':1/3,
+  'Double-Edge':1/3,'Submission':1/4,'Take Down':1/4,'Wild Charge':1/4,
+  'Head Charge':1/4,'Head Smash':1/2,'Light of Ruin':1/2,
+};
+const RECOIL_HP={
+  'Mind Blown':1/2,'Steel Beam':1/2,'Chloroblast':1/2,'Struggle':1/4,
+};
+function recoilInfo(move, atk, r){
+  const dmgFrac=RECOIL_DAMAGE[move], hpFrac=RECOIL_HP[move];
+  if(!dmgFrac && !hpFrac)return null;
+  const ab=atk.ability||'';
+  if(ab==='Magic Guard')return {prevented:'Magic Guard'};
+  if(dmgFrac && ab==='Rock Head')return {prevented:'Rock Head'};
+  const atkMax=statsOf(atk)?.hp||0;
+  if(dmgFrac && r){
+    const lo=Math.max(1,Math.floor(r.lo*dmgFrac));
+    const hi=Math.max(1,Math.floor(r.hi*dmgFrac));
+    return {kind:'damage', lo, hi, pctLo:atkMax?(lo/atkMax*100):0, pctHi:atkMax?(hi/atkMax*100):0, frac:dmgFrac};
+  }
+  if(hpFrac){
+    const dmg=Math.max(1,Math.floor(atkMax*hpFrac));
+    return {kind:'hp', dmg, pct:hpFrac*100, frac:hpFrac};
+  }
+  return null;
+}
+
 // Compute the effective BP for a move, accounting for HP%, status, and target-state doublers.
 function effectiveBP(move, atk, def){
   const mv=DEX.moves[move];if(!mv||!mv.power)return mv?.power||0;
@@ -1241,153 +1232,39 @@ let field=newField(),sideA=newSide(),sideB=newSide();
 let fightTeam=null;  // {team, mons, sourceTeamId} when "Fight this team" is active
 let pinned=null;     // 'a' | 'b' | null — which slot is pinned (locked from quick-pick overwriting)
 
-// ===== Ally slot =====
-// ally: {forme, moves[], ability, source: 'myteam'|'dataset'} | null
-// allyAutoWired: which sideA keys were toggled BY the current ally (so they can
-// be cleared when the ally changes). Manual toggles by the user are NOT tracked
-// here — they persist independently.
-let ally=null, allyAutoWired=[];
-// Map of ally-side abilities → the existing sideA flag they auto-wire.
-const ALLY_ABILITY_WIRE={
+// (Ally bar removed per user feedback — the underlying side-effect flags
+// (sideA.helpingHand, sideA.powerSpot, sideA.battery, sideA.steelySpirit,
+//  sideA.flowerGift, sideA.friendGuard, sideB.* etc.) are still read by
+// calcDmg and toggled via the Battle effects button row inside each slot.)
+
+// ===== Slot-driven auto-wire =====
+// When a mon is loaded into a slot via loadIntoSlot (My Team click, fight-team
+// pick, search), and its ability is one of the team-buff abilities below, the
+// corresponding side flag is auto-enabled. Loading a different mon into the
+// same slot clears the previous auto-wire (only the flags we set — manual
+// toggles by the user are preserved).
+const SIDE_BUFF_ABILITY={
   'Power Spot':'powerSpot',
   'Battery':'battery',
   'Steely Spirit':'steelySpirit',
-  'Flower Gift':'flowerGift',  // requires sun to actually boost
+  'Flower Gift':'flowerGift',   // sun-conditional
+  'Friend Guard':'friendGuard',
 };
-const ALLY_BOOST_LABELS={helpingHand:'Helping Hand',powerSpot:'Power Spot',battery:'Battery',
-  steelySpirit:'Steely Spirit',flowerGift:'Flower Gift'};
-// Build an ally object from a saved My Team mon (we know the exact ability + moveset).
-function allyFromMyTeam(m){return{forme:m.forme,moves:m.moves||[],ability:m.ability||'',source:'myteam'};}
-// Build an ally object from a forme name only. We look up the most-common
-// ability and check if Helping Hand appears in the common move set; user can
-// still override either via the manual side-effect buttons below.
-function allyFromForme(forme){
-  const e=idx.get(forme);
-  if(!e)return{forme,moves:[],ability:'',source:'dataset'};
-  const ab=Object.entries(e.abilities||{}).sort((a,b)=>b[1]-a[1])[0]?.[0]||'';
-  const moves=Object.keys(e.moves||{}).includes('Helping Hand')?['Helping Hand']:[];
-  return{forme,moves,ability:ab,source:'dataset'};
-}
-// Re-evaluate auto-wires from the current ally. Called whenever the ally
-// changes OR when weather changes (Flower Gift is sun-conditional).
-function applyAllyAutoWire(){
-  // Clear previous auto-wires from sideA — but ONLY the ones we set.
-  // Anything the user toggled manually stays put.
-  allyAutoWired.forEach(k=>{sideA[k]=0;});
-  allyAutoWired=[];
-  if(!ally)return;
-  // Ability-based wires
-  const abKey=ALLY_ABILITY_WIRE[ally.ability];
-  if(abKey){
-    if(abKey==='flowerGift'){
-      // Flower Gift only boosts under Sun / Harsh Sun
-      if(weather==='sun'||weather==='harshsun'){sideA.flowerGift=1;allyAutoWired.push('flowerGift');}
-    } else {
-      sideA[abKey]=1;allyAutoWired.push(abKey);
-    }
+let _autoWiredA=[], _autoWiredB=[];
+function applySlotAutoWire(p, m){
+  const side=p==='a'?sideA:sideB;
+  const tracker=p==='a'?_autoWiredA:_autoWiredB;
+  // Clear previously-set auto-wires (only those we set; user-toggled flags stay).
+  tracker.forEach(k=>{side[k]=0;});
+  tracker.length=0;
+  if(!m||!m.ability)return;
+  const key=SIDE_BUFF_ABILITY[m.ability];
+  if(!key)return;
+  if(key==='flowerGift' && weather!=='sun' && weather!=='harshsun')return;
+  if(!side[key]){  // don't take credit if user already had it on
+    side[key]=1;
+    tracker.push(key);
   }
-  // Move-based wires: Helping Hand
-  if((ally.moves||[]).includes('Helping Hand')){
-    sideA.helpingHand=1;allyAutoWired.push('helpingHand');
-  }
-}
-// Public entry point — called by the UI when an ally is picked / cleared.
-function pickAlly(newAlly){ally=newAlly||null;applyAllyAutoWire();}
-
-// Render the ally bar HTML. Called from renderDmg() and re-rendered locally
-// (innerHTML swap) whenever the ally changes — keeps the rest of the calc DOM
-// stable so input focus / scroll position don't reset on ally pick.
-function renderAllyBar(){
-  const teamChips=myTeam.length?myTeam.map((m,i)=>{
-    const isPicked=ally && ally.source==='myteam' && ally.forme===m.forme;
-    return `<button class="allybtn ${isPicked?'picked':''}" data-allyi="${i}" title="${esc(m.ability||'')}${m.moves?.length?' — '+esc(m.moves.filter(Boolean).join(', ')):''}">${pokeSprite(m.forme,'24')}${esc(m.forme)}</button>`;
-  }).join(''):'<span class="small" style="color:var(--muted-foreground)">save a team below to quick-pick</span>';
-  let current,clearBtn='';
-  if(ally){
-    current=`<span class="ally-current">${pokeSprite(ally.forme,'24')}${esc(ally.forme)}${ally.ability?` · ${esc(ally.ability)}`:''}</span><span class="ally-source">${ally.source==='myteam'?'from team':'dataset'}</span>`;
-    clearBtn=`<button class="allyclear" id="allyclear" title="Clear ally">no ally ×</button>`;
-  } else {
-    current=`<span class="ally-current empty">— none —</span>`;
-  }
-  // Boosts-applied transparency badge.
-  // Only 5 abilities + Helping Hand actually buff teammates from the ally
-  // position. For every other pick (most of the dex), picking an ally has NO
-  // CALC EFFECT — surface that clearly so the user doesn't think the
-  // selection is broken.
-  let boostsRow='';
-  if(ally){
-    if(allyAutoWired.length){
-      const chips=allyAutoWired.map(k=>`<button class="allyboost-chip" data-wirek="${k}" title="Click to disable">${esc(ALLY_BOOST_LABELS[k]||k)}</button>`).join('');
-      boostsRow=`<div class="allyboosts"><span class="boostslbl">Boosts from ally →</span>${chips}</div>`;
-    } else {
-      // Ally picked but nothing auto-wired. Explain WHY (some abilities are
-      // self-only, some are conditional on weather, etc.) so the user knows
-      // it's working as designed and not silently broken.
-      let note;
-      if(ally.ability==='Flower Gift'&&weather!=='sun'&&weather!=='harshsun'){
-        note=`<b>Flower Gift waits on Sun</b> — set Sun above and the +50% Atk auto-wires.`;
-      } else if(ally.ability){
-        note=`<b>${esc(ally.ability)}</b> doesn't buff teammates — picking ${esc(ally.forme)} as ally has no calc effect. Use the Battle effects row in the attacker slot if you need to manually add Helping Hand / Power Spot / etc.`;
-      } else {
-        note=`No ally-boost ability or Helping Hand on this mon — picking it has no calc effect. Toggle the Battle effects row on the attacker side manually if needed.`;
-      }
-      boostsRow=`<div class="allyboosts no-effect">${note}</div>`;
-    }
-  }
-  return `<div class="allyhd">
-      <span class="allylbl">Ally</span>${current}${clearBtn}
-    </div>
-    <div class="allypicks">${teamChips}<input class="allysearch" id="allysearch" list="formelist" placeholder="search any Pokémon as ally…" autocomplete="off" onfocus="setTimeout(()=>this.select(),0)"></div>
-    ${boostsRow}`;
-}
-
-// Re-render only the ally bar in place + sync the Battle-effects buttons on
-// the attacker side. Avoids a full renderDmg() rebuild that would lose focus.
-function refreshAllyBar(){
-  const el=document.getElementById('allybar');
-  if(el)el.innerHTML=renderAllyBar();
-  // Update the collapsed summary line so the user can see who their ally is
-  // without expanding the bar.
-  const sum=document.getElementById('ally-summary-status');
-  if(sum)sum.textContent=ally?ally.forme+(ally.ability?' · '+ally.ability:''):'— optional, click to expand —';
-  syncFxRow('a',sideA);
-  wireAllyBar();
-  updateResults();
-}
-
-function wireAllyBar(){
-  document.querySelectorAll('.allybtn[data-allyi]').forEach(btn=>btn.onclick=()=>{
-    const i=+btn.dataset.allyi;
-    const m=myTeam[i];if(!m)return;
-    // Toggle: clicking the already-picked chip clears the ally.
-    if(ally && ally.source==='myteam' && ally.forme===m.forme){pickAlly(null);}
-    else{pickAlly(allyFromMyTeam(m));}
-    refreshAllyBar();
-  });
-  const clr=document.getElementById('allyclear');
-  if(clr)clr.onclick=()=>{pickAlly(null);refreshAllyBar();};
-  const sr=document.getElementById('allysearch');
-  if(sr){
-    attachSmartPicker(sr,{
-      source:()=>ALL_FORMES,
-      usage:(n)=>idx.get(n)?.count||0,
-      defaultEmpty:()=>pokeList.slice(0,10).map(e=>e.name),
-      renderOption:spRenderForme,
-      onPick:v=>{
-        const r=resolveForme(v);if(!r||!DEX.formes[r])return;
-        pickAlly(allyFromForme(r));
-        sr.value='';  // clear input after pick
-        refreshAllyBar();
-      },
-    });
-  }
-  // Allow click on an auto-wired chip to manually disable that boost
-  document.querySelectorAll('.allyboost-chip[data-wirek]').forEach(chip=>chip.onclick=()=>{
-    const k=chip.dataset.wirek;
-    sideA[k]=0;
-    allyAutoWired=allyAutoWired.filter(x=>x!==k);
-    refreshAllyBar();
-  });
 }
 function targetSlot(defaultP){return pinned==='a'?'b':pinned==='b'?'a':defaultP;}
 function zeroEV(){return{hp:0,atk:0,def:0,spa:0,spd:0,spe:0};}
@@ -1811,9 +1688,13 @@ function wireSlot(p,m){
     source:()=>ALL_ABILITIES,
     usage:(n)=>0,
     renderOption:spRenderAbility,
-    onPick:v=>{m.ability=v;readSlot(p,m);updateResults();
+    onPick:v=>{m.ability=v;readSlot(p,m);
+      applySlotAutoWire(p,m);syncFxRow(p,p==='a'?sideA:sideB);
+      updateResults();
       const el=g(p+'_ability'); el.title=descFor('ability',v)||'Ability';},
-    onClear:()=>{m.ability='';readSlot(p,m);updateResults();},
+    onClear:()=>{m.ability='';readSlot(p,m);
+      applySlotAutoWire(p,m);syncFxRow(p,p==='a'?sideA:sideB);
+      updateResults();},
   });
   g(p+'_nature').addEventListener('change',()=>{readSlot(p,m);updateResults();});
   STAT_KEYS.forEach(([k])=>{
@@ -1963,9 +1844,24 @@ function moveDetailHTML(side,atk,def,i){const mv=atk.moves[i];const info=DEX.mov
   if(r.intimidate&&!ctx.includes('Intimidate (-1 Atk)'))ctx.push('<span style="color:var(--accent2)">Intimidate −1 Atk</span>');
   const hitLab=r.hits>1?` · <b style="color:var(--accent2)">${r.hits} hits</b>${r.perHit?` (${r.perHit.map(h=>h.l+'–'+h.h).join(' + ')})`:''}`:'';
   const bpLab=(r.bp!==r.bpRaw)?`${r.bp} BP <span class="small">(${r.bpRaw} base, scaled)</span>`:`${r.bp} BP`;
+  // Recoil damage to the attacker — Brave Bird etc. (% of damage dealt) or
+  // Mind Blown / Steel Beam (% of attacker's max HP). Rock Head prevents
+  // damage-based recoil; Magic Guard prevents both.
+  const rec=recoilInfo(mv, atk, r);
+  let recoilLine='';
+  if(rec){
+    if(rec.prevented){
+      recoilLine=`<div class="small" style="margin-top:4px;color:var(--good)">↳ Recoil prevented by <b>${esc(rec.prevented)}</b></div>`;
+    } else if(rec.kind==='damage'){
+      recoilLine=`<div class="small" style="margin-top:4px;color:var(--warning)">↳ Recoil: <b>${rec.lo}–${rec.hi}</b> HP (${rec.pctLo.toFixed(1)}–${rec.pctHi.toFixed(1)}% of attacker · ${Math.round(rec.frac*100)}% of damage dealt)</div>`;
+    } else if(rec.kind==='hp'){
+      recoilLine=`<div class="small" style="margin-top:4px;color:var(--bad)">↳ Recoil: <b>${rec.dmg}</b> HP (${rec.pct.toFixed(0)}% of attacker's max HP — fixed cost)</div>`;
+    }
+  }
   return `<div class="detail">${esc(atk.forme)}${aBoost} <b>${r.isCrit?'(crit) ':''}${esc(mv)}</b> (${bpLab}${r.eff!==1?', '+r.eff+'×':''}${r.moveType!==info.type?' · type→'+esc(r.moveType):''}${hitLab}) vs ${esc(def.forme)}${dBoost}:
     <b>${r.lo}–${r.hi}</b> (<b style="color:${dmgColor(r.pctHi)}">${r.pctLo.toFixed(1)}–${r.pctHi.toFixed(1)}%</b> of ${r.hp} HP) — ${koNote(r)}${sp}
     ${ctx.length?`<div class="small" style="margin-top:2px">${ctx.join(' · ')}</div>`:''}
+    ${recoilLine}
     <div class="small" style="margin-top:5px">${r.rolls?'rolls: '+r.rolls.join(', '):r.hits>1?'multi-hit · '+r.hits+' hits':''}</div></div>`;}
 function firstDmgIdx(m){return (m.moves||[]).findIndex(mv=>DEX.moves[mv]?.power);}
 // Pick the move that does the most damage (replaces firstDmgIdx for default selection)
@@ -2049,7 +1945,10 @@ function loadIntoSlot(p,m,src){m.forme=src.forme;m.item=src.item||'';m.ability=s
   m.ev={...(src.ev||parseEVs(src.evs||''))};m.boost={...(src.boost||zeroBoost())};
   m.status=src.status||'ok';m.hpPct=src.hpPct??100;
   m.moves=(src.moves||[]).slice(0,4);while(m.moves.length<4)m.moves.push('');
-  g(p+'_search').value=src.forme;rebuildSetOptions(p,m);populateSlot(p,m);if(p==='a')selA=null;else selB=null;updateResults();}
+  g(p+'_search').value=src.forme;rebuildSetOptions(p,m);populateSlot(p,m);if(p==='a')selA=null;else selB=null;
+  applySlotAutoWire(p,m);
+  syncFxRow(p,p==='a'?sideA:sideB);
+  updateResults();}
 function renderDmg(){
   g('dmgpad').innerHTML=`
     <datalist id="formelist">${ALL_FORMES.map(f=>`<option value="${esc(f)}">`).join('')}</datalist>
@@ -2078,24 +1977,16 @@ function renderDmg(){
     </div>
     <div id="matrixpane"></div>
     <div id="speedribbon" class="speedribbon"></div>
-    <details class="allybar-section" id="allybar-section">
-      <summary class="allybar-summary">
-        <span class="ally-summary-lbl">Ally</span>
-        <span class="ally-summary-status" id="ally-summary-status">${ally?esc(ally.forme)+(ally.ability?' · '+esc(ally.ability):''):'— optional, click to expand —'}</span>
-        <span class="ally-summary-help" title="Pick a teammate to auto-apply their Helping Hand, Power Spot, Battery, Steely Spirit, Flower Gift or Friend Guard boost to your attacker's damage calc. Most other abilities (Pixilate, Rough Skin, etc.) are self-only and won't affect the calc when picked as ally.">?</span>
-      </summary>
-      <div class="allybar" id="allybar">${renderAllyBar()}</div>
-    </details>
     <div class="dmgtop">${slotHTML('a','Attacker')}${slotHTML('b','Defender')}</div>
     <div id="dmgresults"></div>
     <div class="small calcfoot"><b>VGC doubles only.</b> Champions ruleset (lv50, IVs max, 1 SP = 8 EV). <b>Modeled:</b> STAB · type chart · spread · stat boosts · status (burn/frostbite/Guts) · current HP (Multiscale) · weather (incl. extremes Harsh Sun/Heavy Rain/Strong Winds) · terrains (Electric/Grassy/Misty/Psychic, grounded only; Grassy halves EQ) · screens (×0.5 singles / ×2/3 doubles, Aurora Veil snow-only; crit bypasses) · Helping Hand · Friend Guard (doubles) · Power Spot · Battery · Steely Spirit · Flower Gift · Crit (ignores +def/-atk boosts; Sniper ×2.25) · Trick/Magic/Wonder Room · Gravity (ground hits Flying, suppresses Levitate) · <b>multi-hit moves</b> (Triple Axel/Triple Kick escalating BP; Population Bomb/Bullet Seed; Skill Link → max hits) · <b>Intimidate auto-apply</b> (with Clear Body / Hyper Cutter / Inner Focus / Scrappy / Own Tempo / Oblivious immunity; Defiant counters; Competitive on special) · <b>contact/flag abilities</b>: Tough Claws ×1.3 (contact) · Iron Fist ×1.2 (punch) · Mega Launcher ×1.5 (pulse) · Strong Jaw ×1.5 (bite) · Sharpness ×1.5 (slicing) · Punk Rock ×1.3 atk / ×0.5 def (sound) · Soundproof immune (sound) · Bulletproof immune (bullet) · Fluffy ×0.5 contact + ×2 fire · -ate abilities (Pixilate/Aerilate/Refrigerate/Galvanize: Normal→type ×1.2 STAB) · Adaptability · Technician · Tinted Lens · Huge/Pure Power · Solar Power · Sand Force · Sniper · Neuroforce · Levitate / type-absorb immunities · Multiscale / Shadow Shield · Filter / Solid Rock / Prism Armor · Thick Fat · Heatproof · Purifying Salt · Fur Coat · Ice Scales · Choice/Specs/Life Orb/AV/Eviolite/type-boost items.</div>`;
   wireSlot('a',A);wireSlot('b',B);
-  wireAllyBar();
   // Field button handlers (single-click). Doubles is hard-pinned (see line ~838) — no Singles toggle in UI.
   document.querySelectorAll('[data-grp="weat"]').forEach(b=>b.onclick=()=>{
     weather=b.dataset.v;syncBtnGroup('weat',weather);
-    // Re-evaluate Flower Gift auto-wire (sun-conditional)
-    if(ally){applyAllyAutoWire();refreshAllyBar();}
+    // Flower Gift is sun-conditional — re-evaluate slot auto-wires
+    applySlotAutoWire('a',A);applySlotAutoWire('b',B);
+    syncFxRow('a',sideA);syncFxRow('b',sideB);
     updateResults();
   });
   document.querySelectorAll('[data-grp="terr"]').forEach(b=>b.onclick=()=>{field.terrain=b.dataset.v;syncBtnGroup('terr',field.terrain);updateResults();});
