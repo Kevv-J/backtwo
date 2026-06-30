@@ -1579,7 +1579,7 @@ function koNote(r){if(r.eff===0)return'immune';if(r.pctLo>=100)return'guaranteed
   const hi=Math.ceil(100/r.pctHi),lo=Math.ceil(100/r.pctLo);return hi===lo?`${hi}HKO`:`${hi}–${lo}HKO`;}
 const g=id=>document.getElementById(id);
 function slotHTML(p,title){
-  const tag=p==='a'?'A':'B';
+  const tag=p==='a'?'Ally':'Enemy';
   return `<div class="dmgslot" data-p="${p}"><div class="slothd"><h3>${title} <button class="pinbtn ${pinned===p?'locked':''}" data-p="${p}" title="Lock this slot — quick-picks go to the other slot">${pinned===p?'🔒':'🔓'}</button></h3><div class="slothd-right"><span id="${p}_slotsprite" class="slotsprite"></span><span id="${p}_typeline" class="small"></span></div></div><div class="slotbody">
   ${myTeam.length?(p==='a'?`<div class="myrow"><span class="small">My team:</span> ${myTeam.map((mon,i)=>`<button class="mybtn" data-p="${p}" data-i="${i}">${pokeSprite(mon.forme,'24')}${esc(mon.forme)}</button>`).join('')}</div>`:`<div class="myrow" aria-hidden="true" style="visibility:hidden"><span class="small">My team:</span><button class="mybtn">${pokeSprite(myTeam[0].forme,'24')}placeholder</button></div>`):''}
   <input id="${p}_search" placeholder="search any Pokémon…" list="formelist" autocomplete="off" onfocus="setTimeout(()=>this.select(),0)">
@@ -1630,15 +1630,16 @@ function renderFinals(p,m){const s=statsOf(m);
     lbl.classList.toggle('natdown',nm<1);
   });
   // Intimidate from the OTHER slot's mon adds a virtual -1 Atk that's only
-  // applied in the calc engine (not stored on m.boost). Show it on the Atk
-  // row so the user can see the effective Atk in the stat panel.
+  // applied in the calc engine (not stored on m.boost). The visual stage row
+  // and stat-value tooltip both reflect the EFFECTIVE stage so the user sees
+  // the actual current Atk without an extra "↓Intim" badge cluttering the row.
   const other = p==='a' ? B : A;
   const intimidated = other?.ability==='Intimidate' && !INTIMIDATE_IMMUNE.has(m.ability||'') && m.forme;
   STAT_KEYS.forEach(([k])=>{const cell=g(p+'_fin_'+k);if(!cell)return;
     if(!s){cell.textContent='';return;}
     let v=s[k];
     let b=k==='hp'?0:(m.boost?.[k]||0);
-    // Virtual Intimidate stage (visual only — calc engine still computes it itself)
+    // Virtual Intimidate stage (visual only — calc engine computes it itself)
     let virtIntim=0;
     if(k==='atk' && intimidated){
       virtIntim=-1;
@@ -1648,17 +1649,18 @@ function renderFinals(p,m){const s=statsOf(m);
     if(effB){
       const boosted=applyBoost(v,effB);
       const sign=effB>0?'up':'down';
-      const intimTag=virtIntim?` <span class="bsign down" title="Intimidate from opposing ${esc(other.forme)}">↓Intim</span>`:'';
-      cell.innerHTML=`<b class="${sign}">${boosted}</b> <span class="finbase">(${v})</span> <span class="bsign ${sign}">${effB>0?'+'+effB:effB}</span>${intimTag}`;
+      const intimHint=virtIntim?` title="Includes Intimidate from opposing ${esc(other.forme)}"`:'';
+      cell.innerHTML=`<b class="${sign}"${intimHint}>${boosted}</b> <span class="finbase">(${v})</span> <span class="bsign ${sign}">${effB>0?'+'+effB:effB}</span>`;
     } else cell.innerHTML=`<b>${v}</b>`;
-    // Sync stage chip active state
+    // Sync stage chip active state — show EFFECTIVE stage (b + virtIntim) so
+    // Intimidate visually shows as the -1 chip lit up, not just as text.
     if(k!=='hp'){const row=document.querySelector(`.stagerow[data-p="${p}"][data-k="${k}"]`);
       if(row)row.querySelectorAll('.stagec').forEach(chip=>{
         const n=+chip.dataset.s;
-        chip.classList.toggle('active',n===b);
-        chip.classList.toggle('pos',n===b && n>0);
-        chip.classList.toggle('neg',n===b && n<0);
-        chip.classList.toggle('zero',n===b && n===0);
+        chip.classList.toggle('active',n===effB);
+        chip.classList.toggle('pos',n===effB && n>0);
+        chip.classList.toggle('neg',n===effB && n<0);
+        chip.classList.toggle('zero',n===effB && n===0);
       });}
   });
   const st=g(p+'_typeline');
@@ -1773,11 +1775,17 @@ function wireSlot(p,m){
     if(sp) sp.addEventListener('input',()=>{if(spv)spv.value=sp.value;readSlot(p,m);updateResults();});
     if(spv) spv.addEventListener('input',()=>{const v=Math.max(0,Math.min(32,+spv.value||0));if(sp)sp.value=v;readSlot(p,m);updateResults();});
   });
-  // Stage chips: jump directly to any -6..+6 stage (the only boost control)
+  // Stage chips: clicking sets the EFFECTIVE stage the user wants. If
+  // Intimidate is currently in play (opposing mon has it), we back out the
+  // virtual -1 so clicking "+1" lands on +1 effective (not +0).
   document.querySelectorAll(`.stagerow[data-p="${p}"] .stagec`).forEach(chip=>chip.onclick=()=>{
     const k=chip.parentElement.dataset.k, s=+chip.dataset.s;
     if(!m.boost)m.boost=zeroBoost();
-    m.boost[k]=Math.max(-6,Math.min(6,s));
+    const other=p==='a'?B:A;
+    const intimActive = k==='atk' && other?.ability==='Intimidate' && !INTIMIDATE_IMMUNE.has(m.ability||'');
+    let virtIntim=0;
+    if(intimActive) virtIntim = m.ability==='Defiant' ? +1 : -1;
+    m.boost[k]=Math.max(-6,Math.min(6, s - virtIntim));
     renderFinals(p,m);updateResults();});
   // Status buttons (single-click)
   document.querySelectorAll(`[data-grp="${p}_st"]`).forEach(btn=>btn.onclick=()=>{
@@ -2071,7 +2079,7 @@ function renderDmg(){
     </div>
     <div id="matrixpane"></div>
     <div id="speedribbon" class="speedribbon"></div>
-    <div class="dmgtop">${slotHTML('a','Attacker')}${slotHTML('b','Defender')}</div>
+    <div class="dmgtop">${slotHTML('a','Ally')}${slotHTML('b','Enemy')}</div>
     <div id="dmgresults"></div>
     <div class="small calcfoot"><b>VGC doubles only.</b> Champions ruleset (lv50, IVs max, 1 SP = 8 EV). <b>Modeled:</b> STAB · type chart · spread · stat boosts · status (burn/frostbite/Guts) · current HP (Multiscale) · weather (incl. extremes Harsh Sun/Heavy Rain/Strong Winds) · terrains (Electric/Grassy/Misty/Psychic, grounded only; Grassy halves EQ) · screens (×0.5 singles / ×2/3 doubles, Aurora Veil snow-only; crit bypasses) · Helping Hand · Friend Guard (doubles) · Power Spot · Battery · Steely Spirit · Flower Gift · Crit (ignores +def/-atk boosts; Sniper ×2.25) · Trick/Magic/Wonder Room · Gravity (ground hits Flying, suppresses Levitate) · <b>multi-hit moves</b> (Triple Axel/Triple Kick escalating BP; Population Bomb/Bullet Seed; Skill Link → max hits) · <b>Intimidate auto-apply</b> (with Clear Body / Hyper Cutter / Inner Focus / Scrappy / Own Tempo / Oblivious immunity; Defiant counters; Competitive on special) · <b>contact/flag abilities</b>: Tough Claws ×1.3 (contact) · Iron Fist ×1.2 (punch) · Mega Launcher ×1.5 (pulse) · Strong Jaw ×1.5 (bite) · Sharpness ×1.5 (slicing) · Punk Rock ×1.3 atk / ×0.5 def (sound) · Soundproof immune (sound) · Bulletproof immune (bullet) · Fluffy ×0.5 contact + ×2 fire · -ate abilities (Pixilate/Aerilate/Refrigerate/Galvanize: Normal→type ×1.2 STAB) · Adaptability · Technician · Tinted Lens · Huge/Pure Power · Solar Power · Sand Force · Sniper · Neuroforce · Levitate / type-absorb immunities · Multiscale / Shadow Shield · Filter / Solid Rock / Prism Armor · Thick Fat · Heatproof · Purifying Salt · Fur Coat · Ice Scales · Choice/Specs/Life Orb/AV/Eviolite/type-boost items.</div>`;
   wireSlot('a',A);wireSlot('b',B);
