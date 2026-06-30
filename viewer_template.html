@@ -56,6 +56,9 @@
     --accent:var(--primary); --accent2:var(--warning);
     /* Move category tokens — physical=orange, special=blue, status=muted */
     --cat-phys:#fb923c; --cat-spec:#60a5fa; --cat-stat:var(--muted-foreground);
+    /* Layout vars — referenced by main, header, footer, future bottom-nav.
+       --bottom-nav-h is 0 on desktop; bumps to 56px under the mobile breakpoint. */
+    --hdr-h:46px; --ftr-h:34px; --bottom-nav-h:0px;
   }
   *{box-sizing:border-box}
   body{margin:0;font-family:'Inter','Segoe UI',system-ui,sans-serif;font-size:13px;line-height:1.5;background:var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased;font-feature-settings:"cv02","cv03","cv04","cv11"}
@@ -96,7 +99,7 @@
   input:focus,textarea:focus,select:focus{outline:none;border-color:rgba(34,211,238,0.50);background:var(--secondary)}
   select{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='%237a8095' d='M0 0l5 6 5-6z'/></svg>");background-repeat:no-repeat;background-position:right 8px center;padding-right:24px}
   #search{flex:1;min-width:200px;max-width:340px}
-  main{height:calc(100vh - 46px);overflow:hidden}
+  main{min-height:calc(100dvh - var(--hdr-h) - var(--ftr-h) - var(--bottom-nav-h));overflow-x:hidden}
   .view{display:none;height:100%}
   .view.active{display:flex}
   /* Pokemon view */
@@ -506,10 +509,25 @@
   .landing-card .lc-hint{margin-top:4px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;color:var(--muted-foreground);opacity:.7}
   .landing-card .lc-hint kbd{font-family:inherit;background:var(--secondary);border:1px solid var(--border);border-radius:3px;padding:0 4px;color:var(--accent-c)}
   .landing-tip{margin-top:24px;color:var(--muted-foreground);font-size:11px;font-family:'JetBrains Mono',ui-monospace,monospace}
-  @media (max-width:580px){
+  /* ====== Single mobile breakpoint — every mobile rule lives here ======
+     Days 2-5 of the mobile sprint pile rules into this @media block. Day 1
+     scaffolding: foundational overflow guards and min-width zeroing so the
+     existing layouts stop forcing horizontal scroll at <=640px. */
+  @media (max-width:640px){
+    /* Landing screen condenses */
     .landing-grid{grid-template-columns:1fr}
     .landing-wm .wm-a,.landing-wm .wm-b{font-size:72px}
     .landing-mantra{font-size:20px}
+    /* Kill the desktop min-widths that force horizontal scroll on phones */
+    .dmgslot{min-width:0;flex-basis:100%}
+    .rescol{min-width:0;flex-basis:100%}
+    .rescols{flex-direction:column}
+    .dmgtop{flex-direction:column}
+    /* Flex children inside wrapping containers need min-width:0 so they can
+       actually shrink to fit; otherwise long words / inputs blow them open */
+    .dmgtop > *, .rescols > *, .fld3 > * { min-width:0; }
+    /* Padding tightens on phones to claw back screen real-estate */
+    .pad{padding:12px}
   }
   /* First-visit hotkey toast — bottom-right, dismissible, auto-fades after 8s */
   #hotkeytoast{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:calc(40px + max(8px,env(safe-area-inset-bottom)));z-index:90;background:var(--card-elev);border:1px solid var(--atk-border);border-radius:10px;padding:10px 14px;display:none;align-items:center;gap:10px;font-size:12px;color:var(--foreground);box-shadow:0 8px 24px rgba(0,0,0,0.5);max-width:320px;animation:toastIn .35s cubic-bezier(.2,.7,.2,1)}
@@ -560,7 +578,7 @@
   #aboutoverlay .share-qr{display:flex;align-items:center;gap:14px;margin-bottom:6px}
   #aboutoverlay .share-qr img{background:#fff;padding:6px;border-radius:6px;flex-shrink:0}
   /* Adjust main height to make room for footer */
-  main{height:calc(100vh - 46px - 34px)}
+  /* (legacy hardcoded override removed — main now uses CSS vars above) */
 </style>
 </head>
 <body>
