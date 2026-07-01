@@ -1432,19 +1432,27 @@ function calcDmg(atk,move,def,atkSide,defSide){
   const critAttempt=!!atkSide.crit;
   const defCritImmune=(def.ability==='Shell Armor'||def.ability==='Battle Armor');
   const isCrit=critAttempt && !defCritImmune;
+  // Foul Play uses the TARGET's Attack stat + target's Atk boosts (Dark move
+  // that "turns the target's power against it"). Intimidate on the user doesn't
+  // affect Foul Play because the user's Atk isn't the one being read.
+  const isFoulPlay = phys && move==='Foul Play';
   // Wonder Room swaps Def and SpD
-  let Aa=phys?as.atk:as.spa;
+  let Aa;
+  if(isFoulPlay) Aa=ds.atk;
+  else Aa=phys?as.atk:as.spa;
   let D;
   if(field.wonderRoom) D=phys?ds.spd:ds.def;
   else D=phys?ds.def:ds.spd;
   // stat boosts (with crit-ignore rules). Wonder Room swaps the base stat
   // value used, but boosts stay tied to slot name (Showdown rule).
   const aBoostKey=phys?'atk':'spa', dBoostKey=phys?'def':'spd';
-  let aB=atk.boost?.[aBoostKey]||0, dB=def.boost?.[dBoostKey]||0;
+  let aB = isFoulPlay ? (def.boost?.atk||0) : (atk.boost?.[aBoostKey]||0);
+  let dB = def.boost?.[dBoostKey]||0;
   // Intimidate auto-apply: defender's ability drops attacker's Atk -1 (phys).
   // Defiant counters with +2 (net +1); Competitive boosts SpA +2 instead (special).
+  // Skip for Foul Play — target's Atk is the one being used, not the user's.
   let intimidate=false;
-  if(def.ability==='Intimidate' && !INTIMIDATE_IMMUNE.has(atk.ability)){
+  if(!isFoulPlay && def.ability==='Intimidate' && !INTIMIDATE_IMMUNE.has(atk.ability)){
     intimidate=true;
     if(phys){ aB-=1; if(atk.ability==='Defiant') aB+=2; }
     else if(atk.ability==='Competitive') aB+=2;
