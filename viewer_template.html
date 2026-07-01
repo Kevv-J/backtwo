@@ -340,6 +340,11 @@
   .mv.typeonly{font-size:9px;padding:1px 5px;min-width:40px;text-align:center}
   .moverow .mvmeta{display:flex;gap:5px;align-items:center;font-size:10px}
   .detail{margin:0;padding:10px 14px;background:var(--muted);border-bottom:1px solid var(--border);line-height:1.55;font-size:12px}
+  .calcline{display:flex;gap:8px;align-items:flex-start;padding:8px 10px;background:rgba(6,182,212,0.06);border:1px solid rgba(6,182,212,0.18);border-radius:4px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;line-height:1.5}
+  .calcline-txt{flex:1;user-select:text;word-break:break-word;color:var(--text)}
+  .calcline-copy{flex-shrink:0;font-size:10px;padding:2px 8px;background:rgba(6,182,212,0.15);color:var(--accent);border:1px solid rgba(6,182,212,0.35);border-radius:3px;cursor:pointer;letter-spacing:.05em;text-transform:uppercase;font-weight:600}
+  .calcline-copy:hover{background:rgba(6,182,212,0.25)}
+  .calcline-copy.done{background:var(--good-bg);color:var(--good);border-color:var(--good-border)}
   /* KO chip — Figma translucent style */
   .kochip{display:inline-block;border-radius:3px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:6px;white-space:nowrap;border:1px solid;letter-spacing:.06em;text-transform:uppercase}
   .kochip.kosure{background:var(--good-bg);color:var(--good);border-color:var(--good-border)}
@@ -2014,6 +2019,83 @@ function moveListHTML(side,atk,def){
   }).join('');
 }
 function boostLabel(n){return n?` <span class="small" style="color:${n>0?'var(--good)':'var(--bad)'}">${n>0?'+':''}${n}</span>`:'';}
+// Nature suffix on the stat EV: "+" if nature raises this stat, "-" if lowers.
+function natSfx(nat, stat){const n=NATURES[nat];if(!n||stat==='hp')return '';if(n[0]===stat)return '+';if(n[1]===stat)return '-';return '';}
+function boostSfx(n){return n>0?` +${n}`:n<0?` ${n}`:'';}
+const WEATHER_LABEL={sun:'Sun',rain:'Rain',sand:'Sand',snow:'Snow',harshsun:'Harsh Sunshine',heavyrain:'Heavy Rain',strongwinds:'Strong Winds'};
+const TERRAIN_LABEL={electric:'Electric',grassy:'Grassy',psychic:'Psychic',misty:'Misty'};
+// Items called out inline (before the mon name) because they modify stats or damage
+// in a way a reader expects to see spelled out. Berries/resist-type items aren't modeled.
+const ATK_ITEM_INLINE=new Set(['Choice Band','Choice Specs','Life Orb','Expert Belt','Muscle Band','Wise Glasses','Metronome']);
+const DEF_ITEM_INLINE=new Set(['Assault Vest','Eviolite']);
+// Build a Showdown-style single-line damage summary. Mirrors calcDmg's logic —
+// changes to modifiers there need reflection here (or the string drifts from reality).
+function calcSummary(atk, def, mv, info, r, aS, dS){
+  const phys=info.category==='physical';
+  const isFoulPlay=phys && mv==='Foul Play';
+  const aStatKey=phys?'atk':'spa';
+  const dStatKey=phys?'def':'spd';
+  const aStatLbl=phys?'Atk':'SpA';
+  const dStatLbl=phys?'Def':'SpD';
+  // Attacking stat is target's Atk for Foul Play (reads defender's EV + nature + boost)
+  const aSrc=isFoulPlay?def:atk;
+  const aStatForNat=isFoulPlay?'atk':aStatKey;
+  const aEV=aSrc.ev[aStatForNat]||0;
+  const aNat=natSfx(aSrc.nature, aStatForNat);
+  let aBoost=isFoulPlay?(def.boost?.atk||0):(atk.boost?.[aStatKey]||0);
+  // Intimidate mutations mirror calcDmg exactly
+  if(r.intimidate){
+    if(phys){aBoost-=1;if(atk.ability==='Defiant')aBoost+=2;}
+    else if(atk.ability==='Competitive')aBoost+=2;
+  }
+  if(r.isCrit){if(aBoost<0)aBoost=0;}
+  const aBstr=boostSfx(aBoost);
+  const dEVhp=def.ev.hp||0;
+  const dEV=def.ev[dStatKey]||0;
+  const dNat=natSfx(def.nature, dStatKey);
+  let dBoost=def.boost?.[dStatKey]||0;
+  if(r.isCrit && dBoost>0)dBoost=0;
+  const dBstr=boostSfx(dBoost);
+  // Inline items (only when damage-relevant and not suppressed by Magic Room)
+  const aItem=field.magicRoom?'':atk.item;
+  const dItem=field.magicRoom?'':def.item;
+  const aItemStr=(aItem && (ATK_ITEM_INLINE.has(aItem) || ITEM_TYPE_BOOST[aItem]===r.moveType))?` ${aItem}`:'';
+  const dItemStr=(dItem && DEF_ITEM_INLINE.has(dItem))?` ${dItem}`:'';
+  const spread=(r.isSpread && doubles)?' (spread)':'';
+  // Trailing modifiers (Showdown reads left→right: field then side then hit-time)
+  const mods=[];
+  // Screens/veil (only if not bypassed by crit)
+  if(!r.isCrit){
+    const veil=dS.auroraVeil && weather==='snow';
+    if(veil) mods.push('through Aurora Veil');
+    else if(phys && dS.reflect) mods.push('through Reflect');
+    else if(!phys && dS.lightScreen) mods.push('through Light Screen');
+  }
+  if(dS.friendGuard && doubles) mods.push('through an ally’s Friend Guard');
+  if(aS.helpingHand) mods.push('with Helping Hand');
+  if(aS.powerSpot) mods.push('with an ally’s Power Spot');
+  if(aS.battery && !phys) mods.push('with an ally’s Battery');
+  if(aS.steelySpirit && r.moveType==='steel') mods.push('with an ally’s Steely Spirit');
+  if(aS.flowerGift && phys && (weather==='sun'||weather==='harshsun')) mods.push('with an ally’s Flower Gift');
+  if(dS.flowerGift && !phys && (weather==='sun'||weather==='harshsun')) mods.push('with the defender’s Flower Gift');
+  // Weather (always call out if active — it may or may not affect the roll but tells the reader the field state)
+  if(weather!=='none' && WEATHER_LABEL[weather]) mods.push('in '+WEATHER_LABEL[weather]);
+  if(field.terrain!=='none' && TERRAIN_LABEL[field.terrain]) mods.push('on '+TERRAIN_LABEL[field.terrain]+' Terrain');
+  if(field.gravity) mods.push('with Gravity');
+  if(field.trickRoom) mods.push('with Trick Room');
+  if(field.wonderRoom) mods.push('with Wonder Room');
+  if(field.magicRoom) mods.push('with Magic Room');
+  // Status
+  if(atk.status==='brn' && phys && atk.ability!=='Guts') mods.push('while burned');
+  else if(atk.status==='brn' && phys && atk.ability==='Guts') mods.push('with Guts (burned)');
+  if(atk.status==='fbt' && !phys) mods.push('while frostbitten');
+  if(r.isCrit) mods.push('on a critical hit');
+  const modStr=mods.length?' '+mods.join(' '):'';
+  const pctLo=r.pctLo.toFixed(1), pctHi=r.pctHi.toFixed(1);
+  const ko=koNote(r);
+  const aFor=atk.forme||'?', dFor=def.forme||'?';
+  return `${aEV}${aNat} ${aStatLbl}${aBstr}${aItemStr} ${aFor} ${mv}${spread} vs. ${dEVhp} HP / ${dEV}${dNat} ${dStatLbl}${dBstr}${dItemStr} ${dFor}${modStr}: ${r.lo}-${r.hi} (${pctLo}% - ${pctHi}%) — ${ko}`;
+}
 function moveDetailHTML(side,atk,def,i){const mv=atk.moves[i];const info=DEX.moves[mv];
   if(!info)return '<div class="detail small">Type a move to see its calc.</div>';
   if(!info.power)return `<div class="detail">${movePill(mv)} — status move (no damage).</div>`;
@@ -2048,8 +2130,10 @@ function moveDetailHTML(side,atk,def,i){const mv=atk.moves[i];const info=DEX.mov
       recoilLine=`<div class="small" style="margin-top:4px;color:var(--bad)">↳ Recoil: <b>${rec.dmg}</b> HP (${rec.pct.toFixed(0)}% of attacker's max HP — fixed cost)</div>`;
     }
   }
-  return `<div class="detail">${esc(atk.forme)}${aBoost} <b>${r.isCrit?'(crit) ':''}${esc(mv)}</b> (${bpLab}${r.eff!==1?', '+r.eff+'×':''}${r.moveType!==info.type?' · type→'+esc(r.moveType):''}${hitLab}) vs ${esc(def.forme)}${dBoost}:
-    <b>${r.lo}–${r.hi}</b> (<b style="color:${dmgColor(r.pctHi)}">${r.pctLo.toFixed(1)}–${r.pctHi.toFixed(1)}%</b> of ${r.hp} HP) — ${koNote(r)}${sp}
+  const summary=calcSummary(atk,def,mv,info,r,aS,dS);
+  return `<div class="detail"><div class="calcline"><span class="calcline-txt">${esc(summary)}</span><button class="calcline-copy" type="button" data-copy="${esc(summary)}" title="Copy Showdown-style summary">Copy</button></div>
+    <div style="margin-top:6px">${esc(atk.forme)}${aBoost} <b>${r.isCrit?'(crit) ':''}${esc(mv)}</b> (${bpLab}${r.eff!==1?', '+r.eff+'×':''}${r.moveType!==info.type?' · type→'+esc(r.moveType):''}${hitLab}) vs ${esc(def.forme)}${dBoost}:
+    <b>${r.lo}–${r.hi}</b> (<b style="color:${dmgColor(r.pctHi)}">${r.pctLo.toFixed(1)}–${r.pctHi.toFixed(1)}%</b> of ${r.hp} HP) — ${koNote(r)}${sp}</div>
     ${ctx.length?`<div class="small" style="margin-top:2px">${ctx.join(' · ')}</div>`:''}
     ${recoilLine}
     <div class="small" style="margin-top:5px">${r.rolls?'rolls: '+r.rolls.join(', '):r.hits>1?'multi-hit · '+r.hits+' hits':''}</div></div>`;}
@@ -2129,7 +2213,20 @@ function updateResults(){const el=g('dmgresults');
     <div class="rescol" data-side="A"><div class="restitle"><span>${esc(A.forme)} → ${esc(B.forme)}</span><span class="restitle-hp">${B.forme?statsOf(B)?.hp+' HP':''}</span></div><div class="resbody">${moveListHTML('A',A,B)}</div></div>
     <div class="rescol" data-side="B"><div class="restitle"><span>${esc(B.forme)} → ${esc(A.forme)}</span><span class="restitle-hp">${A.forme?statsOf(A)?.hp+' HP':''}</span></div><div class="resbody">${moveListHTML('B',B,A)}</div></div></div>`;
   el.querySelectorAll('.moverow').forEach(row=>row.onclick=()=>{const i=+row.dataset.i;
-    if(row.dataset.side==='A')selA=i;else selB=i;updateResults();});}
+    if(row.dataset.side==='A')selA=i;else selB=i;updateResults();});
+  el.querySelectorAll('.calcline-copy').forEach(btn=>btn.onclick=e=>{
+    e.stopPropagation();
+    const txt=btn.dataset.copy||'';
+    (navigator.clipboard?.writeText(txt) ?? Promise.reject()).then(()=>{
+      btn.classList.add('done');btn.textContent='Copied';
+      setTimeout(()=>{btn.classList.remove('done');btn.textContent='Copy';},1200);
+    }).catch(()=>{
+      // fallback: legacy execCommand path for older WebViews / no HTTPS
+      const ta=document.createElement('textarea');ta.value=txt;ta.style.position='fixed';ta.style.top='-1000px';document.body.appendChild(ta);ta.select();
+      try{document.execCommand('copy');btn.classList.add('done');btn.textContent='Copied';setTimeout(()=>{btn.classList.remove('done');btn.textContent='Copy';},1200);}catch{}
+      document.body.removeChild(ta);
+    });
+  });}
 function loadIntoSlot(p,m,src){m.forme=src.forme;m.item=src.item||'';m.ability=src.ability||'';
   m.nature=src.nature||'Serious';
   m.ev={...(src.ev||parseEVs(src.evs||''))};m.boost={...(src.boost||zeroBoost())};
