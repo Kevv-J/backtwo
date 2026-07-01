@@ -407,9 +407,10 @@
   .find-slot .find-sprite{flex-shrink:0;display:flex;align-items:center;justify-content:center;width:36px;height:36px;line-height:0}
   .find-slot .find-sprite .psprite{width:36px;height:36px}
   .find-slot.editing .find-input{width:100%;height:100%;font-size:13px;padding:0 10px;border:none;background:transparent;color:var(--foreground);outline:none;border-radius:8px}
-  /* Dropdown: absolute positioned below the editing slot so it doesn't grow
-     the grid row height. Slightly wider than the slot when there's room. */
-  .find-dropdown{position:absolute;top:calc(100% + 4px);left:0;min-width:100%;width:max(100%,240px);max-width:320px;max-height:280px;overflow-y:auto;background:var(--card-elev);border:1px solid var(--atk-color);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.5);z-index:30}
+  /* Dropdown: position:fixed so it escapes every ancestor overflow context
+     (.pad has overflow-y:auto, main can too under some flex/height combos).
+     Positioned at runtime by wireFindSlots() via getBoundingClientRect. */
+  .find-dropdown{position:fixed;min-width:220px;width:max(240px, min(320px, calc(100vw - 24px)));max-height:280px;overflow-y:auto;background:var(--card-elev);border:1px solid var(--atk-color);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.5);z-index:80}
   .find-dropdown:empty{display:none}
   .find-option{display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .08s;font-size:13px}
   .find-option:last-child{border-bottom:none}
@@ -2223,17 +2224,43 @@ function renderFindSlot(i){
   </div>`;
 }
 
+// Position the find-team dropdown at runtime (position:fixed relative to the
+// input's bounding rect, so it escapes every ancestor overflow context).
+// Called on open, input, and window scroll/resize.
+function positionFindDropdown(i){
+  const input=g('find_input_'+i);
+  const drop=g('find_dropdown_'+i);
+  if(!input||!drop)return;
+  const r=input.getBoundingClientRect();
+  const dropH=Math.min(280, drop.scrollHeight||280);
+  const spaceBelow=window.innerHeight-r.bottom;
+  const spaceAbove=r.top;
+  // Flip above the input if there's not enough room below
+  const flipAbove = spaceBelow < dropH+16 && spaceAbove > spaceBelow;
+  drop.style.top = flipAbove ? (r.top - dropH - 4) + 'px' : (r.bottom + 4) + 'px';
+  // Clamp left so it doesn't overflow the viewport
+  const dropW=drop.offsetWidth||Math.max(240, r.width);
+  drop.style.left = Math.max(8, Math.min(r.left, window.innerWidth - dropW - 8)) + 'px';
+}
+let _findDropdownActive=null;
+function _findDropdownWatcher(){
+  if(_findDropdownActive!=null)positionFindDropdown(_findDropdownActive);
+}
+window.addEventListener('scroll', _findDropdownWatcher, true);
+window.addEventListener('resize', _findDropdownWatcher);
+
 function wireFindSlots(){
   document.querySelectorAll('#findslots .find-slot').forEach(slot=>{
     const i=+slot.dataset.slot;
     const state=findSlotState[i];
     if(state==='editing'){
+      _findDropdownActive=i;
       const input=g('find_input_'+i);
       if(input){
-        input.addEventListener('input',()=>updateFindDropdown(i));
+        input.addEventListener('input',()=>{updateFindDropdown(i);positionFindDropdown(i);});
         input.addEventListener('keydown',e=>handleFindKeydown(e,i));
-        input.addEventListener('blur',()=>setTimeout(()=>closeFindSlot(i,false),120));
-        setTimeout(()=>{input.focus();input.select();updateFindDropdown(i);},10);
+        input.addEventListener('blur',()=>setTimeout(()=>{_findDropdownActive=null;closeFindSlot(i,false);},120));
+        setTimeout(()=>{input.focus();input.select();updateFindDropdown(i);positionFindDropdown(i);},10);
       }
     } else if(findPicks[i]){
       // Click anywhere on the filled slot (except ×) re-opens it for editing
