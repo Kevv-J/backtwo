@@ -54,6 +54,11 @@ SLUG_OVERRIDES = {
     "Pyroar": "pyroar-male",
     "Basculegion-F": "basculegion-female",
     "Aegislash": "aegislash-shield",
+    # Aegislash-Blade is Aegislash's offensive stance (Stance Change swaps
+    # into it when using a damaging move). Not present in VGCPastes teams
+    # (players write "Aegislash"), but we surface it in the calc so users
+    # can toggle to the Blade stat spread for offensive calcs.
+    "Aegislash-Blade": "aegislash-blade",
     "Lycanroc": "lycanroc-midday",
     "Meowstic": "meowstic-male",
     "Mimikyu": "mimikyu-disguised",
@@ -342,6 +347,16 @@ def main() -> None:
             formes.setdefault(m["name"], [species_slug(m["name"])])
             for mv in m.get("moves", []):
                 moves.add(mv)
+
+    # Extra calc-only formes — stance / mode variants that never appear in
+    # paste text (players write "Aegislash" not "Aegislash-Blade"). Surfacing
+    # them here lets the calc offer a Shield ⇄ Blade toggle without polluting
+    # the meta-browser (they won't appear in team lists since no paste has them).
+    EXTRA_CALC_FORMES = {
+        "Aegislash-Blade": "aegislash-blade",
+    }
+    for label, slug in EXTRA_CALC_FORMES.items():
+        formes.setdefault(label, [slug])
 
     # populate move-flags map once before the threadpool needs it
     global _MOVE_FLAGS

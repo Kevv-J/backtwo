@@ -296,6 +296,13 @@
   .fline{display:grid;grid-template-columns:64px 1fr;gap:8px;align-items:start;margin:5px 0}
   .flbl{color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:.5px;font-weight:600;padding-top:4px}
   /* Fight bar */
+  /* Stance toggle (Aegislash Shield ⇄ Blade) — only rendered by
+     syncStanceToggle() when the loaded forme has a stance variant. */
+  .stance-toggle{display:inline-flex;gap:2px;padding:2px;background:var(--secondary);border-radius:5px}
+  .stance-toggle:empty{display:none}
+  .stance-toggle button{padding:2px 8px;border-radius:3px;border:none;background:transparent;color:var(--muted-foreground);cursor:pointer;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-family:'Rajdhani','Inter',sans-serif}
+  .stance-toggle button.active{background:var(--card-elev);color:var(--atk-color);box-shadow:0 0 0 1px var(--atk-border)}
+  .stance-toggle button:hover:not(.active){color:var(--foreground)}
   /* Fight-team chips live inside slot B's myrow now (see slotHTML). ftbtn
      inherits mybtn styling; add active state + the inline × clear button. */
   .ftbtn.active{background:var(--def-bg);border-color:var(--def-color);color:var(--def-color)}
@@ -1604,7 +1611,7 @@ function koNote(r){
 const g=id=>document.getElementById(id);
 function slotHTML(p,title){
   const tag=p==='a'?'Ally':'Enemy';
-  return `<div class="dmgslot" data-p="${p}"><div class="slothd"><h3>${title} <button class="pinbtn ${pinned===p?'locked':''}" data-p="${p}" title="Lock this slot — quick-picks go to the other slot">${pinned===p?'🔒':'🔓'}</button></h3><div class="slothd-right"><span id="${p}_slotsprite" class="slotsprite"></span><span id="${p}_typeline" class="small"></span></div></div><div class="slotbody">
+  return `<div class="dmgslot" data-p="${p}"><div class="slothd"><h3>${title} <button class="pinbtn ${pinned===p?'locked':''}" data-p="${p}" title="Lock this slot — quick-picks go to the other slot">${pinned===p?'🔒':'🔓'}</button></h3><div class="slothd-right"><span id="${p}_stance" class="stance-toggle"></span><span id="${p}_slotsprite" class="slotsprite"></span><span id="${p}_typeline" class="small"></span></div></div><div class="slotbody">
   ${(()=>{
     // Slot A gets a My Team quick-pick row; slot B gets a Fight-team quick-pick
     // row (when a team is being fought). If neither is available, render an
@@ -1722,6 +1729,7 @@ function populateSlot(p,m){
   [0,1,2,3].forEach(i=>g(p+'_mv'+i).value=m.moves[i]||'');
   syncHPUI(p,m);
   syncCounters(p,m);
+  syncStanceToggle(p,m);
   syncBtnGroup(p+'_st',m.status||'ok');
   syncFxRow(p,p==='a'?sideA:sideB);
   renderFinals(p,m);}
@@ -1749,6 +1757,34 @@ function syncHPUI(p,m){
 }
 
 // Show/hide counter rows based on which moves are in the current set.
+// Stance-variant map — formes that have a battle-only alternate stance the
+// user should be able to toggle between during a calc (item / EVs / moves /
+// HP / boosts all preserved across the flip; only base stats change since
+// they come from statsOf → DEX.formes[m.forme].stats).
+const STANCE_VARIANTS={
+  'Aegislash':{shield:'Aegislash', blade:'Aegislash-Blade', shieldLabel:'Shield', bladeLabel:'Blade'},
+  'Aegislash-Blade':{shield:'Aegislash', blade:'Aegislash-Blade', shieldLabel:'Shield', bladeLabel:'Blade'},
+};
+function syncStanceToggle(p,m){
+  const el=g(p+'_stance');if(!el)return;
+  const variants=STANCE_VARIANTS[m.forme];
+  if(!variants){el.innerHTML='';return;}
+  const cur=m.forme;
+  el.innerHTML=`<button data-forme="${esc(variants.shield)}" class="${cur===variants.shield?'active':''}">${esc(variants.shieldLabel)}</button><button data-forme="${esc(variants.blade)}" class="${cur===variants.blade?'active':''}">${esc(variants.bladeLabel)}</button>`;
+  el.querySelectorAll('button').forEach(b=>b.onclick=()=>{
+    const target=b.dataset.forme;
+    if(target===m.forme)return;
+    m.forme=target;
+    // Update the search input to reflect the swap; preserve everything else.
+    const s=g(p+'_search');if(s)s.value=target;
+    afterSlotChange(p,m);  // triggers renderFinals + updateResults + auto-wires
+    // renderFinals is called by afterSlotChange indirectly, but populateSlot
+    // isn't — call syncStanceToggle again explicitly so the buttons update.
+    syncStanceToggle(p,m);
+    renderFinals(p,m);
+    updateResults();
+  });
+}
 function syncCounters(p,m){
   const wrap=document.getElementById(p+'_counters');if(!wrap)return;
   const moves=m.moves||[];
