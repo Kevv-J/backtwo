@@ -99,7 +99,11 @@
   input:focus,textarea:focus,select:focus{outline:none;border-color:rgba(34,211,238,0.50);background:var(--secondary)}
   select{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='%237a8095' d='M0 0l5 6 5-6z'/></svg>");background-repeat:no-repeat;background-position:right 8px center;padding-right:24px}
   #search{flex:1;min-width:200px;max-width:340px}
-  main{min-height:calc(100dvh - var(--hdr-h) - var(--ftr-h) - var(--bottom-nav-h));overflow-x:hidden}
+  /* overflow-x:clip (not hidden) — `hidden` would flip overflow-y to auto per
+     the CSS overflow compat rule, turning main into a scroll container that
+     clips absolutely-positioned descendants (e.g. Find Team's dropdown).
+     `clip` does the same horizontal clip without creating a scroll context. */
+  main{min-height:calc(100dvh - var(--hdr-h) - var(--ftr-h) - var(--bottom-nav-h));overflow-x:clip}
   .view{display:none;height:100%}
   .view.active{display:flex}
   /* Pokemon view */
