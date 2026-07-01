@@ -296,12 +296,12 @@
   .fline{display:grid;grid-template-columns:64px 1fr;gap:8px;align-items:start;margin:5px 0}
   .flbl{color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:.5px;font-weight:600;padding-top:4px}
   /* Fight bar */
-  .fightbar{background:#1b2230;border:1px solid var(--accent);border-radius:10px;padding:10px 14px;margin-bottom:12px}
-  .fbhdr{display:flex;gap:8px;align-items:baseline;margin-bottom:8px}
-  .ftrow{display:flex;gap:6px;flex-wrap:wrap}
-  .ftbtn{padding:5px 10px;border-radius:6px;border:1px solid var(--line);background:var(--panel2);color:var(--accent);cursor:pointer;font-size:12px;font-weight:600}
-  .ftbtn:hover{border-color:var(--accent)}
-  .ftbtn.active{background:var(--panel);border-color:var(--accent2);color:var(--accent2)}
+  /* Fight-team chips live inside slot B's myrow now (see slotHTML). ftbtn
+     inherits mybtn styling; add active state + the inline × clear button. */
+  .ftbtn.active{background:var(--def-bg);border-color:var(--def-color);color:var(--def-color)}
+  .ftclear-inline{background:transparent;border:1px solid var(--border);color:var(--muted-foreground);border-radius:4px;width:22px;height:22px;line-height:1;padding:0;cursor:pointer;font-size:13px;font-family:inherit;flex-shrink:0}
+  .ftclear-inline:hover{border-color:var(--bad);color:var(--bad)}
+  .ftmyrow{align-items:center}
   .closebtn{margin-left:auto;background:transparent;border:none;color:var(--dim);font-size:18px;cursor:pointer;padding:0 4px}
   .closebtn:hover{color:var(--bad)}
   /* Fight-this-team card button */
@@ -1585,16 +1585,46 @@ function calcDmg(atk,move,def,atkSide,defSide){
   };
   const single=range(1),spreadR=range(0.75),isSpread=!!mv.spread;
   const active=(doubles&&isSpread)?spreadR:single;
-  return{...active,eff,hp,bp,bpRaw:mv.power,cat:mv.category,isSpread,single,spreadR,isCrit,moveType,hits,intimidate};
+  // KO calculations should compare damage to CURRENT HP, not max HP.
+  // curHP is the defender's remaining HP based on the hpPct slider.
+  const curHpPct=Math.max(0,Math.min(100, def.hpPct??100));
+  const curHP=Math.max(1, Math.floor(hp * curHpPct / 100));
+  return{...active,eff,hp,curHP,curHpPct,bp,bpRaw:mv.power,cat:mv.category,isSpread,single,spreadR,isCrit,moveType,hits,intimidate};
 }
 function dmgColor(p){if(p>=100)return'#ff7a7a';if(p>=50)return'#ffb070';if(p>=30)return'#ffd166';if(p>0)return'#9aa3b2';return'#5a5f6a';}
-function koNote(r){if(r.eff===0)return'immune';if(r.pctLo>=100)return'guaranteed OHKO';if(r.pctHi>=100)return'possible OHKO';
-  const hi=Math.ceil(100/r.pctHi),lo=Math.ceil(100/r.pctLo);return hi===lo?`${hi}HKO`:`${hi}–${lo}HKO`;}
+function koNote(r){
+  if(r.eff===0)return'immune';
+  const cur=r.curHP??r.hp;
+  const hpTag=r.curHpPct<100?` at ${r.curHpPct}% HP`:'';
+  if(r.lo>=cur)return `guaranteed OHKO${hpTag}`;
+  if(r.hi>=cur)return `possible OHKO${hpTag}`;
+  const hi=Math.ceil(cur/r.hi), lo=Math.ceil(cur/r.lo);
+  return (hi===lo?`${hi}HKO`:`${hi}–${lo}HKO`)+hpTag;
+}
 const g=id=>document.getElementById(id);
 function slotHTML(p,title){
   const tag=p==='a'?'Ally':'Enemy';
   return `<div class="dmgslot" data-p="${p}"><div class="slothd"><h3>${title} <button class="pinbtn ${pinned===p?'locked':''}" data-p="${p}" title="Lock this slot — quick-picks go to the other slot">${pinned===p?'🔒':'🔓'}</button></h3><div class="slothd-right"><span id="${p}_slotsprite" class="slotsprite"></span><span id="${p}_typeline" class="small"></span></div></div><div class="slotbody">
-  ${myTeam.length?(p==='a'?`<div class="myrow"><span class="small">My team:</span> ${myTeam.map((mon,i)=>`<button class="mybtn" data-p="${p}" data-i="${i}">${pokeSprite(mon.forme,'24')}${esc(mon.forme)}</button>`).join('')}</div>`:`<div class="myrow" aria-hidden="true" style="visibility:hidden"><span class="small">My team:</span><button class="mybtn">${pokeSprite(myTeam[0].forme,'24')}placeholder</button></div>`):''}
+  ${(()=>{
+    // Slot A gets a My Team quick-pick row; slot B gets a Fight-team quick-pick
+    // row (when a team is being fought). If neither is available, render an
+    // invisible placeholder to keep both slots vertically aligned.
+    if(p==='a' && myTeam.length){
+      return `<div class="myrow"><span class="small">My team:</span> ${myTeam.map((mon,i)=>`<button class="mybtn" data-p="${p}" data-i="${i}">${pokeSprite(mon.forme,'24')}${esc(mon.forme)}</button>`).join('')}</div>`;
+    }
+    if(p==='b' && fightTeam){
+      const teamLbl=esc(fightTeam.team.description||fightTeam.team.team_id);
+      return `<div class="myrow ftmyrow"><span class="small" title="${teamLbl}">Fighting <b>${teamLbl.length>28?teamLbl.slice(0,26)+'…':teamLbl}</b>:</span> ${fightTeam.mons.map((m,i)=>`<button class="mybtn ftbtn ${B.forme===(m.forme||m.name)?'active':''}" data-fti="${i}">${pokeSprite(m.forme||m.name,'24')}${esc(m.forme||m.name)}</button>`).join('')} <button class="ftclear-inline" id="ftclear" title="Clear fight team">×</button></div>`;
+    }
+    // Placeholder row for alignment when the other slot has one visible
+    const other=p==='a'?'b':'a';
+    const showPlaceholder = (p==='a' && fightTeam) || (p==='b' && myTeam.length);
+    if(showPlaceholder){
+      const sampleForme = p==='a' ? (fightTeam.mons[0]?.forme||fightTeam.mons[0]?.name||'') : myTeam[0].forme;
+      return `<div class="myrow" aria-hidden="true" style="visibility:hidden"><span class="small">My team:</span><button class="mybtn">${pokeSprite(sampleForme,'24')}placeholder</button></div>`;
+    }
+    return '';
+  })()}
   <input id="${p}_search" placeholder="search any Pokémon…" list="formelist" autocomplete="off" onfocus="setTimeout(()=>this.select(),0)">
   <select id="${p}_set"><option>— pick a Pokémon first —</option></select>
   <div class="fld3">
@@ -1842,20 +1872,22 @@ function wireSlot(p,m){
 function koClass(r){
   if(!r) return '';
   if(r.eff===0) return 'koimmune';
-  if(r.pctLo>=100) return 'kosure';
-  if(r.pctHi>=100) return 'komaybe';
-  const hi=Math.ceil(100/r.pctHi);
+  const cur=r.curHP??r.hp;
+  if(r.lo>=cur) return 'kosure';
+  if(r.hi>=cur) return 'komaybe';
+  const hi=Math.ceil(cur/r.hi);
   return hi<=2 ? 'ko2' : hi<=3 ? 'ko3' : 'kolow';
 }
 function koText(r){
   if(!r) return '';
   if(r.eff===0) return '0×';
-  if(r.pctLo>=100) return 'OHKO';
-  if(r.pctHi>=100){
-    if(r.rolls){const ok=r.rolls.filter(x=>x>=r.hp).length;return `OHKO ${Math.round(ok/16*100)}%`;}
+  const cur=r.curHP??r.hp;
+  if(r.lo>=cur) return 'OHKO';
+  if(r.hi>=cur){
+    if(r.rolls){const ok=r.rolls.filter(x=>x>=cur).length;return `OHKO ${Math.round(ok/16*100)}%`;}
     return 'OHKO?';
   }
-  const hi=Math.ceil(100/r.pctHi),lo=Math.ceil(100/r.pctLo);
+  const hi=Math.ceil(cur/r.hi), lo=Math.ceil(cur/r.lo);
   return hi===lo?`${hi}HKO`:`${hi}–${lo}HKO`;
 }
 function effChip(eff){
@@ -2073,7 +2105,6 @@ function renderDmg(){
     <details class="myteam" ${myTeam.length?'':'open'}><summary>${myTeam.length?'<span class="small" style="color:var(--muted-foreground)">✎ edit my team</span>':'<strong>Paste your team</strong> <span class="small">Showdown export — saved in this browser, used for quick-picks</span>'}</summary>
       <textarea id="myta" placeholder="Garchomp @ Sitrus Berry&#10;Ability: Rough Skin&#10;EVs: 32 Atk / 32 Spe&#10;Jolly Nature&#10;- Earthquake&#10;- Dragon Claw&#10;...">${esc(myTeam.raw||'')}</textarea>
       <button id="mysave" class="btn">Save my team</button></details>
-    ${fightTeam?renderFightBar():''}
     <div class="fieldbar">
       <div class="fline"><span class="flbl">Weather</span><div class="btnrow">
         ${WEATHERS.map(([k,lab])=>`<button class="optbtn weat-${k} ${weather===k?'active':''}" data-grp="weat" data-v="${k}">${lab}</button>`).join('')}
@@ -2108,15 +2139,16 @@ function renderDmg(){
   document.querySelectorAll('[data-grp="rm"]').forEach(b=>b.onclick=()=>{const k=b.dataset.v;field[k]=field[k]?0:1;b.classList.toggle('active',!!field[k]);updateResults();});
   g('mysave').onclick=()=>{const raw=g('myta').value;try{localStorage.setItem('vgc_myteam_raw',raw);}catch(e){}
     myTeam=parseShowdown(raw);myTeam.raw=raw;renderDmg();};
-  // My-team quick picks: respect the pin (loads go to unpinned slot when pin is set)
-  document.querySelectorAll('.mybtn').forEach(b=>b.onclick=()=>{
+  // My-team quick picks (slot A). Only the mybtns that have data-i (i.e., not
+  // ftbtn siblings that only carry data-fti) trigger the my-team load.
+  document.querySelectorAll('.mybtn[data-i]').forEach(b=>b.onclick=()=>{
     const p=targetSlot(b.dataset.p);
     loadIntoSlot(p, p==='a'?A:B, myTeam[+b.dataset.i]);
   });
-  // Fight-team opponent picker: always loads to defender side (or unpinned if pin set)
-  document.querySelectorAll('.ftbtn').forEach(b=>b.onclick=()=>{
+  // Fight-team opponent picker inside slot B: always loads to enemy side.
+  document.querySelectorAll('.ftbtn[data-fti]').forEach(b=>b.onclick=()=>{
     const p=targetSlot('b');
-    loadIntoSlot(p, p==='a'?A:B, fightTeam.mons[+b.dataset.i]);
+    loadIntoSlot(p, p==='a'?A:B, fightTeam.mons[+b.dataset.fti]);
   });
   // Pin/lock buttons in the slot headers
   document.querySelectorAll('.pinbtn').forEach(b=>b.onclick=()=>{
@@ -2164,14 +2196,8 @@ function renderMatrix(){
     loadIntoSlot('b',B,fightTeam.mons[+c.dataset.bi]);
   });
 }
-function renderFightBar(){
-  if(!fightTeam)return '';
-  return `<div class="fightbar">
-    <div class="fbhdr"><strong>Fighting:</strong> <span>${esc(fightTeam.team.description||fightTeam.team.team_id)}</span>
-      <span class="small">${esc(fightTeam.team.creator||'')}${fightTeam.team.event&&fightTeam.team.event!=='-'?' · '+esc(fightTeam.team.event):''}</span>
-      <button id="ftclear" class="closebtn">×</button></div>
-    <div class="ftrow">${fightTeam.mons.map((m,i)=>`<button class="ftbtn ${B.forme===m.forme?'active':''}" data-i="${i}">${pokeSprite(m.forme||m.name,'24')}${esc(m.forme||m.name)}${m.item?'<span class="small"> @ '+esc(m.item)+'</span>':''}</button>`).join('')}</div>
-  </div>`;}
+// (renderFightBar removed — fight-team chips now render inline inside slot B
+//  via slotHTML; see the ftmyrow branch there.)
 
 // ---------- FIND TEAM (team-preview scouting) ----------
 // Given 2-6 Pokémon you saw in the opponent's team preview, find teams that
