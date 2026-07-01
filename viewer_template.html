@@ -1212,6 +1212,37 @@ function effectiveBP(move, atk, def){
     const th=Math.max(0,Math.min(6, atk.timesHit||0));
     bp=Math.min(350, 50+50*th);
   }
+  // Weight-based moves. Heavy Metal / Light Metal modify the mon's OWN weight
+  // (Aggron/Copperajah Heavy Metal → 2×; Klefki/Scream Tail Light Metal → 0.5×).
+  const monWeight=(mon)=>{
+    let w=DEX.formes[mon.forme]?.weight_kg||0;
+    if(mon.ability==='Heavy Metal') w*=2;
+    else if(mon.ability==='Light Metal') w*=0.5;
+    return w;
+  };
+  // Low Kick / Grass Knot: 20 → 120 BP based on target's effective weight
+  if(move==='Low Kick'||move==='Grass Knot'){
+    const w=monWeight(def);
+    if(w<=10) bp=20;
+    else if(w<=25) bp=40;
+    else if(w<=50) bp=60;
+    else if(w<=100) bp=80;
+    else if(w<=200) bp=100;
+    else bp=120;
+  }
+  // Heavy Slam / Heat Crash: 40 → 120 BP based on attacker/target weight ratio
+  if(move==='Heavy Slam'||move==='Heat Crash'){
+    const wA=monWeight(atk), wB=monWeight(def);
+    if(wB<=0||wA<=0) bp=40;
+    else{
+      const r=wB/wA;  // target weight as fraction of user's
+      if(r>0.5) bp=40;
+      else if(r>1/3) bp=60;
+      else if(r>0.25) bp=80;
+      else if(r>0.2) bp=100;
+      else bp=120;
+    }
+  }
   // Power doublers
   const dStatus=def.status||'ok';
   if(move==='Hex' && dStatus!=='ok') bp*=2;

@@ -174,6 +174,12 @@ def fetch_pokemon(slugs: list[str]) -> dict | None:
                     "hidden": bool(ab_entry.get("is_hidden")),
                     "slot": ab_entry.get("slot", 0),
                 })
+            # PokeAPI weight is in hectograms (1 hg = 0.1 kg). Round to 1 decimal
+            # to match Bulbapedia's canonical weight; the calc uses this for
+            # Low Kick, Grass Knot (target weight) and Heavy Slam, Heat Crash
+            # (weight ratio).
+            weight_hg = d.get("weight") or 0
+            weight_kg = round(weight_hg / 10.0, 1)
             return {
                 "types": [t["type"]["name"] for t in d["types"]],
                 "stats": {
@@ -183,6 +189,7 @@ def fetch_pokemon(slugs: list[str]) -> dict | None:
                 },
                 "sprite_url": sprite_url,
                 "abilities": abilities,
+                "weight_kg": weight_kg,
             }
     return None
 
