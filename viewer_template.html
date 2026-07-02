@@ -1108,6 +1108,10 @@ const ABILITY_DESC = {
   'Blaze':'Fire moves ×1.5 below 1/3 HP (not modeled)',
   'Torrent':'Water moves ×1.5 below 1/3 HP (not modeled)',
   'Swarm':'Bug moves ×1.5 below 1/3 HP (not modeled)',
+  // Champions-invented Mega abilities
+  'Fire Mane':'Mega Pyroar signature — Fire moves ×1.5 unconditionally',
+  'Fairy Aura':'All Fairy moves on the field ×1.33; auto-toggles the field-effect chip on this side',
+  'Eelevate':'Mega Eelektross signature — Ground immunity (Levitate) + Beast Boost on KO (KO not modeled)',
 };
 const ITEM_DESC = {
   'Choice Band':'Atk ×1.5, locks into the first move',
@@ -1157,7 +1161,7 @@ function descFor(kind, val){
 const ALL_ABILITIES=[...new Set(TEAMS.flatMap(t=>t.mons.map(m=>m.ability)).filter(Boolean))].sort();
 const STAT_KEYS=[['hp','HP'],['atk','Atk'],['def','Def'],['spa','SpA'],['spd','SpD'],['spe','Spe']];
 const BOOST_OPTS=Array.from({length:13},(_,i)=>i-6).map(n=>`<option value="${n}">${n>0?'+'+n:n}</option>`).join('');
-const ABIL_IMMUNE={Levitate:'ground','Flash Fire':'fire','Water Absorb':'water','Dry Skin':'water','Storm Drain':'water','Volt Absorb':'electric','Lightning Rod':'electric','Motor Drive':'electric','Sap Sipper':'grass','Earth Eater':'ground','Well-Baked Body':'fire'};
+const ABIL_IMMUNE={Levitate:'ground',Eelevate:'ground','Flash Fire':'fire','Water Absorb':'water','Dry Skin':'water','Storm Drain':'water','Volt Absorb':'electric','Lightning Rod':'electric','Motor Drive':'electric','Sap Sipper':'grass','Earth Eater':'ground','Well-Baked Body':'fire'};
 // Type-changing "-ate" abilities: Normal moves become the ability's type and get 1.2x.
 const ATE_TYPE={Pixilate:'fairy',Aerilate:'flying',Refrigerate:'ice',Galvanize:'electric'};
 // Escalating-BP multi-hit moves (BP per hit, in order)
@@ -1217,6 +1221,9 @@ function effectiveBP(move, atk, def){
     const th=Math.max(0,Math.min(6, atk.timesHit||0));
     bp=Math.min(350, 50+50*th);
   }
+  // Weather Ball: base 50 → 100 BP when any weather is active (type shift
+  // happens in calcDmg above; here we only handle the BP doubling).
+  if(move==='Weather Ball' && weather!=='none') bp*=2;
   // Weight-based moves. Heavy Metal / Light Metal modify the mon's OWN weight
   // (Aggron/Copperajah Heavy Metal → 2×; Klefki/Scream Tail Light Metal → 0.5×).
   const monWeight=(mon)=>{
@@ -1289,9 +1296,10 @@ const SIDE_FX=[
   ['powerSpot','Power Spot','×1.3 ally damage'],
   ['battery','Battery','×1.3 ally special'],
   ['steelySpirit','Steely Spirit','×1.5 ally Steel moves'],
+  ['fairyAura','Fairy Aura','×1.33 all Fairy moves on the field'],
   ['crit','Crit','×1.5; ignores defender +boosts'],
 ];
-function newSide(){return{reflect:0,lightScreen:0,auroraVeil:0,tailwind:0,helpingHand:0,friendGuard:0,flowerGift:0,powerSpot:0,battery:0,steelySpirit:0,crit:0};}
+function newSide(){return{reflect:0,lightScreen:0,auroraVeil:0,tailwind:0,helpingHand:0,friendGuard:0,flowerGift:0,powerSpot:0,battery:0,steelySpirit:0,fairyAura:0,crit:0};}
 function newField(){return{terrain:'none',trickRoom:0,gravity:0,magicRoom:0,wonderRoom:0};}
 let A=newMon(),B=newMon(),doubles=true,weather='none',myTeam=[],selA=null,selB=null;
 let field=newField(),sideA=newSide(),sideB=newSide();
@@ -1312,6 +1320,7 @@ const SIDE_BUFF_ABILITY={
   'Steely Spirit':'steelySpirit',
   'Flower Gift':'flowerGift',   // sun-conditional
   'Friend Guard':'friendGuard',
+  'Fairy Aura':'fairyAura',     // Champions Mega Floette-Eternal signature
 };
 const WEATHER_SETTER={
   'Drought':'sun', 'Desolate Land':'harshsun',
@@ -1467,6 +1476,15 @@ function calcDmg(atk,move,def,atkSide,defSide){
   // Type-changing -ate abilities (Pixilate/Aerilate/Refrigerate/Galvanize): Normal moves change type + 1.2x
   let moveType=mv.type;let ateMul=1;
   if(mv.type==='normal' && ATE_TYPE[atk.ability]){moveType=ATE_TYPE[atk.ability];ateMul=1.2;}
+  // Weather Ball changes type based on active weather (extremes count too).
+  // Base BP 50 → 100 when weather is up. -ate abilities don't stack with
+  // this because Weather Ball's type shift is applied here, not via bp.
+  if(move==='Weather Ball'){
+    if(weather==='sun'||weather==='harshsun') moveType='fire';
+    else if(weather==='rain'||weather==='heavyrain') moveType='water';
+    else if(weather==='sand') moveType='rock';
+    else if(weather==='snow') moveType='ice';
+  }
   const aT=DEX.formes[atk.forme]?.types||[], dT=DEX.formes[def.forme]?.types||[];
   // Magic Room disables held items
   const aItem=field.magicRoom?'':atk.item, dItem=field.magicRoom?'':def.item;
@@ -1576,6 +1594,8 @@ function calcDmg(atk,move,def,atkSide,defSide){
   if(atk.ability==='Sand Force' && weather==='sand' && ['rock','ground','steel'].includes(moveType)) mod*=1.3;
   if(atk.ability==='Sniper' && isCrit) mod*=1.5;
   if(atk.ability==='Neuroforce' && eff>1) mod*=1.25;
+  // Fire Mane (Mega Pyroar signature): unconditional ×1.5 on Fire moves.
+  if(atk.ability==='Fire Mane' && moveType==='fire') mod*=1.5;
   // Flag-based attacker abilities (contact/punch/pulse/bite/sound/slicing)
   if(atk.ability==='Tough Claws' && mv.contact) mod*=1.3;
   if(atk.ability==='Iron Fist' && mv.punch) mod*=1.2;
@@ -1598,6 +1618,8 @@ function calcDmg(atk,move,def,atkSide,defSide){
   if(atkSide.powerSpot) mod*=1.3;
   if(atkSide.battery && !phys) mod*=1.3;
   if(atkSide.steelySpirit && moveType==='steel') mod*=1.5;
+  // Fairy Aura is a FIELD aura — affects Fairy moves regardless of source side
+  if(moveType==='fairy' && (atkSide.fairyAura || defSide.fairyAura)) mod*=1.33;
   // Friend Guard (doubles only, on defender's side)
   if(defSide.friendGuard && doubles) mod*=0.75;
   // Screens (don't apply on crit)
@@ -2076,6 +2098,7 @@ function calcSummary(atk, def, mv, info, r, aS, dS){
   if(aS.powerSpot) mods.push('with an ally’s Power Spot');
   if(aS.battery && !phys) mods.push('with an ally’s Battery');
   if(aS.steelySpirit && r.moveType==='steel') mods.push('with an ally’s Steely Spirit');
+  if((aS.fairyAura||dS.fairyAura) && r.moveType==='fairy') mods.push('under Fairy Aura');
   if(aS.flowerGift && phys && (weather==='sun'||weather==='harshsun')) mods.push('with an ally’s Flower Gift');
   if(dS.flowerGift && !phys && (weather==='sun'||weather==='harshsun')) mods.push('with the defender’s Flower Gift');
   // Weather (always call out if active — it may or may not affect the roll but tells the reader the field state)

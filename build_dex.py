@@ -85,6 +85,52 @@ SLUG_OVERRIDES = {
 # items ending in -ite that are NOT mega stones
 NOT_A_STONE = {"Eviolite"}
 
+# Pokémon Champions (April 2026) introduces NEW Mega Evolutions that don't
+# exist in prior games. PokéAPI has no data for these, so fetch_pokemon falls
+# back to the base-species entry — which leaves the ability, stats, and types
+# wrong. Patch them here.
+#
+# Any field omitted below keeps its PokéAPI/base-fallback value. `types` is
+# optional (only set when the Mega changes typing).
+MEGA_OVERRIDES: dict[str, dict] = {
+    # Values cross-checked against Game8 / Pikalytics / Serebii / Pokémon Zone
+    # Champions dex pages (all agreed).
+    "Pyroar-Mega": {
+        "ability": "Fire Mane",   # Mega-exclusive; unconditional +50% Fire moves
+        "stats": {"hp": 86, "atk": 88, "def": 92, "spa": 129, "spd": 86, "spe": 126},
+    },
+    "Chimecho-Mega": {
+        "ability": "Levitate",    # base ability retained on the Mega
+        "stats": {"hp": 75, "atk": 50, "def": 110, "spa": 135, "spd": 120, "spe": 65},
+        "types": ["psychic", "steel"],
+    },
+    "Floette-Eternal-Mega": {
+        "ability": "Fairy Aura",  # boosts all Fairy moves on the field
+        "stats": {"hp": 74, "atk": 85, "def": 87, "spa": 155, "spd": 148, "spe": 102},
+    },
+}
+
+
+def apply_mega_overrides(dex_formes: dict[str, dict]) -> None:
+    """Patch Champions-invented Megas whose PokéAPI slug doesn't exist —
+    fetch_pokemon has fallen back to the base species, so we correct ability,
+    stats, and optionally typing here."""
+    for label, patch in MEGA_OVERRIDES.items():
+        if label not in dex_formes:
+            continue
+        rec = dex_formes[label]
+        if "ability" in patch:
+            # Overwrite the ability list with a single-entry canonical ability
+            # so DEX.formes[label].abilities[0].name — which correctMegaAbility
+            # reads in the viewer — returns the correct Mega ability.
+            rec["abilities"] = [{"name": patch["ability"], "hidden": False, "slot": 1}]
+        if "stats" in patch:
+            rec["stats"] = {**rec.get("stats", {}), **patch["stats"]}
+        if "types" in patch:
+            rec["types"] = list(patch["types"])
+        if "weight_kg" in patch:
+            rec["weight_kg"] = patch["weight_kg"]
+
 
 def species_slug(name: str) -> str:
     if name in SLUG_OVERRIDES:
@@ -383,6 +429,10 @@ def main() -> None:
                 dex_formes[label] = res
             else:
                 unresolved.append(label)
+
+    # Patch Champions-invented Megas (PokéAPI has no entries; base-species
+    # fallback leaves ability/stats wrong). Do this after fetch, before sprites.
+    apply_mega_overrides(dex_formes)
 
     # Download front-default sprites for every forme. After downloading,
     # remap each forme's `sprite` field to the slug of the file that ended
