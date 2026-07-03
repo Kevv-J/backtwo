@@ -1,11 +1,19 @@
-name: Weekly data refresh
+name: Data refresh (3x weekly)
 
 # Rebuilds backtwo from the live VGCPastes sheet + PokéAPI + Showdown moves.
-# Runs every Tuesday at 09:00 UTC (after weekend tournament dust settles).
+# Three slots per week, each timed near the event it's meant to catch:
+#   Fri 12:00 UTC (17:30 IST · 08:00 EDT · 05:00 PDT)
+#     Fresh data before the Friday-evening IST / US usage peak.
+#   Sun 23:00 UTC (04:30 Mon IST · 19:00 EDT · 16:00 PDT)
+#     Strictly AFTER Sunday US tournaments finish and creators push pastes.
+#   Tue 09:00 UTC (14:30 IST · 05:00 EDT · 02:00 PDT)
+#     Mid-week filler for any late tournament results / paste corrections.
 # Manual trigger always available via Actions → Run workflow.
 
 on:
   schedule:
+    - cron: '0 12 * * 5'
+    - cron: '0 23 * * 0'
     - cron: '0 9 * * 2'
   workflow_dispatch:
 
@@ -14,7 +22,7 @@ permissions:
   issues: write     # open an issue if the rebuild fails
 
 concurrency:
-  group: weekly-rebuild
+  group: data-refresh
   cancel-in-progress: false
 
 jobs:
@@ -78,7 +86,7 @@ jobs:
           fi
           STAMP=$(date -u +%F)
           # [skip ci] prevents accidental re-triggering of other workflows.
-          git commit -m "chore(data): weekly refresh ${STAMP} [skip ci]"
+          git commit -m "chore(data): refresh ${STAMP} [skip ci]"
           git push origin main
           echo "::notice::Refreshed and pushed at ${STAMP}"
 
@@ -90,10 +98,10 @@ jobs:
           STAMP=$(date -u +%F)
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           gh issue create \
-            --title "Weekly rebuild failed (${STAMP})" \
+            --title "Data refresh failed (${STAMP})" \
             --label "automation" \
             --body "$(cat <<EOF
-          The weekly rebuild workflow failed on ${STAMP}.
+          The data refresh workflow failed on ${STAMP}.
 
           **Run**: ${RUN_URL}
 
