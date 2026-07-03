@@ -77,6 +77,8 @@
   .freshness.very-stale{color:var(--muted-foreground);border-color:var(--border);background:transparent}
   .sub{color:var(--dim);font-size:10px;font-family:'JetBrains Mono',ui-monospace,monospace;border:1px solid var(--border);padding:2px 7px;border-radius:4px;white-space:nowrap}
   .applogo{width:22px;height:22px;border-radius:5px;background:linear-gradient(135deg,var(--atk-color) 50%,var(--def-color) 50%);display:inline-flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;font-family:'Rajdhani','Inter',sans-serif;line-height:1}
+  .homelink{display:inline-flex;align-items:center;gap:8px;text-decoration:none;color:inherit;cursor:pointer;border-radius:6px;padding:2px 4px;margin:-2px -4px;transition:background .12s}
+  .homelink:hover,.homelink:focus-visible{background:rgba(255,255,255,0.05);outline:none}
   .fieldsum{color:var(--muted-foreground);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .reset-btn{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--border);background:transparent;color:var(--muted-foreground);padding:4px 10px;border-radius:4px;font-size:10px;font-weight:600;cursor:pointer;text-transform:uppercase;letter-spacing:.06em}
   .reset-btn:hover{border-color:var(--border-strong);color:var(--foreground)}
@@ -714,8 +716,10 @@
   </div>
 </div>
 <header>
-  <span class="applogo" title="backtwo">2</span>
-  <h1 class="wordmark" title="Read the back two."><span class="wm-a">back</span><span class="wm-b">two</span></h1>
+  <a href="#" class="homelink" id="homelink" title="Back to home (Pokémon browser)" aria-label="Back to home">
+    <span class="applogo">2</span>
+    <h1 class="wordmark"><span class="wm-a">back</span><span class="wm-b">two</span></h1>
+  </a>
   <span class="sub" id="stat">VGC · Reg M-A/B</span>
   <span class="freshness" id="freshness" title="Data refreshed from VGCPastes on this build"></span>
   <span class="fieldsum" id="fieldsum"></span>
@@ -3039,6 +3043,16 @@ document.body.insertAdjacentHTML('afterbegin',
   '<datalist id="abilitylist">'+ALL_ABILITIES.map(a=>`<option value="${esc(a)}">`).join('')+'</datalist>');
 document.querySelectorAll('.tab').forEach(el=>el.onclick=()=>setView(el.dataset.view));
 document.querySelectorAll('#bottomnav .bn').forEach(el=>el.onclick=()=>setView(el.dataset.view));
+// Header logo / wordmark → home (Pokémon view · no selection · empty search).
+// Prevents the '#' navigation default so the URL stays clean.
+document.getElementById('homelink')?.addEventListener('click',e=>{
+  e.preventDefault();
+  selMon=null;
+  q='';
+  const s=document.getElementById('search');
+  if(s)s.value='';
+  setView('poke');
+});
 document.getElementById('resetbtn').onclick=resetCalc;
 updateFieldSummary();
 // ---------- Hotkeys (active only in Damage Calc view, skipped while typing) ----------
