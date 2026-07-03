@@ -952,7 +952,14 @@ function fightThisTeam(team){
 }
 function teamCard(t,focus,matchedSet){
   const reg=t.reg||'M-A';
-  return `<div class="tcard"><div class="th"><span class="desc"><button class="fightcardbtn" data-tid="${esc(t.team_id)}">⚔ Fight</button>${esc(t.description||t.team_id)}<span class="regbadge ${reg==='M-B'?'mb':''}">${reg}</span></span>
+  // Champions allows Mega on any # of team members but only ONE Mega can be
+  // active per battle. Flag multi-Mega teams so users know they're making a
+  // send-order choice, not doubling up.
+  const megaCount=(t.mons||[]).filter(m=>{
+    const it=m.item||'';return it && it!=='Eviolite' && /ite( [XY])?$/.test(it);
+  }).length;
+  const megaChip=megaCount>1?`<span class="chip" title="Multiple mega stones on this team — only one Mega can be active per battle">multi-Mega (${megaCount})</span>`:'';
+  return `<div class="tcard"><div class="th"><span class="desc"><button class="fightcardbtn" data-tid="${esc(t.team_id)}">⚔ Fight</button>${esc(t.description||t.team_id)}<span class="regbadge ${reg==='M-B'?'mb':''}">${reg}</span>${megaChip}</span>
     <span class="meta">${esc(t.creator||'')} ${t.event&&t.event!=='-'?'· '+esc(t.event):''}</span></div>
     <div>${t.rank&&t.rank!=='-'?`<span class="chip rank">${esc(t.rank)}</span>`:''}${t.date?`<span class="chip">${esc(t.date)}</span>`:''}
       ${t.pokepaste?`<span class="chip"><a href="${esc(t.pokepaste)}" target="_blank">pokepaste ↗</a></span>`:''}
@@ -1112,6 +1119,11 @@ const ABILITY_DESC = {
   'Fire Mane':'Mega Pyroar signature — Fire moves ×1.5 unconditionally',
   'Fairy Aura':'All Fairy moves on the field ×1.33; auto-toggles the field-effect chip on this side',
   'Eelevate':'Mega Eelektross signature — Ground immunity (Levitate) + Beast Boost on KO (KO not modeled)',
+  'Mega Sol':'Mega Meganium signature — this mon\'s own Fire/Water moves treat weather as Sun (Fire ×1.5, Water ×0.5)',
+  'Piercing Drill':'Mega Excadrill signature — 25% of a Protect-blocked hit still lands (visual note only; Protect not modeled in calc)',
+  'Dragonize':'Mega Feraligatr signature — Normal moves become Dragon-type ×1.2 (STAB when the user is Dragon)',
+  'Spicy Spray':'Mega Scovillain signature — contact against this mon burns the attacker (not modeled)',
+  'Stalwart':'Redirection-immune (moves target as chosen even against Follow Me/Rage Powder — not modeled)',
 };
 const ITEM_DESC = {
   'Choice Band':'Atk ×1.5, locks into the first move',
@@ -1146,6 +1158,20 @@ const ITEM_DESC = {
   'Lum Berry':'Cures any major status once (not modeled)',
   'White Herb':'Restores any lowered stat once (not modeled)',
   'Mental Herb':'Cures mental ailments (Taunt etc.) once (not modeled)',
+  // Bundle D — M-B items now modeled or explicitly noted
+  'Muscle Band':'Physical moves ×1.1',
+  'Wise Glasses':'Special moves ×1.1',
+  'Expert Belt':'Super-effective moves ×1.2',
+  'Wide Lens':'Move accuracy ×1.1 (accuracy not modeled)',
+  'Zoom Lens':'Move accuracy ×1.2 if moving after target (not modeled)',
+  'Metronome':'Consecutive same-move use ×1.2 → ×2.0 stack (not modeled)',
+  'Big Root':'Drain moves recover +30% (not modeled)',
+  'Shed Shell':'Guarantees switch-out through trap moves (not modeled)',
+  'Light Clay':'Screens last 8 turns instead of 5 (not modeled)',
+  'Heat Rock':'Sun lasts 8 turns instead of 5 (not modeled)',
+  'Damp Rock':'Rain lasts 8 turns instead of 5 (not modeled)',
+  'Smooth Rock':'Sand lasts 8 turns instead of 5 (not modeled)',
+  'Icy Rock':'Snow lasts 8 turns instead of 5 (not modeled)',
 };
 // Heuristic: any item ending in "ite" / "ite X" / "ite Y" is a mega stone.
 function descFor(kind, val){
@@ -1163,7 +1189,7 @@ const STAT_KEYS=[['hp','HP'],['atk','Atk'],['def','Def'],['spa','SpA'],['spd','S
 const BOOST_OPTS=Array.from({length:13},(_,i)=>i-6).map(n=>`<option value="${n}">${n>0?'+'+n:n}</option>`).join('');
 const ABIL_IMMUNE={Levitate:'ground',Eelevate:'ground','Flash Fire':'fire','Water Absorb':'water','Dry Skin':'water','Storm Drain':'water','Volt Absorb':'electric','Lightning Rod':'electric','Motor Drive':'electric','Sap Sipper':'grass','Earth Eater':'ground','Well-Baked Body':'fire'};
 // Type-changing "-ate" abilities: Normal moves become the ability's type and get 1.2x.
-const ATE_TYPE={Pixilate:'fairy',Aerilate:'flying',Refrigerate:'ice',Galvanize:'electric'};
+const ATE_TYPE={Pixilate:'fairy',Aerilate:'flying',Refrigerate:'ice',Galvanize:'electric',Dragonize:'dragon'};
 // Escalating-BP multi-hit moves (BP per hit, in order)
 const ESCALATING_BP={'Triple Axel':[20,40,60],'Triple Kick':[10,20,30]};
 // Moves whose BP scales with the attacker's current HP%: BP = max(1, floor(150 * hpPct / 100))
@@ -1381,8 +1407,12 @@ function statsOf(m){return m.forme?statline(m.forme,m.ev,m.nature):null;}
 // or Levitate ability mean ungrounded (unless Gravity overrides them).
 function isGrounded(mon){const types=DEX.formes[mon.forme]?.types||[];
   if(field.gravity)return true;
+  // Iron Ball forces ground contact — overrides Levitate + Flying type, but
+  // still suppressed under Magic Room. Checked BEFORE the Flying / Levitate
+  // exits so it beats both.
+  if(mon.item==='Iron Ball' && !field.magicRoom)return true;
   if(types.includes('flying'))return false;
-  if(mon.ability==='Levitate')return false;
+  if(mon.ability==='Levitate' || mon.ability==='Eelevate')return false;
   if(mon.item==='Air Balloon')return false;
   return true;}
 function parseShowdown(text){return text.replace(/\r/g,'').split(/\n\s*\n/).map(block=>{
@@ -1573,9 +1603,20 @@ function calcDmg(atk,move,def,atkSide,defSide){
   // type-boost items
   if(ITEM_TYPE_BOOST[aItem]===moveType) mod*=1.2;
   if(aItem==='Life Orb') mod*=1.3;
+  // Category-generic damage items (physical/special/effectiveness-flag)
+  if(aItem==='Muscle Band' && phys) mod*=1.1;
+  if(aItem==='Wise Glasses' && !phys) mod*=1.1;
+  if(aItem==='Expert Belt' && eff>1) mod*=1.2;
   // weather move boosts (regular)
   if(weather==='sun'){if(moveType==='fire')mod*=1.5;if(moveType==='water')mod*=0.5;}
   if(weather==='rain'){if(moveType==='water')mod*=1.5;if(moveType==='fire')mod*=0.5;}
+  // Mega Sol (Mega Meganium): the mon's own Fire moves behave as if in Sun,
+  // and its own Water moves take Sun's -50%. Independent of field weather —
+  // only skip when regular/harsh Sun is already applying the same math.
+  if(atk.ability==='Mega Sol' && weather!=='sun' && weather!=='harshsun'){
+    if(moveType==='fire') mod*=1.5;
+    if(moveType==='water') mod*=0.5;
+  }
   // Harsh Sun / Heavy Rain boost their type 1.5x (failures handled via eff=0 above)
   if(weather==='harshsun'){if(moveType==='fire')mod*=1.5;}
   if(weather==='heavyrain'){if(moveType==='water')mod*=1.5;}
@@ -1713,7 +1754,7 @@ function slotHTML(p,title){
       <div class="counterstep"><button data-step="-1">−</button><span class="counterval" id="${p}_cnt_fa">0</span><button data-step="+1">+</button></div>
     </div>
     <div class="counterrow" data-counter="timesHit" hidden>
-      <span class="counterlbl" title="Rage Fist: +50 BP per time this Pokémon has been hit (capped at 350 BP)">Times hit</span>
+      <span class="counterlbl" title="Rage Fist: +50 BP per time this Pokémon has been hit (capped at 350 BP). Reg-B: counter RESETS on switch-out.">Times hit</span>
       <div class="counterstep"><button data-step="-1">−</button><span class="counterval" id="${p}_cnt_th">0</span><button data-step="+1">+</button></div>
     </div>
   </div>
@@ -2130,6 +2171,9 @@ function moveDetailHTML(side,atk,def,i){const mv=atk.moves[i];const info=DEX.mov
   // Doubles is hard-pinned. For spread moves, the headline IS the 0.75× spread range;
   // show the single-target range as a secondary line in case the move lands solo.
   const sp=r.isSpread?` · <span class="small">if single-target ${r.single.pctLo.toFixed(1)}–${r.single.pctHi.toFixed(1)}%</span>`:'';
+  // Piercing Drill (Mega Excadrill): 25% of a Protect-blocked hit still lands.
+  // Protect isn't modeled in the calc, so surface this as a visual note only.
+  const pdNote=atk.ability==='Piercing Drill' ? ' · <span class="small" style="color:var(--accent2)">Piercing Drill: 25% still lands through Protect</span>' : '';
   const ctx=[];if(atk.ability)ctx.push(esc(atk.ability));if(def.ability)ctx.push(esc(def.ability));
   if(weather!=='none')ctx.push(esc(weather));if(field.terrain!=='none')ctx.push(esc(field.terrain+' terrain'));
   if(r.isCrit)ctx.push('<span style="color:var(--bad)">crit</span>');
@@ -2156,7 +2200,7 @@ function moveDetailHTML(side,atk,def,i){const mv=atk.moves[i];const info=DEX.mov
   const summary=calcSummary(atk,def,mv,info,r,aS,dS);
   return `<div class="detail"><div class="calcline"><span class="calcline-txt">${esc(summary)}</span><button class="calcline-copy" type="button" data-copy="${esc(summary)}" title="Copy Showdown-style summary">Copy</button></div>
     <div style="margin-top:6px">${esc(atk.forme)}${aBoost} <b>${r.isCrit?'(crit) ':''}${esc(mv)}</b> (${bpLab}${r.eff!==1?', '+r.eff+'×':''}${r.moveType!==info.type?' · type→'+esc(r.moveType):''}${hitLab}) vs ${esc(def.forme)}${dBoost}:
-    <b>${r.lo}–${r.hi}</b> (<b style="color:${dmgColor(r.pctHi)}">${r.pctLo.toFixed(1)}–${r.pctHi.toFixed(1)}%</b> of ${r.hp} HP) — ${koNote(r)}${sp}</div>
+    <b>${r.lo}–${r.hi}</b> (<b style="color:${dmgColor(r.pctHi)}">${r.pctLo.toFixed(1)}–${r.pctHi.toFixed(1)}%</b> of ${r.hp} HP) — ${koNote(r)}${sp}${pdNote}</div>
     ${ctx.length?`<div class="small" style="margin-top:2px">${ctx.join(' · ')}</div>`:''}
     ${recoilLine}
     <div class="small" style="margin-top:5px">${r.rolls?'rolls: '+r.rolls.join(', '):r.hits>1?'multi-hit · '+r.hits+' hits':''}</div></div>`;}
@@ -2312,7 +2356,7 @@ function renderDmg(){
     <div id="speedribbon" class="speedribbon"></div>
     <div class="dmgtop">${slotHTML('a','Ally')}${slotHTML('b','Enemy')}</div>
     <div id="dmgresults"></div>
-    <div class="small calcfoot"><b>VGC doubles only.</b> Champions ruleset (lv50, IVs max, 1 SP = 8 EV). <b>Modeled:</b> STAB · type chart · spread · stat boosts · status (burn/frostbite/Guts) · current HP (Multiscale) · weather (incl. extremes Harsh Sun/Heavy Rain/Strong Winds) · terrains (Electric/Grassy/Misty/Psychic, grounded only; Grassy halves EQ) · screens (×0.5 singles / ×2/3 doubles, Aurora Veil snow-only; crit bypasses) · Helping Hand · Friend Guard (doubles) · Power Spot · Battery · Steely Spirit · Flower Gift · Crit (ignores +def/-atk boosts; Sniper ×2.25) · Trick/Magic/Wonder Room · Gravity (ground hits Flying, suppresses Levitate) · <b>multi-hit moves</b> (Triple Axel/Triple Kick escalating BP; Population Bomb/Bullet Seed; Skill Link → max hits) · <b>Intimidate auto-apply</b> (with Clear Body / Hyper Cutter / Inner Focus / Scrappy / Own Tempo / Oblivious immunity; Defiant counters; Competitive on special) · <b>contact/flag abilities</b>: Tough Claws ×1.3 (contact) · Iron Fist ×1.2 (punch) · Mega Launcher ×1.5 (pulse) · Strong Jaw ×1.5 (bite) · Sharpness ×1.5 (slicing) · Punk Rock ×1.3 atk / ×0.5 def (sound) · Soundproof immune (sound) · Bulletproof immune (bullet) · Fluffy ×0.5 contact + ×2 fire · -ate abilities (Pixilate/Aerilate/Refrigerate/Galvanize: Normal→type ×1.2 STAB) · Adaptability · Technician · Tinted Lens · Huge/Pure Power · Solar Power · Sand Force · Sniper · Neuroforce · Levitate / type-absorb immunities · Multiscale / Shadow Shield · Filter / Solid Rock / Prism Armor · Thick Fat · Heatproof · Purifying Salt · Fur Coat · Ice Scales · Choice/Specs/Life Orb/AV/Eviolite/type-boost items.</div>`;
+    <div class="small calcfoot"><b>VGC doubles only.</b> Champions ruleset (lv50, IVs max, 1 SP = 8 EV — 32 SP/stat ≡ old 252 EV cap, 66 SP total). <b>Modeled:</b> STAB · type chart · spread · stat boosts · status (burn/frostbite/Guts) · current HP (Multiscale) · weather (incl. extremes Harsh Sun/Heavy Rain/Strong Winds) · terrains (Electric/Grassy/Misty/Psychic, grounded only; Grassy halves EQ) · screens (×0.5 singles / ×2/3 doubles, Aurora Veil snow-only; crit bypasses) · Helping Hand · Friend Guard (doubles) · Power Spot · Battery · Steely Spirit · Flower Gift · Crit (ignores +def/-atk boosts; Sniper ×2.25) · Trick/Magic/Wonder Room · Gravity (ground hits Flying, suppresses Levitate) · <b>multi-hit moves</b> (Triple Axel/Triple Kick escalating BP; Population Bomb/Bullet Seed; Skill Link → max hits) · <b>Intimidate auto-apply</b> (with Clear Body / Hyper Cutter / Inner Focus / Scrappy / Own Tempo / Oblivious immunity; Defiant counters; Competitive on special) · <b>contact/flag abilities</b>: Tough Claws ×1.3 (contact) · Iron Fist ×1.2 (punch) · Mega Launcher ×1.5 (pulse) · Strong Jaw ×1.5 (bite) · Sharpness ×1.5 (slicing) · Punk Rock ×1.3 atk / ×0.5 def (sound) · Soundproof immune (sound) · Bulletproof immune (bullet) · Fluffy ×0.5 contact + ×2 fire · -ate abilities (Pixilate/Aerilate/Refrigerate/Galvanize: Normal→type ×1.2 STAB) · Adaptability · Technician · Tinted Lens · Huge/Pure Power · Solar Power · Sand Force · Sniper · Neuroforce · Levitate / type-absorb immunities · Multiscale / Shadow Shield · Filter / Solid Rock / Prism Armor · Thick Fat · Heatproof · Purifying Salt · Fur Coat · Ice Scales · Choice/Specs/Life Orb/AV/Eviolite/type-boost items · Muscle Band ×1.1 phys · Wise Glasses ×1.1 spec · Expert Belt ×1.2 SE · Iron Ball grounding. · <b>Champions specifics:</b> Fire Mane (Mega Pyroar) · Fairy Aura toggle (Mega Floette-Eternal) · Eelevate ground-immunity (Mega Eelektross) · Mega Sol personal-sun (Mega Meganium) · Dragonize (Mega Feraligatr, Normal→Dragon ×1.2 STAB) · Piercing Drill (Mega Excadrill, note only — Protect not modeled) · Weather Ball type shift · Reg-B patches (Make It Rain acc 100→95, move BP shifts).</div>`;
   wireSlot('a',A);wireSlot('b',B);
   // Field button handlers (single-click). Doubles is hard-pinned (see line ~838) — no Singles toggle in UI.
   document.querySelectorAll('[data-grp="weat"]').forEach(b=>b.onclick=()=>{

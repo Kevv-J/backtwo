@@ -108,7 +108,54 @@ MEGA_OVERRIDES: dict[str, dict] = {
         "ability": "Fairy Aura",  # boosts all Fairy moves on the field
         "stats": {"hp": 74, "atk": 85, "def": 87, "spa": 155, "spd": 148, "spe": 102},
     },
+    # Meowstic-Mega splits — M and F are stat-identical and share Trace on the
+    # Mega; the M/F difference at the base form (Prankster vs Competitive) is
+    # cosmetic in the Mega. Not in PokéAPI as of 2026-07-03.
+    "Meowstic-Mega": {
+        "ability": "Trace",
+        "stats": {"hp": 74, "atk": 48, "def": 76, "spa": 143, "spd": 101, "spe": 124},
+    },
+    "Meowstic-Mega-F": {
+        "ability": "Trace",
+        "stats": {"hp": 74, "atk": 48, "def": 76, "spa": 143, "spd": 101, "spe": 124},
+    },
 }
+
+
+# Pokémon Champions rebalances a handful of pre-existing moves (BP, accuracy,
+# flag corrections) and adds a few new signatures. PokéAPI reflects gen 9,
+# not the Champions patches — patch them here after the fetch.
+#
+# Fields: any subset of {power, accuracy, type, category, spread, contact,
+# slicing, punch, sound, bullet, bite, pulse}. Omitted fields keep the
+# PokéAPI value.
+MOVE_OVERRIDES: dict[str, dict] = {
+    # ── BP shifts (Champions rebalance, per Serebii Champions updated moves) ──
+    "Trop Kick":        {"power": 85},   # was 70
+    "Psyshield Bash":   {"power": 90},   # was 70
+    "First Impression": {"power": 100},  # was 90
+    "Infernal Parade":  {"power": 65},   # was 60
+    "Bone Rush":        {"power": 30},   # per-hit; was 25
+    # ── Slicing-flag corrections (were missing in PokéAPI's flag set) ──
+    "Dragon Claw":  {"slicing": True},
+    "Shadow Claw":  {"slicing": True},
+    "Crush Claw":   {"slicing": True},
+    # ── Type correction (Growth was miscategorized as Normal in old data) ──
+    "Growth":       {"type": "grass"},
+    # ── Sound-flag correction (Dragon Cheer's sound flag was missing) ──
+    "Dragon Cheer": {"sound": True},
+    # ── Reg-B (June 2026 patch) — Gholdengo/Annihilape nerfs ──
+    # Make It Rain: accuracy 100 → 95, SpA drop -1 → -2 (drop is secondary
+    # effect, not modeled in single-turn calc — surface via tooltip only).
+    "Make It Rain": {"accuracy": 95},
+}
+
+
+def apply_move_overrides(dex_moves: dict[str, dict]) -> None:
+    for name, patch in MOVE_OVERRIDES.items():
+        if name not in dex_moves:
+            continue
+        dex_moves[name].update(patch)
 
 
 def apply_mega_overrides(dex_formes: dict[str, dict]) -> None:
@@ -407,6 +454,19 @@ def main() -> None:
     # the meta-browser (they won't appear in team lists since no paste has them).
     EXTRA_CALC_FORMES = {
         "Aegislash-Blade": "aegislash-blade",
+        # Reg-M-B classics that VGCPastes teams haven't picked up yet but the
+        # calc should still support. Houndoom-Mega is a returning gen-VI Mega
+        # legal in M-B and has PokéAPI data. Meowstic-Mega-M/-F are Champions-
+        # new gendered splits — since PokéAPI likely lacks them, the labels
+        # are seeded here with the CLOSEST PokéAPI slug for a fallback (base
+        # Meowstic-male / -female) and MEGA_OVERRIDES patches ability/stats.
+        "Houndoom-Mega":   "houndoom-mega",
+        "Meowstic-Mega":   "meowstic-male",     # fallback; overridden below
+        "Meowstic-Mega-F": "meowstic-female",   # fallback; overridden below
+        # Champions-new base species missing from earlier meta scrapes
+        "Qwilfish":   "qwilfish",
+        "Musharna":   "musharna",
+        "Houndstone": "houndstone",
     }
     for label, slug in EXTRA_CALC_FORMES.items():
         formes.setdefault(label, [slug])
@@ -470,6 +530,7 @@ def main() -> None:
     with ThreadPoolExecutor(max_workers=6) as pool:
         for name, res in zip(moves, pool.map(fetch_move, moves)):
             dex_moves[name] = res
+    apply_move_overrides(dex_moves)
 
     print("Building type chart ...", flush=True)
     typechart = build_typechart()

@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-07-02T19:40:30Z",
+  "generated_at_utc": "2026-07-03T17:31:49Z",
   "build_sha": "0a469af",
   "build_date": "2026-07-03",
   "scrape": {
@@ -12,7 +12,7 @@
     "resolve_rate": 1.0
   },
   "dex": {
-    "forme_count": 265,
+    "forme_count": 271,
     "move_count": 363,
     "type_count": 18
   },
