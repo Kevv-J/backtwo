@@ -590,6 +590,27 @@
     #view-poke.detail-open #list{overflow:hidden}
     .mobile-back{display:inline-flex;align-items:center;background:transparent;border:1px solid var(--border);color:var(--muted-foreground);padding:8px 14px;border-radius:6px;font-family:inherit;font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;margin:0 0 12px}
     .mobile-back:hover,.mobile-back:focus-visible{color:var(--foreground);border-color:var(--foreground)}
+    /* Mobile hero — renders inline at the top of #list, gives the wordmark +
+       four quick-tap chips above the fold on phones. The full .landing that
+       #detail carries on desktop is hidden below since we can't fit both. */
+    #view-poke #detail .landing{display:none}
+    .mhero{padding:16px 14px 12px;border-bottom:1px solid var(--border);margin-bottom:8px;
+      background:linear-gradient(180deg,var(--card) 0%,transparent 100%);text-align:center}
+    .mhero-wm{display:inline-flex;flex-direction:column;line-height:.82;
+      font-family:'Rajdhani','Inter',sans-serif;text-transform:lowercase;
+      letter-spacing:-1.5px;margin:0 0 6px}
+    .mhero-wm .wm-a{color:var(--atk-color);font-weight:600;font-size:52px}
+    .mhero-wm .wm-b{color:var(--def-color);font-weight:700;font-size:52px}
+    .mhero-mantra{font-family:'Rajdhani','Inter',sans-serif;font-size:15px;color:var(--foreground);margin:0 0 8px;font-weight:600}
+    .mhero-stats{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--muted-foreground);margin-bottom:12px}
+    .mhero-stats b{color:var(--foreground);font-weight:600}
+    .mhero-chips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+    .mhero-chip{flex:0 0 auto;min-height:38px;padding:0 14px;border:1px solid var(--atk-border);
+      background:var(--atk-bg);color:var(--atk-color);border-radius:19px;
+      font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;
+      text-transform:uppercase;letter-spacing:.08em;cursor:pointer;transition:all .12s}
+    .mhero-chip:hover,.mhero-chip:focus-visible{background:var(--atk-color);color:#0c0e12;border-color:var(--atk-color)}
+    .mhero-chip:active{transform:translateY(1px)}
     /* Damage calc: boost row is 13 buttons ≥ ~390px on desktop. On phones,
        let it scroll horizontally with snap so all 13 stages stay reachable
        without breaking table layout. */
@@ -999,10 +1020,38 @@ function renderLanding(){
     if(go==='poke'){document.getElementById('search')?.focus();return;}
     setView(go);
   }));
+  // Mobile hero — a compact landing lives at the top of #list on phones so
+  // the wordmark + 4 tap chips are above-the-fold alongside the mon list.
+  // #detail's fullscreen .landing is CSS-hidden on mobile; this replaces it.
+  const listEl=document.getElementById('list');
+  if(listEl && window.matchMedia('(max-width:640px)').matches){
+    listEl.querySelector('.mhero')?.remove();
+    const reg=(regFilter||'').replace(/^M-/,'')||'—';
+    const chipHTML=cards.map(([go,title])=>{
+      const short=title==='Damage Calc'?'Calc':title==='Find Team'?'Find':title==='Pokémon'?'Poké':title;
+      return `<button class="mhero-chip" data-go="${go}">${esc(short)}</button>`;
+    }).join('');
+    listEl.insertAdjacentHTML('afterbegin', `<div class="mhero" id="mhero">
+      <h1 class="mhero-wm"><span class="wm-a">back</span><span class="wm-b">two</span></h1>
+      <div class="mhero-mantra">Read the back two.</div>
+      <div class="mhero-stats"><b>${nTeams}</b> teams · <b>${nMons}</b> mons · Reg <b>${esc(reg)}</b></div>
+      <div class="mhero-chips">${chipHTML}</div>
+    </div>`);
+    listEl.querySelectorAll('.mhero-chip').forEach(c=>c.addEventListener('click',()=>{
+      const go=c.dataset.go;
+      if(go==='poke'){
+        document.getElementById('search')?.focus();
+        document.getElementById('mhero')?.scrollIntoView({block:'end',behavior:'smooth'});
+        return;
+      }
+      setView(go);
+    }));
+  }
 }
 
 function renderDetail(name){
   const e=idx.get(name);if(!e){renderLanding();return;}
+  document.getElementById('mhero')?.remove();  // clear mobile hero when drilling in
   const pct=(e.count/scopeTeams.length*100).toFixed(1);
   const mega=isMega(name), hasMega=!isMega(name)&&megaBases.has(name);
   const newMB=isNewInMB(name);
