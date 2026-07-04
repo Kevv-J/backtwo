@@ -21,6 +21,9 @@
      URL is the user's own site (set up at https://www.goatcounter.com/signup).
      Until that URL is filled in, the script tag is harmless (it just 404s on the
      count endpoint). The 5 custom events are wired in the inline script below. -->
+<!-- no_onload=true: we fire pageviews manually in setView() so every SPA tab
+     switch counts as its own page (/poke, /find, /damage, /teams). -->
+<script>window.goatcounter=window.goatcounter||{};window.goatcounter.no_onload=true;</script>
 <script data-goatcounter="https://backtwo.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
@@ -3182,20 +3185,49 @@ document.getElementById('list').addEventListener('click',e=>{
   selMon=r.dataset.name;_pendingMon=null;megaCmp=false;
   renderDetail(selMon);
 });
-setView('poke');
-
-// Telemetry — GoatCounter custom event helper. Fails silently when the
-// script hasn't loaded yet (or when the user is offline). No PII; the path
-// string is the only signal sent.
-function tcount(path, title){
-  try{ if(window.goatcounter && window.goatcounter.count)
-    window.goatcounter.count({path:path, title:title||path, event:true}); }
+// Telemetry — GoatCounter helpers. Queue-safe: goatcounter.count() is set up
+// with no_onload=true above the script tag, so we own pageview + event firing.
+// If count.js hasn't parsed yet, GoatCounter buffers into window.goatcounter
+// and drains once it loads. Prior version had `if(window.goatcounter && …)`
+// which silently DROPPED any call during that ~200ms load gap.
+window.goatcounter = window.goatcounter || {};
+function tcount(path, title){                     // custom event (search, share, …)
+  try{ window.goatcounter.count({path:path, title:title||path, event:true}); }
   catch(e){}
 }
-// Hook 1: view switch — wrap setView so every tab change pings telemetry.
+function tpageview(path, title){                  // SPA pageview per view switch
+  try{ window.goatcounter.count({path:path, title:title||path}); }
+  catch(e){}
+}
+// Hook 1: view switch — every tab change now fires BOTH a pageview (so /poke,
+// /find, /damage, /teams show up as real pages in the dashboard, not just
+// events) AND the existing custom event (existing dashboard filters unchanged).
+// GoatCounter dedupes (path,session) for 8h — tab-cycling won't inflate counts.
 (function(){
   const _orig=setView;
-  setView=function(v){_orig(v);tcount('view/'+v,'view: '+v);};
+  setView=function(v){
+    _orig(v);
+    tpageview('/'+v, 'backtwo — '+v);
+    tcount('view/'+v, 'view: '+v);
+  };
+})();
+// Initial view — MUST come after the wrapper install above, otherwise the
+// first landing's view/poke event is silently lost (was line 3188). For a
+// background-tab open (WhatsApp middle-click, browser prerender), wait for
+// the tab to become visible before firing, since visibilityState:hidden
+// makes GoatCounter's auto-loader skip the initial hit.
+(function(){
+  const fireInit = ()=> setView('poke');
+  if(document.visibilityState === 'hidden'){
+    document.addEventListener('visibilitychange', function once(){
+      if(document.visibilityState === 'visible'){
+        document.removeEventListener('visibilitychange', once);
+        fireInit();
+      }
+    });
+  } else {
+    fireInit();
+  }
 })();
 // Hook 2: reg toggle — re-attach on top of the existing handler. The original
 // handler is set with onclick=; we wrap it.
