@@ -1269,6 +1269,23 @@ const ABILITY_DESC = {
   'Dragonize':'Mega Feraligatr signature — Normal moves become Dragon-type ×1.2 (STAB when the user is Dragon)',
   'Spicy Spray':'Mega Scovillain signature — contact against this mon burns the attacker (not modeled)',
   'Stalwart':'Redirection-immune (moves target as chosen even against Follow Me/Rage Powder — not modeled)',
+  // ── Meta abilities added in the calc-coverage sweep
+  'Supreme Overlord':'Kingambit — +10% damage per fainted ally (cap +50% at 4). Set counter in slot.',
+  'Water Bubble':'Araquanid — own Water moves ×2; incoming Fire ×0.5',
+  'Parental Bond':'Mega Kangaskhan — single-target damaging moves hit twice; hit 2 = 25% BP',
+  'Sheer Force':'Nidoking/Iron Moth/Sneasler etc. — damaging moves with a secondary gain ×1.3; LO recoil suppressed',
+  'Dragon’s Maw':'Dragon-type moves ×1.5',
+  'Transistor':'Electric-type moves ×1.5',
+  'Steelworker':'Steel-type moves ×1.5',
+  'Rocky Payload':'Rock-type moves ×1.5',
+  // Prep-only (not in current Reg-B — hot when reg allows)
+  'Tablets of Ruin':'Ruin — opponents\' Atk ×0.75',
+  'Vessel of Ruin':'Ruin — opponents\' SpA ×0.75',
+  'Sword of Ruin':'Ruin — opponents\' Def ×0.75',
+  'Beads of Ruin':'Ruin — opponents\' SpD ×0.75',
+  'Protosynthesis':'Highest stat ×1.3 in Sun or with Booster Energy (Speed ×1.5). Prep — Reg-B disabled.',
+  'Quark Drive':'Highest stat ×1.3 on Electric Terrain or with Booster Energy (Speed ×1.5). Prep — Reg-B disabled.',
+  'Ripen':'Berry effect ×2 (halves become quarters)',
 };
 const ITEM_DESC = {
   'Choice Band':'Atk ×1.5, locks into the first move',
@@ -1317,6 +1334,28 @@ const ITEM_DESC = {
   'Damp Rock':'Rain lasts 8 turns instead of 5 (not modeled)',
   'Smooth Rock':'Sand lasts 8 turns instead of 5 (not modeled)',
   'Icy Rock':'Snow lasts 8 turns instead of 5 (not modeled)',
+  // Sheer Force / Loaded Dice — modeled
+  'Loaded Dice':'Variable multi-hit moves floor at 4 hits (Pop Bomb 4-7, Bullet Seed 4-5)',
+  'Booster Energy':'Consumed on send-in to trigger Protosynthesis/Quark Drive (prep only)',
+  // Type-resist berries — modeled via secondary "with berry X-Y%" line
+  'Occa Berry':'Halves incoming super-effective Fire hit (once)',
+  'Passho Berry':'Halves incoming super-effective Water hit (once)',
+  'Wacan Berry':'Halves incoming super-effective Electric hit (once)',
+  'Rindo Berry':'Halves incoming super-effective Grass hit (once)',
+  'Yache Berry':'Halves incoming super-effective Ice hit (once)',
+  'Chople Berry':'Halves incoming super-effective Fighting hit (once)',
+  'Kebia Berry':'Halves incoming super-effective Poison hit (once)',
+  'Shuca Berry':'Halves incoming super-effective Ground hit (once)',
+  'Coba Berry':'Halves incoming super-effective Flying hit (once)',
+  'Payapa Berry':'Halves incoming super-effective Psychic hit (once)',
+  'Tanga Berry':'Halves incoming super-effective Bug hit (once)',
+  'Charti Berry':'Halves incoming super-effective Rock hit (once)',
+  'Kasib Berry':'Halves incoming super-effective Ghost hit (once)',
+  'Haban Berry':'Halves incoming super-effective Dragon hit (once)',
+  'Colbur Berry':'Halves incoming super-effective Dark hit (once)',
+  'Babiri Berry':'Halves incoming super-effective Steel hit (once)',
+  'Roseli Berry':'Halves incoming super-effective Fairy hit (once)',
+  'Chilan Berry':'Halves any incoming Normal hit (SE or not — once)',
 };
 // Heuristic: any item ending in "ite" / "ite X" / "ite Y" is a mega stone.
 function descFor(kind, val){
@@ -1338,7 +1377,58 @@ const ATE_TYPE={Pixilate:'fairy',Aerilate:'flying',Refrigerate:'ice',Galvanize:'
 // Escalating-BP multi-hit moves (BP per hit, in order)
 const ESCALATING_BP={'Triple Axel':[20,40,60],'Triple Kick':[10,20,30]};
 // Moves whose BP scales with the attacker's current HP%: BP = max(1, floor(150 * hpPct / 100))
+// Type-resist berries: consumed ONCE when the holder takes a super-effective
+// hit of that type, halving damage (or ×0.25 with Ripen). Chilan Berry halves
+// ANY Normal hit (not just SE). We surface as a secondary damage line "with
+// berry X-Y%" so users see both outcomes; assume unconsumed on the main line
+// since the berry only fires once per battle.
+const BERRY_TYPE={
+  'Occa Berry':'fire','Passho Berry':'water','Wacan Berry':'electric','Rindo Berry':'grass',
+  'Yache Berry':'ice','Chople Berry':'fighting','Kebia Berry':'poison','Shuca Berry':'ground',
+  'Coba Berry':'flying','Payapa Berry':'psychic','Tanga Berry':'bug','Charti Berry':'rock',
+  'Kasib Berry':'ghost','Haban Berry':'dragon','Colbur Berry':'dark','Babiri Berry':'steel',
+  'Roseli Berry':'fairy',
+};
+const CHILAN_BERRY='Chilan Berry';  // halves ANY normal move (SE not required)
 const HP_USER_SCALE=new Set(['Water Spout','Eruption','Dragon Energy']);
+// Sheer Force gets ×1.3 on damaging moves that have a REMOVABLE secondary
+// effect. PokéAPI doesn't surface that flag reliably, so curate the list of
+// VGC-common Sheer Force targets. Errata additions belong here as one-liners.
+const SHEER_FORCE_MOVES=new Set([
+  // Fire
+  'Fire Blast','Flamethrower','Heat Wave','Fire Punch','Fire Fang','Blaze Kick','Fiery Dance','Ember',
+  'Sacred Fire','Overheat',
+  // Water
+  'Water Pulse','Muddy Water','Origin Pulse','Hydro Pump','Steam Eruption','Waterfall',
+  // Electric
+  'Thunderbolt','Thunder','Thunder Punch','Thunder Fang','Discharge','Volt Switch','Zap Cannon','Zing Zap',
+  // Ice
+  'Ice Beam','Blizzard','Ice Punch','Ice Fang','Icy Wind','Frost Breath','Powder Snow','Freeze-Dry',
+  // Poison
+  'Sludge Wave','Sludge Bomb','Poison Jab','Cross Poison','Gunk Shot','Sludge','Smog','Acid Spray',
+  // Ground
+  'Earth Power','Bulldoze','Mud Shot','Mud Slap','Bone Club','Magnitude',
+  // Rock
+  'Rock Slide','Rock Blast','Head Smash','Meteor Beam','Power Gem','Rock Tomb',
+  // Psychic
+  'Zen Headbutt','Psychic','Psybeam','Extrasensory','Psychic Fangs','Future Sight','Confusion','Mystical Fire',
+  // Bug
+  'Bug Buzz','Silver Wind','Signal Beam','Twineedle','Attack Order',
+  // Dark
+  'Dark Pulse','Bite','Crunch','Snarl','Assurance',
+  // Fighting
+  'Dire Claw','Close Combat','Focus Blast','Power-Up Punch','Sky Uppercut','Force Palm',
+  // Flying
+  'Air Slash','Aeroblast','Chatter','Gust','Twister','Wing Attack','Air Cutter',
+  // Steel
+  'Iron Head','Iron Tail','Steel Wing','Meteor Mash','Gyro Ball','Magnet Bomb','Metal Claw',
+  // Fairy
+  'Play Rough','Dazzling Gleam','Moonblast','Draining Kiss','Fairy Wind',
+  // Dragon
+  'Dragon Rush','Draco Meteor','Twister',
+  // Normal
+  'Body Slam','Headbutt','Extreme Speed','Facade','Stomp','Slam',
+]);
 // Reversal/Flail BP table (attacker's HP%; uses the FIRST row where hpPct ≤ threshold, else 20)
 const FLAIL_TABLE=[[1,200],[4,150],[10,100],[21,80],[35,40]];
 // Recoil tables. RECOIL_DAMAGE is fraction of damage dealt — Rock Head and
@@ -1628,6 +1718,14 @@ function resolveForme(v){
 }
 // round half DOWN, as the games do ("pokeRound")
 function pokeRound(x){const f=Math.floor(x);return (x-f>0.5)?f+1:f;}
+// Damage modifiers chain in 4096-based fixed-point, not float. Every mult is
+// stored as round(mult * 4096); chain via floor((m1 * m2 + 2048) >> 12) so the
+// running product matches Showdown's engine exactly (no ±1-3 HP drift from
+// accumulated float error over stacked multipliers).
+const FP_ONE = 4096;
+function M(x){return Math.round(x * FP_ONE);}  // 1.5 → 6144, 1.3 → 5325 …
+function chainMod(a, b){return b===FP_ONE ? a : ((a * b + 2048) >> 12);}
+function applyMod(value, mod){return mod===FP_ONE ? value : pokeRound(value * mod / FP_ONE);}
 // one damage roll, in Showdown's modifier order: spread (pre-random) → random
 // → STAB → type → item. eff===0 short-circuits to an immunity.
 function oneRoll(base,roll,spreadMod,stab,eff,itemMod){
@@ -1637,7 +1735,8 @@ function oneRoll(base,roll,spreadMod,stab,eff,itemMod){
   d=Math.floor(d*roll/100);
   if(stab!==1)d=pokeRound(d*stab);
   d=Math.floor(d*eff);
-  if(itemMod!==1)d=pokeRound(d*itemMod);
+  // itemMod is now a 4096-based fixed-point chain from calcDmg.
+  if(itemMod!==FP_ONE)d=applyMod(d,itemMod);
   return Math.max(1,d);
 }
 // "atkSide" / "defSide" pass the per-side field effects (sideA when atk=A, etc.).
@@ -1719,8 +1818,22 @@ function calcDmg(atk,move,def,atkSide,defSide){
   const baseFor=p=>Math.floor(Math.floor(Math.floor(22*p*Aa/D)/50))+2;
   const base=baseFor(bp);
   // multi-hit: how many hits to compute (1 if not multi-hit)
-  const hits=hitsOf(move, atk.ability);
-  const bpList=ESCALATING_BP[move]||(hits>1?Array(hits).fill(bp):[bp]);
+  let hits=hitsOf(move, atk.ability);
+  let bpList=ESCALATING_BP[move]||(hits>1?Array(hits).fill(bp):[bp]);
+  // Parental Bond (Mega Kangaskhan): single-target damaging moves hit twice.
+  // Hit 2 has 25% BP. Doesn't stack with existing multi-hit / spread moves.
+  if(atk.ability==='Parental Bond' && hits===1 && !mv.spread && mv.power){
+    hits=2;
+    bpList=[bp, Math.max(1, Math.floor(bp*0.25))];
+  }
+  // Loaded Dice (item): variable multi-hit floors at 4 hits. Population Bomb
+  // shifts from 3 (our default) to 4; Bullet Seed / Rock Blast / Icicle Spear
+  // etc. also shift. Skill Link (5) still beats it. Only applies to non-fixed
+  // multi-hit (mv.minHits < mv.maxHits) — moves with fixed hit count ignore.
+  if(aItem==='Loaded Dice' && mv.minHits && mv.maxHits && mv.minHits < mv.maxHits && atk.ability!=='Skill Link'){
+    const floored = Math.max(4, hits);
+    if(floored !== hits){ hits = floored; bpList = ESCALATING_BP[move] || Array(hits).fill(bp); }
+  }
   // type effectiveness (with extreme-weather + terrain tweaks)
   let eff=1;dT.forEach(t=>{let e=DEX.typechart[moveType]?.[t];if(e===undefined)e=1;
     // Strong Winds: Flying defender takes neutral from Ice/Electric/Rock (super-effective canceled)
@@ -1741,86 +1854,140 @@ function calcDmg(atk,move,def,atkSide,defSide){
   // STAB (Adaptability ×2; -ate abilities give STAB if type matches attacker type now)
   const aTypesEff=aT.slice();if(ATE_TYPE[atk.ability])aTypesEff.push(ATE_TYPE[atk.ability]);
   const stab=aTypesEff.includes(moveType)?(atk.ability==='Adaptability'?2:1.5):1;
-  // chained "other" multipliers
-  let mod=1;
+  // chained "other" multipliers — accumulator in 4096-based fixed-point so the
+  // running product matches Showdown's engine exactly (no float drift).
+  let mod=FP_ONE;
   // -ate boost
-  if(ateMul!==1) mod*=ateMul;
+  if(ateMul!==1) mod=chainMod(mod,M(ateMul));
   // type-boost items
-  if(ITEM_TYPE_BOOST[aItem]===moveType) mod*=1.2;
-  if(aItem==='Life Orb') mod*=1.3;
+  if(ITEM_TYPE_BOOST[aItem]===moveType) mod=chainMod(mod,M(1.2));
+  if(aItem==='Life Orb') mod=chainMod(mod,M(1.3));
   // Category-generic damage items (physical/special/effectiveness-flag)
-  if(aItem==='Muscle Band' && phys) mod*=1.1;
-  if(aItem==='Wise Glasses' && !phys) mod*=1.1;
-  if(aItem==='Expert Belt' && eff>1) mod*=1.2;
+  if(aItem==='Muscle Band' && phys) mod=chainMod(mod,M(1.1));
+  if(aItem==='Wise Glasses' && !phys) mod=chainMod(mod,M(1.1));
+  if(aItem==='Expert Belt' && eff>1) mod=chainMod(mod,M(1.2));
   // weather move boosts (regular)
-  if(weather==='sun'){if(moveType==='fire')mod*=1.5;if(moveType==='water')mod*=0.5;}
-  if(weather==='rain'){if(moveType==='water')mod*=1.5;if(moveType==='fire')mod*=0.5;}
+  if(weather==='sun'){if(moveType==='fire')mod=chainMod(mod,M(1.5));if(moveType==='water')mod=chainMod(mod,M(0.5));}
+  if(weather==='rain'){if(moveType==='water')mod=chainMod(mod,M(1.5));if(moveType==='fire')mod=chainMod(mod,M(0.5));}
   // Mega Sol (Mega Meganium): the mon's own Fire moves behave as if in Sun,
   // and its own Water moves take Sun's -50%. Independent of field weather —
   // only skip when regular/harsh Sun is already applying the same math.
   if(atk.ability==='Mega Sol' && weather!=='sun' && weather!=='harshsun'){
-    if(moveType==='fire') mod*=1.5;
-    if(moveType==='water') mod*=0.5;
+    if(moveType==='fire') mod=chainMod(mod,M(1.5));
+    if(moveType==='water') mod=chainMod(mod,M(0.5));
   }
   // Harsh Sun / Heavy Rain boost their type 1.5x (failures handled via eff=0 above)
-  if(weather==='harshsun'){if(moveType==='fire')mod*=1.5;}
-  if(weather==='heavyrain'){if(moveType==='water')mod*=1.5;}
+  if(weather==='harshsun'){if(moveType==='fire')mod=chainMod(mod,M(1.5));}
+  if(weather==='heavyrain'){if(moveType==='water')mod=chainMod(mod,M(1.5));}
   // Terrains (boost only grounded attacker; Misty halves Dragon vs grounded defender)
   const aGround=isGrounded(atk), dGround=isGrounded(def);
-  if(field.terrain==='electric' && moveType==='electric' && aGround) mod*=1.3;
-  if(field.terrain==='grassy' && moveType==='grass' && aGround) mod*=1.3;
-  if(field.terrain==='psychic' && moveType==='psychic' && aGround) mod*=1.3;
-  if(field.terrain==='misty' && moveType==='dragon' && dGround) mod*=0.5;
+  if(field.terrain==='electric' && moveType==='electric' && aGround) mod=chainMod(mod,M(1.3));
+  if(field.terrain==='grassy' && moveType==='grass' && aGround) mod=chainMod(mod,M(1.3));
+  if(field.terrain==='psychic' && moveType==='psychic' && aGround) mod=chainMod(mod,M(1.3));
+  if(field.terrain==='misty' && moveType==='dragon' && dGround) mod=chainMod(mod,M(0.5));
   // Grassy Terrain weakens Earthquake/Magnitude/Bulldoze vs grounded (×0.5)
-  if(field.terrain==='grassy' && dGround && ['Earthquake','Magnitude','Bulldoze'].includes(move)) mod*=0.5;
+  if(field.terrain==='grassy' && dGround && ['Earthquake','Magnitude','Bulldoze'].includes(move)) mod=chainMod(mod,M(0.5));
   // Misty Terrain blocks status on grounded — no damage effect beyond Dragon halving.
   // attacker abilities
-  if(atk.ability==='Technician' && bp<=60) mod*=1.5;
-  if(atk.ability==='Tinted Lens' && eff>0 && eff<1) mod*=2;
-  if(atk.ability==='Sand Force' && weather==='sand' && ['rock','ground','steel'].includes(moveType)) mod*=1.3;
-  if(atk.ability==='Sniper' && isCrit) mod*=1.5;
-  if(atk.ability==='Neuroforce' && eff>1) mod*=1.25;
+  if(atk.ability==='Technician' && bp<=60) mod=chainMod(mod,M(1.5));
+  if(atk.ability==='Tinted Lens' && eff>0 && eff<1) mod=chainMod(mod,M(2));
+  if(atk.ability==='Sand Force' && weather==='sand' && ['rock','ground','steel'].includes(moveType)) mod=chainMod(mod,M(1.3));
+  if(atk.ability==='Sniper' && isCrit) mod=chainMod(mod,M(1.5));
+  if(atk.ability==='Neuroforce' && eff>1) mod=chainMod(mod,M(1.25));
   // Fire Mane (Mega Pyroar signature): unconditional ×1.5 on Fire moves.
-  if(atk.ability==='Fire Mane' && moveType==='fire') mod*=1.5;
+  if(atk.ability==='Fire Mane' && moveType==='fire') mod=chainMod(mod,M(1.5));
+  // Supreme Overlord (Kingambit): +10% per fainted teammate, cap 5 → ×1.5 at max.
+  // Reuses the faintedAllies counter that's already surfaced for Last Respects.
+  if(atk.ability==='Supreme Overlord'){
+    const fa=Math.max(0,Math.min(5, atk.faintedAllies||0));
+    if(fa>0) mod=chainMod(mod,M(1 + 0.1*fa));
+  }
+  // Water Bubble (Araquanid): own Water moves ×2. Defensive halving handled below.
+  if(atk.ability==='Water Bubble' && moveType==='water') mod=chainMod(mod,M(2));
+  // Water Bubble defender: Fire ×0.5.
+  if(def.ability==='Water Bubble' && moveType==='fire') mod=chainMod(mod,M(0.5));
+  // Type-boosting signature abilities: Dragon's Maw, Transistor, Steelworker,
+  // Rocky Payload — own-type moves ×1.5 unconditionally.
+  if(atk.ability==='Dragon’s Maw' && moveType==='dragon') mod=chainMod(mod,M(1.5));
+  if(atk.ability==='Dragons Maw'     && moveType==='dragon') mod=chainMod(mod,M(1.5));
+  if(atk.ability==='Transistor'      && moveType==='electric') mod=chainMod(mod,M(1.5));
+  if(atk.ability==='Steelworker'     && moveType==='steel')  mod=chainMod(mod,M(1.5));
+  if(atk.ability==='Rocky Payload'   && moveType==='rock')   mod=chainMod(mod,M(1.5));
+  // Sheer Force (Nidoking / Iron Moth / Sneasler / Camerupt-Mega etc.):
+  // damaging moves with a secondary effect gain ×1.3, and Life Orb recoil is
+  // suppressed (recoil not modeled — LO ×1.3 damage already applied above).
+  // We can't tell from PokéAPI whether a move has a secondary; use a curated
+  // move list of VGC-common Sheer Force targets. False positives on
+  // non-secondary moves; false negatives on unusual sets. Toolable via tests.
+  if(atk.ability==='Sheer Force' && SHEER_FORCE_MOVES.has(move)) mod=chainMod(mod,M(1.3));
+  // ── Prep-only for Champions Reg-B (not currently legal — code hot when the
+  // reg allows them). Ruin abilities: each drops a non-holder's stat 0.75×.
+  //   Vessel of Ruin (Ting-Lu) → all others' SpA
+  //   Sword of Ruin  (Chien-Pao) → all others' Def
+  //   Tablets of Ruin (Wo-Chien) → all others' Atk
+  //   Beads of Ruin  (Chi-Yu)   → all others' SpD
+  // Modeled as attacker/defender-side abilities. Multiple Ruin sources stack.
+  if(atk.ability !== 'Tablets of Ruin' && def.ability === 'Tablets of Ruin' && phys)
+    mod=chainMod(mod,M(0.75));
+  if(atk.ability !== 'Vessel of Ruin' && def.ability === 'Vessel of Ruin' && !phys)
+    mod=chainMod(mod,M(0.75));
+  // The two DEFENSIVE ruins already got their effect on D above? No — Ruin
+  // applies as an incoming-damage OUTPUT modifier in the calc, since it drops
+  // stats globally. Model as ×0.75/×0.75 on damage:
+  if(def.ability !== 'Sword of Ruin' && atk.ability === 'Sword of Ruin' && phys)
+    mod=chainMod(mod,M(4/3));  // effectively: opponent's Def is 0.75, so dmg ×1.333
+  if(def.ability !== 'Beads of Ruin' && atk.ability === 'Beads of Ruin' && !phys)
+    mod=chainMod(mod,M(4/3));
+  // Protosynthesis / Quark Drive — the mon boosts its highest stat by 1.3×
+  // (Speed by 1.5×) when it's in Sun / Electric Terrain OR holds Booster
+  // Energy. Modeled as an explicit "protoActive" flag on the mon, with the
+  // stat picked by whichever offense is being used (Atk for phys, SpA for
+  // spec). Booster-energy consumption not tracked (it's UI state).
+  const protoAtk = (atk.ability==='Protosynthesis' && (weather==='sun'||weather==='harshsun'||atk.item==='Booster Energy'))
+                || (atk.ability==='Quark Drive' && (field.terrain==='electric' || atk.item==='Booster Energy'));
+  if(protoAtk) mod=chainMod(mod,M(1.3));
+  const protoDefBoost = (def.ability==='Protosynthesis' && (weather==='sun'||weather==='harshsun'||def.item==='Booster Energy'))
+                     || (def.ability==='Quark Drive' && (field.terrain==='electric' || def.item==='Booster Energy'));
+  if(protoDefBoost) mod=chainMod(mod,M(1/1.3));  // defender's defense stat ×1.3 → damage ÷1.3
   // Flag-based attacker abilities (contact/punch/pulse/bite/sound/slicing)
-  if(atk.ability==='Tough Claws' && mv.contact) mod*=1.3;
-  if(atk.ability==='Iron Fist' && mv.punch) mod*=1.2;
-  if(atk.ability==='Mega Launcher' && mv.pulse) mod*=1.5;
-  if(atk.ability==='Strong Jaw' && mv.bite) mod*=1.5;
-  if(atk.ability==='Sharpness' && mv.slicing) mod*=1.5;
-  if(atk.ability==='Punk Rock' && mv.sound) mod*=1.3;
+  if(atk.ability==='Tough Claws' && mv.contact) mod=chainMod(mod,M(1.3));
+  if(atk.ability==='Iron Fist' && mv.punch) mod=chainMod(mod,M(1.2));
+  if(atk.ability==='Mega Launcher' && mv.pulse) mod=chainMod(mod,M(1.5));
+  if(atk.ability==='Strong Jaw' && mv.bite) mod=chainMod(mod,M(1.5));
+  if(atk.ability==='Sharpness' && mv.slicing) mod=chainMod(mod,M(1.5));
+  if(atk.ability==='Punk Rock' && mv.sound) mod=chainMod(mod,M(1.3));
   // defender damage-reduction abilities
-  if((def.ability==='Multiscale'||def.ability==='Shadow Shield') && def.hpPct>=100) mod*=0.5;
-  if((def.ability==='Filter'||def.ability==='Solid Rock'||def.ability==='Prism Armor') && eff>1) mod*=0.75;
-  if(def.ability==='Thick Fat' && (moveType==='fire'||moveType==='ice')) mod*=0.5;
-  if(def.ability==='Heatproof' && moveType==='fire') mod*=0.5;
-  if(def.ability==='Purifying Salt' && moveType==='ghost') mod*=0.5;
+  if((def.ability==='Multiscale'||def.ability==='Shadow Shield') && def.hpPct>=100) mod=chainMod(mod,M(0.5));
+  if((def.ability==='Filter'||def.ability==='Solid Rock'||def.ability==='Prism Armor') && eff>1) mod=chainMod(mod,M(0.75));
+  if(def.ability==='Thick Fat' && (moveType==='fire'||moveType==='ice')) mod=chainMod(mod,M(0.5));
+  if(def.ability==='Heatproof' && moveType==='fire') mod=chainMod(mod,M(0.5));
+  if(def.ability==='Purifying Salt' && moveType==='ghost') mod=chainMod(mod,M(0.5));
   // Fluffy: ×0.5 on contact, ×2 on fire (so fire+contact = 1×).
-  if(def.ability==='Fluffy'){let fl=1;if(mv.contact)fl*=0.5;if(moveType==='fire')fl*=2;if(fl!==1)mod*=fl;}
-  if(def.ability==='Punk Rock' && mv.sound) mod*=0.5;
+  if(def.ability==='Fluffy'){let fl=1;if(mv.contact)fl*=0.5;if(moveType==='fire')fl*=2;if(fl!==1)mod=chainMod(mod,M(fl));}
+  if(def.ability==='Punk Rock' && mv.sound) mod=chainMod(mod,M(0.5));
   if(def.ability==='Ice Scales' && !phys){/* applied to D above */}
   // Side effects (per-side multipliers)
-  if(atkSide.helpingHand) mod*=1.5;
-  if(atkSide.powerSpot) mod*=1.3;
-  if(atkSide.battery && !phys) mod*=1.3;
-  if(atkSide.steelySpirit && moveType==='steel') mod*=1.5;
+  if(atkSide.helpingHand) mod=chainMod(mod,M(1.5));
+  if(atkSide.powerSpot) mod=chainMod(mod,M(1.3));
+  if(atkSide.battery && !phys) mod=chainMod(mod,M(1.3));
+  if(atkSide.steelySpirit && moveType==='steel') mod=chainMod(mod,M(1.5));
   // Fairy Aura is a FIELD aura — affects Fairy moves regardless of source side
-  if(moveType==='fairy' && (atkSide.fairyAura || defSide.fairyAura)) mod*=1.33;
+  if(moveType==='fairy' && (atkSide.fairyAura || defSide.fairyAura)) mod=chainMod(mod,M(1.33));
   // Friend Guard (doubles only, on defender's side)
-  if(defSide.friendGuard && doubles) mod*=0.75;
+  if(defSide.friendGuard && doubles) mod=chainMod(mod,M(0.75));
   // Screens (don't apply on crit)
   if(!isCrit){
     const screenMult=doubles?2/3:0.5;
     const veil=defSide.auroraVeil && weather==='snow';
-    if(veil) mod*=screenMult;
-    else if(phys && defSide.reflect) mod*=screenMult;
-    else if(!phys && defSide.lightScreen) mod*=screenMult;
+    if(veil) mod=chainMod(mod,M(screenMult));
+    else if(phys && defSide.reflect) mod=chainMod(mod,M(screenMult));
+    else if(!phys && defSide.lightScreen) mod=chainMod(mod,M(screenMult));
   }
   // Crit multiplier (×1.5)
-  if(isCrit) mod*=1.5;
+  if(isCrit) mod=chainMod(mod,M(1.5));
   // Burn: halve physical (after STAB/type). Skip if Guts applied above.
-  if(burnedAtk) mod*=0.5;
-  if(atk.status==='fbt' && !phys) mod*=0.5;
+  if(burnedAtk) mod=chainMod(mod,M(0.5));
+  if(atk.status==='fbt' && !phys) mod=chainMod(mod,M(0.5));
   const hp=ds.hp;
   const range=sp=>{
     if(hits===1){
@@ -1836,11 +2003,31 @@ function calcDmg(atk,move,def,atkSide,defSide){
   };
   const single=range(1),spreadR=range(0.75),isSpread=!!mv.spread;
   const active=(doubles&&isSpread)?spreadR:single;
+  // Type-resist berry: if the defender holds a matching berry and this move
+  // is super-effective (or Chilan Berry vs any Normal move), compute a second
+  // damage line at ×0.5 (or ×0.25 with Ripen). Berry doesn't apply on crit if
+  // the calc is set to crit (berries don't cushion crits in modern gens for
+  // some — but Type-resist berries DO cushion). Suppressed under Magic Room.
+  const berryType = BERRY_TYPE[dItem];
+  const isChilan = dItem===CHILAN_BERRY && moveType==='normal';
+  const berryFires = !field.magicRoom && ((berryType===moveType && eff>1) || isChilan);
+  let berry=null;
+  if(berryFires){
+    const berryMult = def.ability==='Ripen' ? 0.25 : 0.5;
+    berry = {
+      lo: Math.max(1, pokeRound(active.lo * berryMult)),
+      hi: Math.max(1, pokeRound(active.hi * berryMult)),
+      item: dItem,
+      mult: berryMult,
+    };
+    berry.pctLo = berry.lo/hp*100;
+    berry.pctHi = berry.hi/hp*100;
+  }
   // KO calculations should compare damage to CURRENT HP, not max HP.
   // curHP is the defender's remaining HP based on the hpPct slider.
   const curHpPct=Math.max(0,Math.min(100, def.hpPct??100));
   const curHP=Math.max(1, Math.floor(hp * curHpPct / 100));
-  return{...active,eff,hp,curHP,curHpPct,bp,bpRaw:mv.power,cat:mv.category,isSpread,single,spreadR,isCrit,moveType,hits,intimidate};
+  return{...active,eff,hp,curHP,curHpPct,bp,bpRaw:mv.power,cat:mv.category,isSpread,single,spreadR,berry,isCrit,moveType,hits,intimidate};
 }
 function dmgColor(p){if(p>=100)return'#ff7a7a';if(p>=50)return'#ffb070';if(p>=30)return'#ffd166';if(p>0)return'#9aa3b2';return'#5a5f6a';}
 function koNote(r){
@@ -2316,6 +2503,9 @@ function moveDetailHTML(side,atk,def,i){const mv=atk.moves[i];const info=DEX.mov
   // Doubles is hard-pinned. For spread moves, the headline IS the 0.75× spread range;
   // show the single-target range as a secondary line in case the move lands solo.
   const sp=r.isSpread?` · <span class="small">if single-target ${r.single.pctLo.toFixed(1)}–${r.single.pctHi.toFixed(1)}%</span>`:'';
+  // Berry indicator — mirrors the "if single-target" hint pattern. Only rendered
+  // when a matching type-resist berry (or Chilan) is on the defender.
+  const berry=r.berry?` · <span class="small" style="color:var(--good)">with ${esc(r.berry.item)} ${r.berry.pctLo.toFixed(1)}–${r.berry.pctHi.toFixed(1)}%</span>`:'';
   // Piercing Drill (Mega Excadrill): 25% of a Protect-blocked hit still lands.
   // Protect isn't modeled in the calc, so surface this as a visual note only.
   const pdNote=atk.ability==='Piercing Drill' ? ' · <span class="small" style="color:var(--accent2)">Piercing Drill: 25% still lands through Protect</span>' : '';
@@ -2345,7 +2535,7 @@ function moveDetailHTML(side,atk,def,i){const mv=atk.moves[i];const info=DEX.mov
   const summary=calcSummary(atk,def,mv,info,r,aS,dS);
   return `<div class="detail"><div class="calcline"><span class="calcline-txt">${esc(summary)}</span><button class="calcline-copy" type="button" data-copy="${esc(summary)}" title="Copy Showdown-style summary">Copy</button></div>
     <div style="margin-top:6px">${esc(atk.forme)}${aBoost} <b>${r.isCrit?'(crit) ':''}${esc(mv)}</b> (${bpLab}${r.eff!==1?', '+r.eff+'×':''}${r.moveType!==info.type?' · type→'+esc(r.moveType):''}${hitLab}) vs ${esc(def.forme)}${dBoost}:
-    <b>${r.lo}–${r.hi}</b> (<b style="color:${dmgColor(r.pctHi)}">${r.pctLo.toFixed(1)}–${r.pctHi.toFixed(1)}%</b> of ${r.hp} HP) — ${koNote(r)}${sp}${pdNote}</div>
+    <b>${r.lo}–${r.hi}</b> (<b style="color:${dmgColor(r.pctHi)}">${r.pctLo.toFixed(1)}–${r.pctHi.toFixed(1)}%</b> of ${r.hp} HP) — ${koNote(r)}${sp}${berry}${pdNote}</div>
     ${ctx.length?`<div class="small" style="margin-top:2px">${ctx.join(' · ')}</div>`:''}
     ${recoilLine}
     <div class="small" style="margin-top:5px">${r.rolls?'rolls: '+r.rolls.join(', '):r.hits>1?'multi-hit · '+r.hits+' hits':''}</div></div>`;}

@@ -51,6 +51,15 @@ jobs:
       - name: Build dex + render index.html + data_lock.json
         run: python build_dex.py
 
+      - name: Golden calc regression
+        # Fail the cron rebuild if the freshly-regenerated dex.json breaks the
+        # calc (e.g. a Champions patch renamed a mon's typing). Better to open
+        # an issue than push a broken bundle to Pages.
+        run: |
+          if [ -d tests ]; then
+            node --test --test-reporter=spec tests/golden.*.js
+          fi
+
       - name: Render OG card
         run: python build_og.py
 

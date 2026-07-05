@@ -1,0 +1,51 @@
+name: Calc regression
+
+# Blocks PRs and pushes-to-main that would change viewer_template.html or the
+# dex without a matching test update. Also runs on tests/ changes.
+#
+# 30+ golden tests cover every VGC modeled interaction — weather-defensive
+# buffs, Champions Megas, item chains, ability stacks, edge cases. Adding a
+# new test takes <2 min (see tests/README if present, or copy an existing
+# test as a template).
+
+on:
+  pull_request:
+    paths:
+      - 'viewer_template.html'
+      - 'data/dex.json'
+      - 'tests/**'
+      - '.github/workflows/calc-tests.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'viewer_template.html'
+      - 'data/dex.json'
+      - 'tests/**'
+      - '.github/workflows/calc-tests.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: calc-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  golden:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Ensure data/dex.json exists (rebuild if a PR only touched code)
+        run: |
+          if [ ! -f data/dex.json ]; then
+            pip install --quiet -r requirements.txt
+            python build_dex.py
+          fi
+
+      - name: Run golden tests
+        run: node --test --test-reporter=spec tests/golden.*.js
