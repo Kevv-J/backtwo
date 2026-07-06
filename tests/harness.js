@@ -73,7 +73,7 @@ var performance = { now: () => 0, getEntriesByType: () => [] };
 var navigator = { userAgent: 'node', clipboard: null };
 var location = { hash:'', search:'', href:'', origin:'', pathname:'/' };
 var history = { pushState() {}, replaceState() {} };
-var setTimeout = (fn) => { try { fn(); } catch (_) {} return 0; };
+var setTimeout = (fn) => { try { fn && fn(); } catch (_) {} return 0; };
 var clearTimeout = () => {};
 var setInterval = () => 0;
 var clearInterval = () => {};
@@ -82,6 +82,12 @@ var cancelAnimationFrame = () => {};
 var ResizeObserver = class { observe() {} disconnect() {} };
 var MutationObserver = class { observe() {} disconnect() {} };
 var IntersectionObserver = class { observe() {} disconnect() {} };
+// Bare (unqualified) DOM globals — a browser resolves these to window.* but
+// a VM context doesn't auto-bridge. Stub top-level to no-ops.
+var addEventListener = () => {};
+var removeEventListener = () => {};
+var innerWidth = 1200, innerHeight = 900;
+var screen = { width: 1200, height: 900 };
 `;
 
 const ctx = vm.createContext({ console });
