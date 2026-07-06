@@ -748,6 +748,73 @@
   #guidemodal .gm-ph-body{max-width:520px;margin:0 auto}
   #guidemodal .gm-toc{text-align:left;padding-left:24px;margin:10px 0;color:var(--foreground)}
   #guidemodal .gm-toc li{margin-bottom:4px;font-size:12.5px;line-height:1.5}
+  /* ─── Team Builder overlay ─────────────────────────────────────────── */
+  .myteam-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .btn-alt{background:transparent;color:var(--muted-foreground);border-color:var(--border)}
+  .btn-alt:hover,.btn-alt:focus-visible{color:var(--foreground);border-color:var(--foreground);outline:none}
+  #builderoverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:150;
+    align-items:flex-start;justify-content:center;overflow-y:auto;padding:24px}
+  #builderoverlay.open{display:flex}
+  #builderoverlay .tb-box{background:var(--panel);border:1px solid var(--border-strong);border-radius:14px;
+    padding:0;max-width:960px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.5);margin:auto}
+  .tb-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;
+    border-bottom:1px solid var(--border);gap:12px;position:sticky;top:0;background:var(--panel);
+    z-index:5;border-radius:14px 14px 0 0}
+  .tb-back{background:transparent;border:1px solid var(--border);color:var(--muted-foreground);
+    border-radius:6px;padding:5px 10px;font-family:inherit;font-size:12px;cursor:pointer}
+  .tb-back:hover,.tb-back:focus-visible{color:var(--foreground);border-color:var(--foreground);outline:none}
+  .tb-title{font-family:'Rajdhani','Inter',sans-serif;font-size:20px;font-weight:700;margin:0;color:var(--foreground);letter-spacing:.02em}
+  .tb-io-toggle{background:transparent;border:1px solid var(--accent);color:var(--accent);border-radius:6px;
+    padding:5px 12px;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;letter-spacing:.04em}
+  .tb-io-toggle:hover,.tb-io-toggle:focus-visible{background:var(--accent);color:#0c0e12;outline:none}
+  .tb-io{max-height:0;overflow:hidden;transition:max-height .25s ease;background:var(--muted);border-bottom:1px solid var(--border)}
+  .tb-io.open{max-height:280px}
+  .tb-io-body{padding:14px 18px;display:flex;flex-direction:column;gap:10px}
+  .tb-io-body textarea{width:100%;min-height:120px;padding:10px 12px;background:var(--secondary);border:1px solid var(--border);
+    border-radius:6px;color:var(--foreground);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;
+    line-height:1.5;resize:vertical;box-sizing:border-box}
+  .tb-io-actions{display:flex;gap:8px;flex-wrap:wrap}
+  .tb-slots{padding:16px 18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:14px}
+  .tb-slot{background:var(--muted);border:1px solid var(--border);border-radius:10px;padding:12px 14px;transition:border-color .12s}
+  .tb-slot.filled{border-color:var(--atk-border)}
+  .tb-slot-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .tb-slot-num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:5px;
+    background:var(--secondary);border:1px solid var(--border);color:var(--muted-foreground);
+    font-family:'Rajdhani','Inter',sans-serif;font-weight:700;font-size:12px}
+  .tb-slot-sprite{width:32px;height:32px;flex-shrink:0}
+  .tb-slot-sprite img{width:32px;height:32px;image-rendering:pixelated;object-fit:contain}
+  .tb-slot-sprite.empty{width:32px;height:32px;border:1px dashed var(--border);border-radius:5px;background:var(--secondary)}
+  .tb-slot-mon{flex:1;padding:6px 10px;background:var(--secondary);border:1px solid var(--border);border-radius:5px;
+    color:var(--foreground);font-family:inherit;font-size:13px;font-weight:600;min-width:0}
+  .tb-slot-clear{background:transparent;border:1px solid var(--border);color:var(--muted-foreground);border-radius:5px;
+    padding:4px 8px;font-family:inherit;font-size:11px;cursor:pointer}
+  .tb-slot-clear:hover{color:var(--bad);border-color:var(--bad)}
+  .tb-slot-body{display:flex;flex-direction:column;gap:8px}
+  .tb-row-3{display:grid;grid-template-columns:1fr 1fr auto;gap:6px}
+  .tb-row-3 input,.tb-row-3 select{padding:5px 8px;background:var(--secondary);border:1px solid var(--border);border-radius:5px;
+    color:var(--foreground);font-family:inherit;font-size:12px;min-width:0}
+  .tb-row-3 select{cursor:pointer}
+  .tb-moves{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .tb-moves input{padding:5px 8px;background:var(--secondary);border:1px solid var(--border);border-radius:5px;
+    color:var(--foreground);font-family:inherit;font-size:12px;min-width:0}
+  .tb-evs{display:grid;grid-template-columns:auto 1fr auto;gap:2px 8px;align-items:center;padding:6px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+  .tb-ev-lbl{color:var(--muted-foreground);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10.5px;letter-spacing:.04em}
+  .tb-ev-slider{width:100%;margin:0;min-width:0}
+  .tb-ev-num{width:36px;padding:2px 4px;background:var(--secondary);border:1px solid var(--border);border-radius:4px;
+    color:var(--foreground);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;text-align:right}
+  .tb-ev-total{color:var(--muted-foreground);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;
+    grid-column:1/-1;text-align:right;margin-top:2px}
+  .tb-ev-total.over{color:var(--bad)}
+  .tb-foot{padding:12px 18px;display:flex;justify-content:flex-end;gap:10px;align-items:center;border-top:1px solid var(--border);background:var(--panel);border-radius:0 0 14px 14px}
+  .tb-count{color:var(--muted-foreground);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;margin-right:auto}
+  @media (max-width:640px){
+    #builderoverlay{padding:0}
+    #builderoverlay .tb-box{border-radius:0;max-height:100vh;height:100vh;overflow-y:auto}
+    .tb-header{border-radius:0}
+    .tb-foot{border-radius:0;position:sticky;bottom:0}
+    .tb-slots{padding:12px;grid-template-columns:1fr}
+    .tb-title{font-size:16px}
+  }
   @keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
   /* Touch-target sweep: WCAG 2.5.5 wants >=44x44 on touch devices.
      On coarse-pointer devices (phones, tablets), expand hit areas while
@@ -946,6 +1013,32 @@
     <div class="tt-nav">
       <button class="tt-btn" id="ttprev">← Back</button>
       <button class="tt-btn tt-btn-primary" id="ttnext">Next →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Team Builder overlay ──────────────────────────────────────────── -->
+<div id="builderoverlay" onclick="if(event.target===this)closeBuilder()">
+  <div class="tb-box">
+    <div class="tb-header">
+      <button class="tb-back" onclick="closeBuilder()" aria-label="Close builder">← Back</button>
+      <h2 class="tb-title">Team Builder</h2>
+      <button class="tb-io-toggle" onclick="document.getElementById('tb-io').classList.toggle('open')" title="Toggle Showdown paste import/export">Import / Export ⇅</button>
+    </div>
+    <div id="tb-io" class="tb-io">
+      <div class="tb-io-body">
+        <textarea id="tb-paste" placeholder="Paste a Showdown export here to load into the builder, or copy the generated text below."></textarea>
+        <div class="tb-io-actions">
+          <button class="btn" onclick="tbImportFromPaste()">← Load into builder</button>
+          <button class="btn btn-alt" onclick="tbExportToClipboard()">Copy paste text ⧉</button>
+        </div>
+      </div>
+    </div>
+    <div id="tb-slots" class="tb-slots"></div>
+    <div class="tb-foot">
+      <span class="tb-count" id="tb-count">0 / 6 mons</span>
+      <button class="btn btn-alt" onclick="closeBuilder()">Cancel</button>
+      <button class="btn" onclick="tbSave()">Save team</button>
     </div>
   </div>
 </div>
@@ -2831,7 +2924,10 @@ function renderDmg(){
     <datalist id="abilitylist">${ALL_ABILITIES.map(a=>`<option value="${esc(a)}">`).join('')}</datalist>
     <details class="myteam" data-tour="myteam-paste" ${myTeam.length?'':'open'}><summary>${myTeam.length?'<span class="small" style="color:var(--muted-foreground)">✎ edit my team</span>':'<strong>Paste your team</strong> <span class="small">Showdown export — saved in this browser, used for quick-picks</span>'}</summary>
       <textarea id="myta" placeholder="Garchomp @ Sitrus Berry&#10;Ability: Rough Skin&#10;EVs: 32 Atk / 32 Spe&#10;Jolly Nature&#10;- Earthquake&#10;- Dragon Claw&#10;...">${esc(myTeam.raw||'')}</textarea>
-      <button id="mysave" class="btn">Save my team</button></details>
+      <div class="myteam-actions">
+        <button id="mysave" class="btn">Save my team</button>
+        <button id="mybuild" class="btn btn-alt" title="Build a team with dropdowns instead of pasting">🛠 Build team →</button>
+      </div></details>
     <div class="fieldbar">
       <div class="fline"><span class="flbl">Weather</span><div class="btnrow">
         ${WEATHERS.map(([k,lab])=>`<button class="optbtn weat-${k} ${weather===k?'active':''}" data-grp="weat" data-v="${k}">${lab}</button>`).join('')}
@@ -2866,6 +2962,7 @@ function renderDmg(){
   document.querySelectorAll('[data-grp="rm"]').forEach(b=>b.onclick=()=>{const k=b.dataset.v;field[k]=field[k]?0:1;b.classList.toggle('active',!!field[k]);updateResults();});
   g('mysave').onclick=()=>{const raw=g('myta').value;try{localStorage.setItem('vgc_myteam_raw',raw);}catch(e){}
     myTeam=parseShowdown(raw);myTeam.raw=raw;renderDmg();};
+  const mybuild=g('mybuild'); if(mybuild) mybuild.onclick=()=>openBuilder();
   // My-team quick picks (slot A). Only the mybtns that have data-i (i.e., not
   // ftbtn siblings that only carry data-fti) trigger the my-team load.
   document.querySelectorAll('.mybtn[data-i]').forEach(b=>b.onclick=()=>{
@@ -3536,6 +3633,196 @@ document.getElementById('list').addEventListener('click',e=>{
   selMon=r.dataset.name;_pendingMon=null;megaCmp=false;
   renderDetail(selMon);
 });
+
+// ─── Team Builder ───────────────────────────────────────────────────────────
+// A visual alternative to the paste-a-Showdown-export flow. 6 slots, live-
+// synced to the same localStorage key (`vgc_myteam_raw`) via the paste
+// textarea. Import/Export section rides the same round-trip: users paste
+// text → we parse into slots; users tweak slots → we serialize back to text.
+const STAT_LBL_ORDER = [['hp','HP'],['atk','Atk'],['def','Def'],['spa','SpA'],['spd','SpD'],['spe','Spe']];
+function serializeShowdown(mons){
+  // mons: parseShowdown-shaped array. Skip empty (no name/forme) entries.
+  return mons.filter(m => m && (m.name || m.forme)).map(m => {
+    const name = m.forme || m.name || '';
+    const item = m.item ? ` @ ${m.item}` : '';
+    const lines = [`${name}${item}`];
+    if(m.ability) lines.push(`Ability: ${m.ability}`);
+    // EVs: prefer parsed ev object if it has non-zero entries; else fall back to the string
+    let evsStr = '';
+    if(m.ev){
+      evsStr = STAT_LBL_ORDER.filter(([k])=>m.ev[k]).map(([k,lab])=>`${m.ev[k]} ${lab}`).join(' / ');
+    }
+    if(!evsStr && m.evs) evsStr = m.evs;
+    if(evsStr) lines.push(`EVs: ${evsStr}`);
+    if(m.nature && m.nature !== 'Serious') lines.push(`${m.nature} Nature`);
+    (m.moves||[]).filter(mv => mv && mv.trim()).forEach(mv => lines.push(`- ${mv}`));
+    return lines.join('\n');
+  }).join('\n\n');
+}
+let tbSlots = [];  // 6 slots, each a mon-shaped object
+function _tbBlankSlot(){
+  return {name:'',forme:'',item:'',ability:'',nature:'Serious',
+    ev:zeroEV(),evs:'',boost:zeroBoost(),moves:['','','',''],
+    status:'ok',hpPct:100};
+}
+function openBuilder(){
+  // Seed slots from the current textarea (or myTeam), padded to 6.
+  const raw = document.getElementById('myta')?.value || myTeam.raw || '';
+  const parsed = raw ? parseShowdown(raw) : [];
+  tbSlots = [];
+  for(let i=0;i<6;i++) tbSlots.push(parsed[i] ? {...parsed[i]} : _tbBlankSlot());
+  document.getElementById('tb-paste').value = raw;
+  document.getElementById('builderoverlay').classList.add('open');
+  document.getElementById('tb-io').classList.remove('open');
+  tbRender();
+  try{ tcount && tcount('builder/open','builder: open'); }catch(e){}
+}
+function closeBuilder(){
+  document.getElementById('builderoverlay').classList.remove('open');
+}
+function tbRender(){
+  const slotsEl = document.getElementById('tb-slots');
+  const filled = tbSlots.filter(s => s.name || s.forme).length;
+  document.getElementById('tb-count').textContent = `${filled} / 6 mons`;
+  document.getElementById('tb-count').classList.toggle('low', filled === 0);
+  slotsEl.innerHTML = tbSlots.map((s, i) => _tbSlotHTML(s, i)).join('');
+  // Wire per-slot handlers after render
+  tbSlots.forEach((s, i) => _tbWireSlot(i));
+  // Live-sync textarea preview
+  document.getElementById('tb-paste').value = serializeShowdown(tbSlots);
+}
+function _tbSlotHTML(s, i){
+  const name = s.name || s.forme || '';
+  const spriteURL = name ? _tbSpriteURL(name) : '';
+  const spriteHTML = spriteURL
+    ? `<span class="tb-slot-sprite"><img src="${esc(spriteURL)}" alt=""></span>`
+    : `<span class="tb-slot-sprite empty"></span>`;
+  const filledCls = name ? 'filled' : '';
+  const evsTotal = STAT_LBL_ORDER.reduce((sum,[k])=>sum + (s.ev?.[k] || 0), 0);
+  const evsOver = evsTotal > 66;
+  const evsRows = STAT_LBL_ORDER.map(([k,lab]) => `
+    <span class="tb-ev-lbl">${lab}</span>
+    <input class="tb-ev-slider" type="range" min="0" max="32" step="1" value="${s.ev?.[k]||0}" data-ev="${k}">
+    <input class="tb-ev-num" type="number" min="0" max="32" value="${s.ev?.[k]||0}" data-ev="${k}">
+  `).join('');
+  return `<div class="tb-slot ${filledCls}" data-i="${i}">
+    <div class="tb-slot-head">
+      <span class="tb-slot-num">${i+1}</span>
+      ${spriteHTML}
+      <input class="tb-slot-mon" placeholder="Pokémon…" list="formelist" value="${esc(name)}" data-field="name">
+      <button class="tb-slot-clear" data-clear title="Clear this slot">✕</button>
+    </div>
+    <div class="tb-slot-body">
+      <div class="tb-row-3">
+        <input list="itemlist" placeholder="Item" value="${esc(s.item||'')}" data-field="item">
+        <input list="abilitylist" placeholder="Ability" value="${esc(s.ability||'')}" data-field="ability">
+        <select data-field="nature">${ALL_NATURES.map(n=>`<option value="${esc(n)}" ${n===(s.nature||'Serious')?'selected':''}>${esc(natureLabel(n))}</option>`).join('')}</select>
+      </div>
+      <div class="tb-evs">${evsRows}
+        <span class="tb-ev-total ${evsOver?'over':''}">${evsTotal} / 66 SP</span>
+      </div>
+      <div class="tb-moves">
+        ${[0,1,2,3].map(j=>`<input list="movelist" placeholder="move ${j+1}" value="${esc((s.moves||[])[j]||'')}" data-move="${j}">`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+function _tbSpriteURL(name){
+  // Reuse pokeSprite's URL resolution — pokeSprite renders <img>, we want raw src.
+  const forme = jsForme(name, '') || name;
+  const slug = (forme || '').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+  const sprite = DEX.formes[forme]?.sprite || DEX.formes[name]?.sprite;
+  if(sprite) return `data/sprites/${sprite}.png`;
+  return '';
+}
+function _tbWireSlot(i){
+  const el = document.querySelector(`.tb-slot[data-i="${i}"]`);
+  if(!el) return;
+  const s = tbSlots[i];
+  // Mon field
+  el.querySelector('[data-field="name"]').addEventListener('change', e => {
+    s.name = e.target.value.trim();
+    s.forme = s.name ? jsForme(s.name, s.item) : '';
+    tbRender();
+  });
+  el.querySelector('[data-field="item"]').addEventListener('change', e => {
+    s.item = e.target.value.trim();
+    s.forme = s.name ? jsForme(s.name, s.item) : '';
+    tbRender();
+  });
+  el.querySelector('[data-field="ability"]').addEventListener('change', e => {
+    s.ability = e.target.value.trim();
+    tbSyncPaste();
+  });
+  el.querySelector('[data-field="nature"]').addEventListener('change', e => {
+    s.nature = e.target.value;
+    tbSyncPaste();
+  });
+  el.querySelectorAll('[data-move]').forEach(inp => {
+    inp.addEventListener('change', e => {
+      const j = +e.target.dataset.move;
+      s.moves = s.moves || ['','','',''];
+      s.moves[j] = e.target.value.trim();
+      tbSyncPaste();
+    });
+  });
+  el.querySelectorAll('.tb-ev-slider,.tb-ev-num').forEach(inp => {
+    inp.addEventListener('input', e => {
+      const stat = e.target.dataset.ev;
+      const v = Math.max(0, Math.min(32, +e.target.value || 0));
+      s.ev = s.ev || zeroEV();
+      s.ev[stat] = v;
+      // Update the paired input without full re-render (keeps focus)
+      el.querySelectorAll(`[data-ev="${stat}"]`).forEach(x => { if(x !== e.target) x.value = v; });
+      const total = STAT_LBL_ORDER.reduce((sum,[k])=>sum + (s.ev?.[k] || 0), 0);
+      const totalEl = el.querySelector('.tb-ev-total');
+      if(totalEl){ totalEl.textContent = `${total} / 66 SP`; totalEl.classList.toggle('over', total > 66); }
+      tbSyncPaste();
+    });
+  });
+  el.querySelector('[data-clear]').addEventListener('click', () => {
+    tbSlots[i] = _tbBlankSlot();
+    tbRender();
+  });
+}
+function tbSyncPaste(){
+  document.getElementById('tb-paste').value = serializeShowdown(tbSlots);
+  // Update slot count / filled state without full DOM rebuild
+  const filled = tbSlots.filter(s => s.name || s.forme).length;
+  document.getElementById('tb-count').textContent = `${filled} / 6 mons`;
+}
+function tbImportFromPaste(){
+  const raw = document.getElementById('tb-paste').value;
+  const parsed = raw ? parseShowdown(raw) : [];
+  tbSlots = [];
+  for(let i=0;i<6;i++) tbSlots.push(parsed[i] ? {...parsed[i]} : _tbBlankSlot());
+  tbRender();
+  try{ tcount && tcount('builder/import','builder: import'); }catch(e){}
+}
+function tbExportToClipboard(){
+  const txt = serializeShowdown(tbSlots);
+  const done = (btn) => { btn.textContent = 'Copied ✓'; setTimeout(()=>{ btn.textContent = 'Copy paste text ⧉'; }, 1400); };
+  const btn = event?.currentTarget;
+  if(navigator.clipboard?.writeText){
+    navigator.clipboard.writeText(txt).then(()=>btn && done(btn)).catch(()=>{});
+  } else {
+    const ta = document.getElementById('tb-paste');
+    ta.select(); document.execCommand?.('copy');
+    btn && done(btn);
+  }
+  try{ tcount && tcount('builder/export','builder: export'); }catch(e){}
+}
+function tbSave(){
+  const raw = serializeShowdown(tbSlots);
+  try{ localStorage.setItem('vgc_myteam_raw', raw); }catch(e){}
+  myTeam = parseShowdown(raw); myTeam.raw = raw;
+  // Sync the paste textarea in the panel
+  const myta = document.getElementById('myta');
+  if(myta) myta.value = raw;
+  closeBuilder();
+  renderDmg();
+  try{ tcount && tcount('builder/save','builder: save'); }catch(e){}
+}
 
 // ─── Guided tour ────────────────────────────────────────────────────────────
 // Version-keyed dismissal — bump to backtwo_tour_v2 when the tour changes
