@@ -421,10 +421,18 @@
   .smartpicker-option{display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .08s;font-size:12px;color:var(--foreground)}
   .smartpicker-option:last-child{border-bottom:none}
   .smartpicker-option.highlighted,.smartpicker-option:hover{background:var(--atk-bg)}
-  .smartpicker-option .sp-name{flex:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .smartpicker-option .sp-meta{color:var(--muted-foreground);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;flex-shrink:0}
+  /* Name takes NATURAL width and never shrinks below its own content — meta
+     (description) gets whatever's left and ellipsis-clips. Previous rule had
+     the opposite: name was flex:1 (basis:0) and meta was flex-shrink:0, so a
+     long description could squeeze the name down to zero width. */
+  .smartpicker-option .sp-name{flex:0 0 auto;font-weight:600;white-space:nowrap;color:var(--foreground)}
+  .smartpicker-option .sp-meta{flex:1 1 0;min-width:0;color:var(--muted-foreground);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right}
   .smartpicker-option .sp-tag{flex-shrink:0;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;text-transform:uppercase;letter-spacing:.05em;background:rgba(6,182,212,0.14);color:var(--atk-color);border:1px solid rgba(6,182,212,0.35)}
   .smartpicker-option .sp-tag-warn{background:var(--warning-bg);color:var(--warning);border-color:var(--warning-border)}
+  .smartpicker-option .sp-nature-chip{flex-shrink:0;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;padding:1px 8px;border-radius:11px;background:var(--secondary);border:1px solid var(--border);letter-spacing:.02em;display:inline-flex;gap:5px}
+  .smartpicker-option .sp-nature-neutral{color:var(--muted-foreground);font-weight:600;padding:1px 10px}
+  .smartpicker-option .sp-nat-up{color:var(--good);font-weight:600}
+  .smartpicker-option .sp-nat-down{color:var(--bad);font-weight:600}
   .smartpicker-option .sp-itemicon{flex-shrink:0;width:22px;height:22px;border-radius:4px;background:var(--secondary);border:1px solid var(--border);display:inline-flex;align-items:center;justify-content:center;color:var(--warning);font-size:11px}
   .smartpicker-option .sp-cat{flex-shrink:0;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;text-transform:uppercase;letter-spacing:.04em}
   .smartpicker-option .sp-cat.physical{background:rgba(251,146,60,0.18);color:var(--cat-phys);border:1px solid rgba(251,146,60,0.35)}
@@ -771,6 +779,21 @@
   #guidemodal .gm-ph-body{max-width:520px;margin:0 auto}
   #guidemodal .gm-toc{text-align:left;padding-left:24px;margin:10px 0;color:var(--foreground)}
   #guidemodal .gm-toc li{margin-bottom:4px;font-size:12.5px;line-height:1.5}
+  /* ─── Team Builder audit modal (incomplete-save warning) ─────────── */
+  #tbaudit{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:170;
+    align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+  #tbaudit.open{display:flex}
+  #tbaudit .tba-box{background:var(--panel);border:1px solid var(--warning-border);border-radius:14px;
+    padding:24px 26px;max-width:520px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.6)}
+  #tbaudit .tba-title{font-family:'Rajdhani','Inter',sans-serif;font-size:19px;font-weight:700;margin-bottom:4px;color:var(--warning)}
+  #tbaudit .tba-sub{color:var(--muted-foreground);font-size:12px;margin-bottom:14px;line-height:1.5}
+  #tbaudit .tba-list{margin:0 0 18px;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;max-height:340px;overflow-y:auto}
+  #tbaudit .tba-list li{background:var(--muted);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:12.5px;line-height:1.6;color:var(--foreground)}
+  #tbaudit .tba-list b{color:var(--foreground);font-weight:700}
+  #tbaudit .tba-slot{color:var(--muted-foreground);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10.5px;margin-left:4px}
+  #tbaudit .tba-tag{display:inline-block;background:var(--warning-bg);color:var(--warning);border:1px solid var(--warning-border);
+    border-radius:11px;padding:0 8px;font-size:10.5px;font-family:'JetBrains Mono',ui-monospace,monospace;margin-right:3px}
+  #tbaudit .tba-actions{display:flex;gap:10px;justify-content:flex-end}
   /* ─── Team Builder overlay ─────────────────────────────────────────── */
   .myteam-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
   .btn-alt{background:transparent;color:var(--muted-foreground);border-color:var(--border)}
@@ -831,10 +854,17 @@
     border-radius:6px;padding:5px 9px;font-family:inherit;font-size:12px;cursor:pointer;line-height:1;transition:all .12s}
   .tb-slot-clear:hover{color:var(--bad);border-color:rgba(255,120,120,0.4);background:rgba(255,120,120,0.06)}
   .tb-slot-body{display:flex;flex-direction:column;gap:10px}
-  .tb-row-3{display:grid;grid-template-columns:1fr 1fr minmax(140px,1.2fr);gap:6px}
+  /* Item / Ability / Nature row — equal thirds. Nature is now a smart-picker
+     input that shows just the name ("Adamant"), so the third column no longer
+     needs a fixed floor for "(+Atk −SpA)" text — that lives in the dropdown
+     chip. `min-width:0` on the row + children lets long labels ellipsis-clip
+     inside their column instead of pushing siblings out. */
+  .tb-row-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;min-width:0}
+  #builderoverlay .tb-row-3 input{min-width:0;text-overflow:ellipsis}
   #builderoverlay select{cursor:pointer;padding-right:26px}
   /* The global `select` rule above provides the chevron + appearance:none */
-  .tb-moves{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .tb-moves{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px;min-width:0}
+  .tb-moves input{min-width:0;text-overflow:ellipsis}
   /* EV grid — dense but airy */
   .tb-evs{display:grid;grid-template-columns:32px 1fr 44px;gap:6px 10px;align-items:center;
     padding:10px 2px;margin:2px 0;border-top:1px solid rgba(255,255,255,0.05);border-bottom:1px solid rgba(255,255,255,0.05)}
@@ -1086,6 +1116,19 @@
     <div class="tt-nav">
       <button class="tt-btn" id="ttprev">← Back</button>
       <button class="tt-btn tt-btn-primary" id="ttnext">Next →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Team Builder — incomplete-save audit modal ───────────────────── -->
+<div id="tbaudit" onclick="if(event.target===this)_tbCancelSave()">
+  <div class="tba-box">
+    <div class="tba-title">Some slots are incomplete</div>
+    <div class="tba-sub">You can save anyway — this list is a heads-up so you know what's not filled in.</div>
+    <ul id="tbaudit-body" class="tba-list"></ul>
+    <div class="tba-actions">
+      <button class="ts-btn ts-btn-primary" onclick="_tbCancelSave()">← Return to edit</button>
+      <button class="ts-btn ts-btn-accent" onclick="_tbConfirmSave()">Save anyway</button>
     </div>
   </div>
 </div>
@@ -1604,6 +1647,53 @@ const ABILITY_DESC = {
   'Blaze':'Fire moves ×1.5 below 1/3 HP (not modeled)',
   'Torrent':'Water moves ×1.5 below 1/3 HP (not modeled)',
   'Swarm':'Bug moves ×1.5 below 1/3 HP (not modeled)',
+  // Common weather / passive / VGC abilities the picker used to leave blank
+  'Rain Dish':'Restores 1/16 HP per turn in Rain',
+  'Ice Body':'Restores 1/16 HP per turn in Snow',
+  'Solar Power':'SpA ×1.5 in Sun (Cost: 1/8 HP/turn — not modeled)',
+  'Armor Tail':'Blocks moves with priority (targets can\'t use priority moves against this mon)',
+  'Queenly Majesty':'Blocks moves with priority',
+  'Dazzling':'Blocks moves with priority',
+  'Regenerator':'Restores 1/3 HP on switch out',
+  'Natural Cure':'Cures status on switch out',
+  'Magic Bounce':'Reflects status moves back at the user',
+  'Magic Guard':'Immune to indirect damage (Life Orb recoil, hazards, weather)',
+  'Sturdy':'Survives a one-shot from full HP with 1 HP',
+  'Anger Point':'Atk maxed if hit by a critical hit',
+  'Contrary':'Stat changes are inverted',
+  'Simple':'Stat changes are doubled',
+  'Serene Grace':'Secondary effects trigger 2× more often',
+  'Prankster':'Status moves get +1 priority (fails vs Dark)',
+  'Gale Wings':'Flying moves get +1 priority at full HP',
+  'Analytic':'Damage ×1.3 when moving last (not modeled)',
+  'Poison Heal':'Heals 1/8 HP per turn when poisoned',
+  'Rocky Payload':'Rock moves ×1.5',
+  'Toxic Chain':'30% to badly poison on hit (not modeled)',
+  'Cud Chew':'Berry effect fires twice (once next turn — not modeled)',
+  'Good as Gold':'Immune to opposing status moves',
+  'Vessel of Ruin':'Opponents\' SpA ×0.75 (prep — Reg-B disabled)',
+  'Sword of Ruin':'Opponents\' Def ×0.75 (prep — Reg-B disabled)',
+  'Tablets of Ruin':'Opponents\' Atk ×0.75 (prep — Reg-B disabled)',
+  'Beads of Ruin':'Opponents\' SpD ×0.75 (prep — Reg-B disabled)',
+  'Wind Rider':'Immune to wind moves and Tailwind boosts Atk +1',
+  'Wind Power':'Charges Electric on being hit by wind (not modeled)',
+  'Sap Sipper':'Immune to Grass; Atk +1 when hit by a Grass move',
+  'Cursed Body':'30% to disable an attacker\'s move on contact (not modeled)',
+  'Weak Armor':'Def −1 / Speed +2 when hit by a physical move',
+  'Justified':'Atk +1 when hit by a Dark move',
+  'Anticipation':'Warns of dangerous moves on send-in (not modeled)',
+  'Frisk':'Reveals opponent items on send-in (not modeled)',
+  'Forewarn':'Reveals opponent\'s strongest move on send-in (not modeled)',
+  'Telepathy':'[ally] Immune to damaging moves from ally (doubles)',
+  'Aroma Veil':'[ally] Protects team from taunt / encore / disable (not modeled)',
+  'Pastel Veil':'[ally] Team immune to poison (not modeled)',
+  'Sweet Veil':'[ally] Team immune to sleep (not modeled)',
+  'Healer':'[ally] 30% to cure ally\'s status each turn (not modeled)',
+  'Trace':'Copies the opposing mon\'s ability on switch-in',
+  'Mummy':'Contact makes attacker\'s ability become Mummy (not modeled)',
+  'Wandering Spirit':'Contact swaps abilities with attacker (not modeled)',
+  'Perish Body':'Contact sets 3-turn perish count on both mons (not modeled)',
+  'Corrosion':'Can poison Steel and Poison types (not modeled)',
   // Champions-invented Mega abilities
   'Fire Mane':'Mega Pyroar signature — Fire moves ×1.5 unconditionally',
   'Fairy Aura':'All Fairy moves on the field ×1.33; auto-toggles the field-effect chip on this side',
@@ -2667,6 +2757,10 @@ function wireSlot(p,m){
       updateResults();},
   });
   g(p+'_nature').addEventListener('change',()=>{readSlot(p,m);updateResults();});
+  // Calc slot deliberately has NO total-budget cap — users need freedom to
+  // test what-if matchups like "max HP + max Def enemy". Per-stat 0-32 clamp
+  // still applies (that's the SP hard limit); running total shows red when
+  // over 66 as an informational nudge but never blocks the input.
   STAT_KEYS.forEach(([k])=>{
     const sp=g(p+'_sp_'+k);
     const spv=g(p+'_spv_'+k);
@@ -3435,6 +3529,19 @@ function spRenderAbility(name, forme){
   }
   return `<span class="sp-name">${esc(name)}</span>${tag}${trimmed?`<span class="sp-meta">${esc(trimmed)}</span>`:''}`;
 }
+// Nature — name in bold + effect as a compact chip. "Serious (neutral)" gets
+// a "—" chip to make the neutral-ness explicit at a glance.
+function spRenderNature(name){
+  const pair = NATURES[name];
+  let chip;
+  if(!pair){
+    chip = '<span class="sp-nature-chip sp-nature-neutral">—</span>';
+  } else {
+    const [up, down] = pair;
+    chip = `<span class="sp-nature-chip"><span class="sp-nat-up">+${STAT_DISPLAY[up]}</span> <span class="sp-nat-down">−${STAT_DISPLAY[down]}</span></span>`;
+  }
+  return `<span class="sp-name">${esc(name)}</span>${chip}`;
+}
 function spRenderMove(name){
   const info=DEX.moves[name]||{};
   const catLab=info.category==='physical'?'Phys':info.category==='special'?'Spec':'Stat';
@@ -3863,7 +3970,7 @@ function _tbSlotHTML(s, i){
       <div class="tb-row-3">
         <input list="itemlist" placeholder="Item" value="${esc(s.item||'')}" data-field="item">
         <input list="abilitylist" placeholder="Ability" value="${esc(s.ability||'')}" data-field="ability">
-        <select data-field="nature">${ALL_NATURES.map(n=>`<option value="${esc(n)}" ${n===(s.nature||'Serious')?'selected':''}>${esc(natureLabel(n))}</option>`).join('')}</select>
+        <input type="text" data-field="nature" placeholder="Nature" value="${esc(s.nature||'Serious')}" autocomplete="off">
       </div>
       <div class="tb-evs">${evsRows}
         <span class="tb-ev-total ${evsOver?'over':''}">${evsTotal} / 66 SP</span>
@@ -3939,9 +4046,15 @@ function _tbWireSlot(i){
     onPick: v => { s.ability = v; tbSyncPaste(); },
     onClear: () => { s.ability = ''; tbSyncPaste(); },
   });
-  el.querySelector('[data-field="nature"]').addEventListener('change', e => {
-    s.nature = e.target.value;
-    tbSyncPaste();
+  // Nature smart-picker — renders name in bold + subtle "+SpA −Atk" chip so
+  // the label is scannable, unlike the cramped native select.
+  attachSmartPicker(el.querySelector('[data-field="nature"]'), {
+    source: () => ALL_NATURES,
+    defaultEmpty: () => ALL_NATURES,
+    usage: () => 0,
+    renderOption: spRenderNature,
+    onPick: v => { s.nature = v; tbSyncPaste(); },
+    onClear: () => { s.nature = 'Serious'; tbSyncPaste(); },
   });
   // Moves — smart picker with BP-weighted usage sort
   el.querySelectorAll('[data-move]').forEach(inp => {
@@ -3954,15 +4067,23 @@ function _tbWireSlot(i){
       onClear: () => { s.moves = s.moves || ['','','','']; s.moves[j] = ''; tbSyncPaste(); },
     });
   });
+  // Champions ruleset caps team-builder EVs at 66 SP total. Drag past the
+  // remaining budget and the slider snaps down to what's left on release —
+  // the visual + numeric input clamp mid-drag so users see the ceiling as
+  // they push against it. (The Damage Calc slot deliberately has no cap so
+  // users can what-if against max-invested opponents.)
   el.querySelectorAll('.tb-ev-slider,.tb-ev-num').forEach(inp => {
     inp.addEventListener('input', e => {
       const stat = e.target.dataset.ev;
-      const v = Math.max(0, Math.min(32, +e.target.value || 0));
       s.ev = s.ev || zeroEV();
+      const raw = Math.max(0, Math.min(32, +e.target.value || 0));
+      const otherSum = STAT_LBL_ORDER.reduce((sum, [k]) => k===stat ? sum : sum + (s.ev[k] || 0), 0);
+      const cap = Math.max(0, Math.min(32, 66 - otherSum));
+      const v = Math.min(raw, cap);
       s.ev[stat] = v;
-      // Update the paired input without full re-render (keeps focus)
-      el.querySelectorAll(`[data-ev="${stat}"]`).forEach(x => { if(x !== e.target) x.value = v; });
-      const total = STAT_LBL_ORDER.reduce((sum,[k])=>sum + (s.ev?.[k] || 0), 0);
+      // Mirror clamped value into both paired inputs (slider AND number).
+      el.querySelectorAll(`[data-ev="${stat}"]`).forEach(x => { if(+x.value !== v) x.value = v; });
+      const total = STAT_LBL_ORDER.reduce((sum,[k])=>sum + (s.ev[k] || 0), 0);
       const totalEl = el.querySelector('.tb-ev-total');
       if(totalEl){ totalEl.textContent = `${total} / 66 SP`; totalEl.classList.toggle('over', total > 66); }
       tbSyncPaste();
@@ -4000,7 +4121,26 @@ function tbExportToClipboard(){
   }
   try{ tcount && tcount('builder/export','builder: export'); }catch(e){}
 }
-function tbSave(){
+// Walk the 6 slots and report each partial mon's missing fields. A "partial"
+// mon is one that has a name/forme picked but is missing an item, ability, or
+// EVs total < 66 SP (Champions cap). Fully-empty slots are ignored — the user
+// intentionally left them blank.
+function _tbAudit(){
+  const gaps = [];
+  tbSlots.forEach((s, i) => {
+    if(!(s.name || s.forme)) return;  // empty slot — no warning
+    const missing = [];
+    if(!s.item)    missing.push('item');
+    if(!s.ability) missing.push('ability');
+    const sp = STAT_LBL_ORDER.reduce((t, [k]) => t + (s.ev?.[k] || 0), 0);
+    if(sp < 66)    missing.push(`stat points (${sp}/66)`);
+    const badMoves = (s.moves || []).filter(m => m && m.trim()).length;
+    if(badMoves < 4) missing.push(`${4-badMoves} of 4 moves`);
+    if(missing.length) gaps.push({ i: i+1, name: s.forme || s.name, missing });
+  });
+  return gaps;
+}
+function _tbDoSave(){
   const raw = serializeShowdown(tbSlots);
   try{ localStorage.setItem('vgc_myteam_raw', raw); }catch(e){}
   myTeam = parseShowdown(raw); myTeam.raw = raw;
@@ -4011,6 +4151,18 @@ function tbSave(){
   renderDmg();
   try{ tcount && tcount('builder/save','builder: save'); }catch(e){}
 }
+function tbSave(){
+  const gaps = _tbAudit();
+  if(gaps.length === 0){ _tbDoSave(); return; }
+  // Render a confirm modal listing the missing pieces per slot. User can
+  // "Save anyway" (their choice) or "Return to edit" (default primary).
+  const modal = document.getElementById('tbaudit');
+  const body = document.getElementById('tbaudit-body');
+  body.innerHTML = gaps.map(g => `<li><b>${esc(g.name)}</b> <span class="tba-slot">slot ${g.i}</span> — missing ${g.missing.map(m=>`<span class="tba-tag">${esc(m)}</span>`).join(' ')}</li>`).join('');
+  modal.classList.add('open');
+}
+function _tbConfirmSave(){ document.getElementById('tbaudit').classList.remove('open'); _tbDoSave(); }
+function _tbCancelSave(){ document.getElementById('tbaudit').classList.remove('open'); }
 
 // ─── Guided tour ────────────────────────────────────────────────────────────
 // Version-keyed dismissal — bump to backtwo_tour_v2 when the tour changes
@@ -4221,10 +4373,9 @@ if(_helpPill){
   });
 }
 
-// Esc closes the topmost open modal: Team Builder → Guide → tour splash → tour steps.
+// Esc closes the tour, splash, or Guide (whichever's open).
 document.addEventListener('keydown',(e)=>{
   if(e.key !== 'Escape') return;
-  if(document.getElementById('builderoverlay')?.classList.contains('open')){ closeBuilder(); return; }
   if(document.getElementById('toursplash')?.classList.contains('open')){ _closeSplash(); return; }
   if(document.getElementById('guidemodal')?.classList.contains('open')){ closeGuide(); return; }
   if(_tourStep >= 0){ _abortTour(); return; }
