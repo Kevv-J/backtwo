@@ -102,7 +102,12 @@
   .newbadge{display:inline-block;font-size:9px;background:rgba(16,185,129,0.10);color:var(--good);border:1px solid rgba(16,185,129,0.30);border-radius:3px;padding:1px 5px;margin-left:6px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
   input,textarea,select{font:inherit;color:var(--foreground);background:var(--input-bg);border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;font-size:13px}
   input:focus,textarea:focus,select:focus{outline:none;border-color:rgba(34,211,238,0.50);background:var(--secondary)}
-  select{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='%237a8095' d='M0 0l5 6 5-6z'/></svg>");background-repeat:no-repeat;background-position:right 8px center;padding-right:24px}
+  select{appearance:none;-webkit-appearance:none;-moz-appearance:none;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'><path d='M1 1L6 6L11 1' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-repeat:no-repeat;background-position:right 10px center;background-size:10px 7px;
+    padding-right:26px}
+  select:hover,select:focus-visible{
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'><path d='M1 1L6 6L11 1' stroke='%2322d3ee' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>")}
   #search{flex:1;min-width:200px;max-width:340px}
   /* overflow-x:clip (not hidden) — `hidden` would flip overflow-y to auto per
      the CSS overflow compat rule, turning main into a scroll container that
@@ -331,9 +336,16 @@
   .fightcardbtn:hover{background:var(--accent);color:#0c0e12}
   /* My-team details/summary */
   details.myteam{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:12px}
-  details.myteam summary{cursor:pointer;list-style:none;font-weight:600}
+  details.myteam summary{cursor:pointer;list-style:none;font-weight:600;display:flex;align-items:center;gap:6px}
   details.myteam summary::-webkit-details-marker{display:none}
+  details.myteam summary::after{content:'▾';color:var(--muted-foreground);margin-left:auto;font-size:11px;transition:transform .15s}
+  details.myteam[open] summary::after{transform:rotate(180deg)}
   details.myteam[open] summary{margin-bottom:8px}
+  /* Saved-team summary — visible enough not to miss */
+  .myteam-lbl{display:inline-flex;align-items:center;gap:8px}
+  .myteam-lbl strong{color:var(--foreground);font-size:14px;letter-spacing:.01em}
+  .myteam-ic{font-size:18px;line-height:1}
+  .myteam-hint{color:var(--muted-foreground);font-size:11px;font-family:'JetBrains Mono',ui-monospace,monospace}
   .calcfoot{margin-top:14px;padding:10px 14px;background:var(--panel);border:1px solid var(--line);border-radius:10px;line-height:1.5}
   .myrow{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-bottom:7px}
   .mybtn{padding:3px 9px;border-radius:6px;border:1px solid var(--line);background:var(--panel2);color:var(--accent);cursor:pointer;font-size:12px;font-weight:600}
@@ -405,7 +417,7 @@
      calc (slot search, item, ability, moves) + the ally search. Fixed-position
      so it floats above any layout; same style across all input types for
      consistency. */
-  .smartpicker-dropdown{position:fixed;z-index:80;background:var(--card-elev);border:1px solid var(--atk-color);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.5);max-height:300px;overflow-y:auto;min-width:220px;max-width:380px}
+  .smartpicker-dropdown{position:fixed;z-index:260;background:var(--card-elev);border:1px solid var(--atk-color);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.5);max-height:300px;overflow-y:auto;min-width:220px;max-width:380px}
   .smartpicker-option{display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .08s;font-size:12px;color:var(--foreground)}
   .smartpicker-option:last-child{border-bottom:none}
   .smartpicker-option.highlighted,.smartpicker-option:hover{background:var(--atk-bg)}
@@ -767,7 +779,7 @@
     align-items:flex-start;justify-content:center;overflow-y:auto;padding:24px}
   #builderoverlay.open{display:flex}
   #builderoverlay .tb-box{background:var(--panel);border:1px solid var(--border-strong);border-radius:14px;
-    padding:0;max-width:960px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.5);margin:auto}
+    padding:0;max-width:1280px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.5);margin:auto}
   .tb-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;
     border-bottom:1px solid var(--border);gap:12px;position:sticky;top:0;background:var(--panel);
     z-index:5;border-radius:14px 14px 0 0}
@@ -820,17 +832,8 @@
   .tb-slot-clear:hover{color:var(--bad);border-color:rgba(255,120,120,0.4);background:rgba(255,120,120,0.06)}
   .tb-slot-body{display:flex;flex-direction:column;gap:10px}
   .tb-row-3{display:grid;grid-template-columns:1fr 1fr minmax(140px,1.2fr);gap:6px}
-  #builderoverlay select{
-    cursor:pointer;
-    /* Kill the native chevron; draw our own so it matches the theme */
-    -webkit-appearance:none;-moz-appearance:none;appearance:none;
-    background-image:linear-gradient(45deg,transparent 50%,var(--muted-foreground) 50%),
-                     linear-gradient(135deg,var(--muted-foreground) 50%,transparent 50%);
-    background-position:calc(100% - 14px) 50%, calc(100% - 9px) 50%;
-    background-size:5px 5px, 5px 5px;
-    background-repeat:no-repeat;
-    padding-right:22px
-  }
+  #builderoverlay select{cursor:pointer;padding-right:26px}
+  /* The global `select` rule above provides the chevron + appearance:none */
   .tb-moves{display:grid;grid-template-columns:1fr 1fr;gap:6px}
   /* EV grid — dense but airy */
   .tb-evs{display:grid;grid-template-columns:32px 1fr 44px;gap:6px 10px;align-items:center;
@@ -3054,7 +3057,7 @@ function renderDmg(){
     <datalist id="itemlist">${ALL_ITEMS.map(i=>`<option value="${esc(i)}">`).join('')}</datalist>
     <datalist id="movelist">${ALL_MOVES.map(mv=>`<option value="${esc(mv)}">`).join('')}</datalist>
     <datalist id="abilitylist">${ALL_ABILITIES.map(a=>`<option value="${esc(a)}">`).join('')}</datalist>
-    <details class="myteam" data-tour="myteam-paste" ${myTeam.length?'':'open'}><summary>${myTeam.length?'<span class="small" style="color:var(--muted-foreground)">✎ edit my team</span>':'<strong>Paste your team</strong> <span class="small">Showdown export — saved in this browser, used for quick-picks</span>'}</summary>
+    <details class="myteam" data-tour="myteam-paste" ${myTeam.length?'':'open'}><summary>${myTeam.length?'<span class="myteam-lbl"><span class="myteam-ic">🎒</span><strong>My Team</strong> <span class="small myteam-hint">tap to edit</span></span>':'<strong>Paste your team</strong> <span class="small">Showdown export — saved in this browser, used for quick-picks</span>'}</summary>
       <textarea id="myta" placeholder="Garchomp @ Sitrus Berry&#10;Ability: Rough Skin&#10;EVs: 32 Atk / 32 Spe&#10;Jolly Nature&#10;- Earthquake&#10;- Dragon Claw&#10;...">${esc(myTeam.raw||'')}</textarea>
       <div class="myteam-actions">
         <button id="mysave" class="btn">Save my team</button>
@@ -3896,7 +3899,11 @@ function _tbWireSlot(i){
       correctMegaAbility(s);  // parity with calc — mega mons get post-mega ability
       tbRender();
     },
-    onClear: () => { s.name=''; s.forme=''; tbRender(); },
+    // Clearing the input mid-edit MUST NOT tbRender — it nukes DOM + focus so
+    // the user has to click back into the same box to keep typing. Just clear
+    // state; the next pick's onPick will rebuild sprites + ability list. Sync
+    // the paste textarea so Save doesn't hold stale text.
+    onClear: () => { s.name=''; s.forme=''; tbSyncPaste(); },
   });
   // Item — smart picker (may flip forme to -Mega via jsForme)
   attachSmartPicker(el.querySelector('[data-field="item"]'), {
@@ -4214,9 +4221,10 @@ if(_helpPill){
   });
 }
 
-// Esc closes the tour, splash, or Guide (whichever's open).
+// Esc closes the topmost open modal: Team Builder → Guide → tour splash → tour steps.
 document.addEventListener('keydown',(e)=>{
   if(e.key !== 'Escape') return;
+  if(document.getElementById('builderoverlay')?.classList.contains('open')){ closeBuilder(); return; }
   if(document.getElementById('toursplash')?.classList.contains('open')){ _closeSplash(); return; }
   if(document.getElementById('guidemodal')?.classList.contains('open')){ closeGuide(); return; }
   if(_tourStep >= 0){ _abortTour(); return; }
