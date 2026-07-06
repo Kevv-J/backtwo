@@ -305,6 +305,15 @@
   /* Stance toggle (Aegislash Shield ⇄ Blade) — only rendered by
      syncStanceToggle() when the loaded forme has a stance variant. */
   .stance-toggle{display:inline-flex;gap:2px;padding:2px;background:var(--secondary);border-radius:5px}
+  /* Mega toggle — appears in slot header only when the mon has a mega forme.
+     Cyan when active (mega applies), muted when off (mon stays base). */
+  .mega-pill{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:11px;
+    background:var(--atk-bg);border:1px solid var(--atk-border);color:var(--atk-color);
+    font-family:'JetBrains Mono',ui-monospace,monospace;font-size:9.5px;font-weight:700;
+    letter-spacing:.06em;cursor:pointer;text-transform:uppercase;user-select:none;transition:all .12s}
+  .mega-pill:hover,.mega-pill:focus-visible{filter:brightness(1.15);outline:none}
+  .mega-pill[data-off="1"]{background:var(--secondary);color:var(--muted-foreground);border-color:var(--border);opacity:.75}
+  .mega-pill[data-off="1"]:hover{color:var(--foreground);border-color:var(--foreground);opacity:1}
   .stance-toggle:empty{display:none}
   .stance-toggle button{padding:2px 8px;border-radius:3px;border:none;background:transparent;color:var(--muted-foreground);cursor:pointer;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-family:'Rajdhani','Inter',sans-serif}
   .stance-toggle button.active{background:var(--card-elev);color:var(--atk-color);box-shadow:0 0 0 1px var(--atk-border)}
@@ -402,6 +411,8 @@
   .smartpicker-option.highlighted,.smartpicker-option:hover{background:var(--atk-bg)}
   .smartpicker-option .sp-name{flex:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .smartpicker-option .sp-meta{color:var(--muted-foreground);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;flex-shrink:0}
+  .smartpicker-option .sp-tag{flex-shrink:0;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;text-transform:uppercase;letter-spacing:.05em;background:rgba(6,182,212,0.14);color:var(--atk-color);border:1px solid rgba(6,182,212,0.35)}
+  .smartpicker-option .sp-tag-warn{background:var(--warning-bg);color:var(--warning);border-color:var(--warning-border)}
   .smartpicker-option .sp-itemicon{flex-shrink:0;width:22px;height:22px;border-radius:4px;background:var(--secondary);border:1px solid var(--border);display:inline-flex;align-items:center;justify-content:center;color:var(--warning);font-size:11px}
   .smartpicker-option .sp-cat{flex-shrink:0;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;text-transform:uppercase;letter-spacing:.04em}
   .smartpicker-option .sp-cat.physical{background:rgba(251,146,60,0.18);color:var(--cat-phys);border:1px solid rgba(251,146,60,0.35)}
@@ -774,37 +785,96 @@
     border-radius:6px;color:var(--foreground);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;
     line-height:1.5;resize:vertical;box-sizing:border-box}
   .tb-io-actions{display:flex;gap:8px;flex-wrap:wrap}
-  .tb-slots{padding:16px 18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:14px}
-  .tb-slot{background:var(--muted);border:1px solid var(--border);border-radius:10px;padding:12px 14px;transition:border-color .12s}
-  .tb-slot.filled{border-color:var(--atk-border)}
-  .tb-slot-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .tb-slots{padding:18px 20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:14px}
+  /* Softer card — subtle border, gradient background, thinner radius outside */
+  .tb-slot{background:linear-gradient(180deg,rgba(255,255,255,0.02) 0%,transparent 100%),var(--muted);
+    border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:14px 14px 12px;transition:border-color .16s,box-shadow .16s}
+  .tb-slot.filled{border-color:var(--atk-border);box-shadow:0 0 0 1px rgba(6,182,212,0.10) inset}
+  .tb-slot:focus-within{border-color:rgba(6,182,212,0.35)}
+  .tb-slot-head{display:flex;align-items:center;gap:8px;margin-bottom:12px}
   .tb-slot-num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:5px;
-    background:var(--secondary);border:1px solid var(--border);color:var(--muted-foreground);
+    background:var(--secondary);color:var(--muted-foreground);
     font-family:'Rajdhani','Inter',sans-serif;font-weight:700;font-size:12px}
-  .tb-slot-sprite{width:32px;height:32px;flex-shrink:0}
-  .tb-slot-sprite img{width:32px;height:32px;image-rendering:pixelated;object-fit:contain}
-  .tb-slot-sprite.empty{width:32px;height:32px;border:1px dashed var(--border);border-radius:5px;background:var(--secondary)}
-  .tb-slot-mon{flex:1;padding:6px 10px;background:var(--secondary);border:1px solid var(--border);border-radius:5px;
-    color:var(--foreground);font-family:inherit;font-size:13px;font-weight:600;min-width:0}
-  .tb-slot-clear{background:transparent;border:1px solid var(--border);color:var(--muted-foreground);border-radius:5px;
-    padding:4px 8px;font-family:inherit;font-size:11px;cursor:pointer}
-  .tb-slot-clear:hover{color:var(--bad);border-color:var(--bad)}
-  .tb-slot-body{display:flex;flex-direction:column;gap:8px}
-  .tb-row-3{display:grid;grid-template-columns:1fr 1fr auto;gap:6px}
-  .tb-row-3 input,.tb-row-3 select{padding:5px 8px;background:var(--secondary);border:1px solid var(--border);border-radius:5px;
-    color:var(--foreground);font-family:inherit;font-size:12px;min-width:0}
-  .tb-row-3 select{cursor:pointer}
+  .tb-slot-sprite{width:30px;height:30px;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center}
+  .tb-slot-sprite img{width:30px;height:30px;image-rendering:pixelated;object-fit:contain}
+  .tb-slot-sprite.empty{width:30px;height:30px;border:1px dashed rgba(255,255,255,0.10);border-radius:5px;background:transparent}
+  /* Text inputs across the whole builder — cohesive style */
+  #builderoverlay input[type="text"],
+  #builderoverlay input[list],
+  #builderoverlay select,
+  #builderoverlay input[type="number"],
+  .tb-slot-mon{
+    padding:7px 10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);
+    border-radius:6px;color:var(--foreground);font-family:inherit;font-size:12px;min-width:0;
+    transition:border-color .12s,background .12s;outline:none
+  }
+  #builderoverlay input[type="text"]:focus,
+  #builderoverlay input[list]:focus,
+  #builderoverlay select:focus,
+  #builderoverlay input[type="number"]:focus,
+  .tb-slot-mon:focus{border-color:var(--atk-color);background:rgba(6,182,212,0.06)}
+  #builderoverlay input::placeholder{color:rgba(255,255,255,0.28)}
+  .tb-slot-mon{flex:1;font-size:13px;font-weight:600}
+  .tb-slot-clear{background:transparent;border:1px solid rgba(255,255,255,0.08);color:var(--muted-foreground);
+    border-radius:6px;padding:5px 9px;font-family:inherit;font-size:12px;cursor:pointer;line-height:1;transition:all .12s}
+  .tb-slot-clear:hover{color:var(--bad);border-color:rgba(255,120,120,0.4);background:rgba(255,120,120,0.06)}
+  .tb-slot-body{display:flex;flex-direction:column;gap:10px}
+  .tb-row-3{display:grid;grid-template-columns:1fr 1fr minmax(140px,1.2fr);gap:6px}
+  #builderoverlay select{
+    cursor:pointer;
+    /* Kill the native chevron; draw our own so it matches the theme */
+    -webkit-appearance:none;-moz-appearance:none;appearance:none;
+    background-image:linear-gradient(45deg,transparent 50%,var(--muted-foreground) 50%),
+                     linear-gradient(135deg,var(--muted-foreground) 50%,transparent 50%);
+    background-position:calc(100% - 14px) 50%, calc(100% - 9px) 50%;
+    background-size:5px 5px, 5px 5px;
+    background-repeat:no-repeat;
+    padding-right:22px
+  }
   .tb-moves{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-  .tb-moves input{padding:5px 8px;background:var(--secondary);border:1px solid var(--border);border-radius:5px;
-    color:var(--foreground);font-family:inherit;font-size:12px;min-width:0}
-  .tb-evs{display:grid;grid-template-columns:auto 1fr auto;gap:2px 8px;align-items:center;padding:6px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+  /* EV grid — dense but airy */
+  .tb-evs{display:grid;grid-template-columns:32px 1fr 44px;gap:6px 10px;align-items:center;
+    padding:10px 2px;margin:2px 0;border-top:1px solid rgba(255,255,255,0.05);border-bottom:1px solid rgba(255,255,255,0.05)}
   .tb-ev-lbl{color:var(--muted-foreground);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10.5px;letter-spacing:.04em}
-  .tb-ev-slider{width:100%;margin:0;min-width:0}
-  .tb-ev-num{width:36px;padding:2px 4px;background:var(--secondary);border:1px solid var(--border);border-radius:4px;
-    color:var(--foreground);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;text-align:right}
-  .tb-ev-total{color:var(--muted-foreground);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;
-    grid-column:1/-1;text-align:right;margin-top:2px}
-  .tb-ev-total.over{color:var(--bad)}
+  /* Slider — matches the calc's cyan .spslider treatment. accent-color makes
+     modern browsers respect the theme; the explicit rules below cover Chrome
+     and Firefox so the styling is identical everywhere. */
+  .tb-ev-slider{
+    width:100%;height:14px;-webkit-appearance:none;appearance:none;
+    background:transparent;cursor:pointer;margin:0;padding:0;min-width:0;
+    accent-color:var(--atk-color)
+  }
+  .tb-ev-slider::-webkit-slider-runnable-track{
+    height:4px;border-radius:3px;background:rgba(255,255,255,0.06)
+  }
+  .tb-ev-slider::-webkit-slider-thumb{
+    -webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+    background:var(--atk-color);margin-top:-5px;cursor:pointer;
+    box-shadow:0 0 0 2px rgba(6,182,212,0.18)
+  }
+  .tb-ev-slider::-moz-range-track{
+    height:4px;border-radius:3px;background:rgba(255,255,255,0.06);border:none
+  }
+  .tb-ev-slider::-moz-range-progress{
+    height:4px;border-radius:3px;background:var(--atk-color)
+  }
+  .tb-ev-slider::-moz-range-thumb{
+    width:12px;height:12px;border-radius:50%;background:var(--atk-color);border:none;cursor:pointer;
+    box-shadow:0 0 0 2px rgba(6,182,212,0.18)
+  }
+  .tb-ev-slider:focus{outline:none}
+  /* Number input — strip the native spinner arrows, tabular figures, subtle
+     right-aligned monospace so the numbers feel like a display, not an input */
+  .tb-ev-num{
+    padding:4px 6px;text-align:right;font-variant-numeric:tabular-nums;
+    font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;font-weight:600;color:var(--atk-color)
+  }
+  .tb-ev-num::-webkit-outer-spin-button,
+  .tb-ev-num::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .tb-ev-num{-moz-appearance:textfield;appearance:textfield}
+  .tb-ev-total{color:var(--muted-foreground);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10.5px;
+    grid-column:1/-1;text-align:right;margin-top:4px;letter-spacing:.04em}
+  .tb-ev-total.over{color:var(--bad);font-weight:600}
   .tb-foot{padding:12px 18px;display:flex;justify-content:flex-end;gap:10px;align-items:center;border-top:1px solid var(--border);background:var(--panel);border-radius:0 0 14px 14px}
   .tb-count{color:var(--muted-foreground);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;margin-right:auto}
   @media (max-width:640px){
@@ -1107,6 +1177,23 @@ function jsForme(name,item){name=normSpec(name);if(!isStone(item))return name;
   const xy=/ ([XY])$/.exec(item);
   if(xy){const lab=`${name}-Mega-${xy[1]}`;return DEX.formes[lab]?lab:(DEX.formes[name+'-Mega']?name+'-Mega':name);}
   const m=name+'-Mega';return DEX.formes[m]?m:name;}
+// Legal-ability lookup — a Mega forme's LEGAL abilities are its base mon's,
+// since the mega ability auto-applies on evolve (paste convention lists the
+// pre-mega ability). Callers that want the effective in-game ability of an
+// evolved mega go through correctMegaAbility() instead.
+function legalAbilities(forme){
+  if(!forme) return [];
+  const base = isMega(forme) ? baseOf(forme) : forme;
+  return (DEX.formes[base]?.abilities || []).map(a => a.name);
+}
+function isHiddenAbility(forme, name){
+  const base = forme && isMega(forme) ? baseOf(forme) : forme;
+  return !!DEX.formes[base]?.abilities?.find(a => a.name===name && a.hidden);
+}
+// The "effective" forme for calc — if the user toggled the mega off (m.megaOff),
+// stats/types resolve to the base mon even though m.forme still holds the mega
+// label (so the picker input, mega pill, URL round-trip stay coherent).
+const effectiveForme = m => (m && m.megaOff && isMega(m.forme)) ? baseOf(m.forme) : (m ? m.forme : '');
 
 // ---------- build per-forme index (keyed by mega-aware forme) ----------
 function bump(o,k){if(!k)return;o[k]=(o[k]||0)+1;}
@@ -1891,7 +1978,7 @@ function targetSlot(defaultP){return pinned==='a'?'b':pinned==='b'?'a':defaultP;
 function zeroEV(){return{hp:0,atk:0,def:0,spa:0,spd:0,spe:0};}
 function zeroBoost(){return{atk:0,def:0,spa:0,spd:0,spe:0};}
 function newMon(){return{forme:'',item:'',ability:'',nature:'Serious',ev:zeroEV(),boost:zeroBoost(),moves:['','','',''],status:'ok',hpPct:100,faintedAllies:0,timesHit:0};}
-function statsOf(m){return m.forme?statline(m.forme,m.ev,m.nature):null;}
+function statsOf(m){const f=effectiveForme(m);return f?statline(f,m.ev,m.nature):null;}
 // Grounded check: defender takes terrain effects only if grounded. Flying type
 // or Levitate ability mean ungrounded (unless Gravity overrides them).
 function isGrounded(mon){const types=DEX.formes[mon.forme]?.types||[];
@@ -2013,7 +2100,7 @@ function calcDmg(atk,move,def,atkSide,defSide){
     else if(weather==='sand') moveType='rock';
     else if(weather==='snow') moveType='ice';
   }
-  const aT=DEX.formes[atk.forme]?.types||[], dT=DEX.formes[def.forme]?.types||[];
+  const aT=DEX.formes[effectiveForme(atk)]?.types||[], dT=DEX.formes[effectiveForme(def)]?.types||[];
   // Magic Room disables held items
   const aItem=field.magicRoom?'':atk.item, dItem=field.magicRoom?'':def.item;
   // CRIT: ignore defender's positive boosts to Def/SpD, and attacker's negative boosts to Atk/SpA.
@@ -2296,7 +2383,7 @@ function koNote(r){
 const g=id=>document.getElementById(id);
 function slotHTML(p,title){
   const tag=p==='a'?'Ally':'Enemy';
-  return `<div class="dmgslot" data-p="${p}"><div class="slothd"><h3>${title} <button class="pinbtn ${pinned===p?'locked':''}" data-p="${p}" title="Lock this slot — quick-picks go to the other slot">${pinned===p?'🔒':'🔓'}</button></h3><div class="slothd-right"><span id="${p}_stance" class="stance-toggle"></span><span id="${p}_slotsprite" class="slotsprite"></span><span id="${p}_typeline" class="small"></span></div></div><div class="slotbody">
+  return `<div class="dmgslot" data-p="${p}"><div class="slothd"><h3>${title} <button class="pinbtn ${pinned===p?'locked':''}" data-p="${p}" title="Lock this slot — quick-picks go to the other slot">${pinned===p?'🔒':'🔓'}</button></h3><div class="slothd-right"><span id="${p}_megapill" class="mega-pill" hidden></span><span id="${p}_stance" class="stance-toggle"></span><span id="${p}_slotsprite" class="slotsprite"></span><span id="${p}_typeline" class="small"></span></div></div><div class="slotbody">
   ${(()=>{
     // Slot A gets a My Team quick-pick row; slot B gets a Fight-team quick-pick
     // row (when a team is being fought). If neither is available, render an
@@ -2399,10 +2486,42 @@ function renderFinals(p,m){const s=statsOf(m);
       });}
   });
   const st=g(p+'_typeline');
-  if(st)st.innerHTML=s&&DEX.formes[m.forme]?DEX.formes[m.forme].types.map(typePill).join(' '):'';
-  // Slot-header sprite reflects the currently-loaded mon.
+  const ef=effectiveForme(m);
+  if(st)st.innerHTML=s&&DEX.formes[ef]?DEX.formes[ef].types.map(typePill).join(' '):'';
+  // Slot-header sprite reflects the currently-loaded mon. When mega is
+  // toggled off, we show the BASE sprite to make it visually clear that
+  // the mon isn't evolving this battle.
   const sp=g(p+'_slotsprite');
-  if(sp)sp.innerHTML=m.forme?pokeSprite(m.forme,'32'):'';}
+  if(sp)sp.innerHTML=m.forme?pokeSprite(ef,'32'):'';
+  syncMegaPill(p,m);}
+// Mega toggle — shown only when the current mon has a mega forme. Click flips
+// m.megaOff; ability resets to the base/mega slot-0 depending on the new state.
+function syncMegaPill(p,m){
+  const el=document.getElementById(p+'_megapill');
+  if(!el)return;
+  const showToggle = m && m.forme && isMega(m.forme);
+  el.hidden = !showToggle;
+  if(!showToggle)return;
+  const off = !!m.megaOff;
+  el.dataset.off = off ? '1' : '0';
+  el.textContent = off ? 'Mega ✕ Off' : 'Mega ⚡ On';
+  el.title = off ? 'Mon isn\'t mega-evolving this battle (base stats + base ability). Click to re-enable.' : 'Mega evolves on send-in. Click to disable — some players run the mon non-mega\'d.';
+  el.onclick = () => {
+    m.megaOff = !m.megaOff;
+    const base = baseOf(m.forme);
+    if(m.megaOff){
+      // Turning off — restore the base mon's slot-0 ability. (User can retype.)
+      const baseAb = DEX.formes[base]?.abilities?.[0]?.name;
+      if(baseAb) m.ability = baseAb;
+    } else {
+      // Turning back on — re-apply the mega ability.
+      correctMegaAbility(m);
+    }
+    populateSlot(p, m);
+    updateResults();
+    try{ tcount && tcount('calc/mega-toggle', 'calc: mega ' + (m.megaOff?'off':'on')); }catch(e){}
+  };
+}
 function syncBtnGroup(grp,val){document.querySelectorAll(`[data-grp="${grp}"]`).forEach(b=>b.classList.toggle('active',b.dataset.v===val));}
 function syncFxRow(p,sideObj){SIDE_FX.forEach(([k])=>{const el=document.querySelector(`[data-grp="${p}_fx"][data-v="${k}"]`);if(el)el.classList.toggle('active',!!sideObj[k]);});}
 function populateSlot(p,m){
@@ -2490,6 +2609,7 @@ function rebuildSetOptions(p,m){const ss=setsFor(m.forme).slice(0,10);
 function wireSlot(p,m){
   function applyForme(v){
     Object.assign(m,defaultSet(v));
+    m.megaOff=false;  // new mon pick resets the what-if toggle
     correctMegaAbility(m);  // calc-side only
     rebuildSetOptions(p,m);
     g(p+'_search').value=v;populateSlot(p,m);
@@ -2520,10 +2640,21 @@ function wireSlot(p,m){
       const el=g(p+'_item'); el.title=descFor('item',v)||'Held item';},
     onClear:()=>{m.item='';readSlot(p,m);updateResults();},
   });
+  // Ability picker sources only the legal abilities for the current mon
+  // (mega formes route to base — pastes list pre-mega ability). The current
+  // value survives even if it's not in the legal set — prepended as a
+  // 'custom' row so bad-old-data pastes aren't silently retyped away.
+  const _abilitySource = () => {
+    const ef = effectiveForme(m);
+    const legal = legalAbilities(ef);
+    const cur = (m.ability||'').trim();
+    return (cur && legal.length && !legal.includes(cur)) ? [cur, ...legal] : (legal.length ? legal : ALL_ABILITIES);
+  };
   attachSmartPicker(g(p+'_ability'),{
-    source:()=>ALL_ABILITIES,
+    source:_abilitySource,
+    defaultEmpty:_abilitySource,
     usage:(n)=>0,
-    renderOption:spRenderAbility,
+    renderOption:(v)=>spRenderAbility(v, effectiveForme(m)),
     onPick:v=>{m.ability=v;readSlot(p,m);
       afterSlotChange(p,m);
       updateResults();
@@ -2900,6 +3031,7 @@ function loadIntoSlot(p,m,src){m.forme=src.forme;m.item=src.item||'';m.ability=s
 // Only fires for -Mega formes; non-megas keep the dataset-derived ability.
 function correctMegaAbility(m){
   if(!m.forme || !isMega(m.forme))return;
+  if(m.megaOff)return;  // user opted out of the mega — keep the pre-mega ability
   const apiAb=DEX.formes[m.forme]?.abilities?.[0]?.name;
   if(apiAb)m.ability=apiAb;
 }
@@ -3287,10 +3419,18 @@ function spRenderItem(name){
   // Show a generic accent dot until item sprites are added in a future build.
   return `<span class="sp-itemicon">◆</span><span class="sp-name">${esc(name)}</span>`;
 }
-function spRenderAbility(name){
+function spRenderAbility(name, forme){
   const desc=ABILITY_DESC[name]||'';
   const trimmed=desc.length>48?desc.slice(0,45)+'…':desc;
-  return `<span class="sp-name">${esc(name)}</span>${trimmed?`<span class="sp-meta">${esc(trimmed)}</span>`:''}`;
+  // Tag rows so users can spot Hidden Abilities and non-legal (custom) entries.
+  // When forme is missing we skip tagging — non-forme callers keep the old look.
+  let tag='';
+  if(forme){
+    const legal=legalAbilities(forme);
+    if(legal.length && !legal.includes(name)) tag=`<span class="sp-tag sp-tag-warn">custom</span>`;
+    else if(isHiddenAbility(forme,name))     tag=`<span class="sp-tag">HA</span>`;
+  }
+  return `<span class="sp-name">${esc(name)}</span>${tag}${trimmed?`<span class="sp-meta">${esc(trimmed)}</span>`:''}`;
 }
 function spRenderMove(name){
   const info=DEX.moves[name]||{};
@@ -3681,6 +3821,10 @@ function closeBuilder(){
   document.getElementById('builderoverlay').classList.remove('open');
 }
 function tbRender(){
+  // Hide any smart-picker dropdown before the DOM churn — the picker's
+  // captured input reference becomes detached across the innerHTML rebuild
+  // and would orphan on document.body otherwise.
+  document.querySelectorAll('.smartpicker-dropdown').forEach(d => d.remove());
   const slotsEl = document.getElementById('tb-slots');
   const filled = tbSlots.filter(s => s.name || s.forme).length;
   document.getElementById('tb-count').textContent = `${filled} / 6 mons`;
@@ -3739,31 +3883,68 @@ function _tbWireSlot(i){
   const el = document.querySelector(`.tb-slot[data-i="${i}"]`);
   if(!el) return;
   const s = tbSlots[i];
-  // Mon field
-  el.querySelector('[data-field="name"]').addEventListener('change', e => {
-    s.name = e.target.value.trim();
-    s.forme = s.name ? jsForme(s.name, s.item) : '';
-    tbRender();
+  // Mon — smart picker (sprite + usage count; commits on single Enter)
+  attachSmartPicker(el.querySelector('[data-field="name"]'), {
+    source: () => ALL_FORMES,
+    usage: (n) => idx.get(n)?.count || 0,
+    defaultEmpty: () => pokeList.slice(0,10).map(e => e.name),
+    renderOption: spRenderForme,
+    onPick: v => {
+      const r = resolveForme(v);
+      s.name = r || v;
+      s.forme = s.name ? jsForme(s.name, s.item) : '';
+      correctMegaAbility(s);  // parity with calc — mega mons get post-mega ability
+      tbRender();
+    },
+    onClear: () => { s.name=''; s.forme=''; tbRender(); },
   });
-  el.querySelector('[data-field="item"]').addEventListener('change', e => {
-    s.item = e.target.value.trim();
-    s.forme = s.name ? jsForme(s.name, s.item) : '';
-    tbRender();
+  // Item — smart picker (may flip forme to -Mega via jsForme)
+  attachSmartPicker(el.querySelector('[data-field="item"]'), {
+    source: () => ALL_ITEMS,
+    usage: () => 0,
+    renderOption: spRenderItem,
+    onPick: v => {
+      s.item = v;
+      const newForme = s.name ? jsForme(s.name, s.item) : '';
+      const formeChanged = newForme !== s.forme;
+      s.forme = newForme;
+      if(formeChanged) correctMegaAbility(s);
+      tbRender();
+    },
+    onClear: () => {
+      s.item = '';
+      s.forme = s.name ? jsForme(s.name, '') : '';
+      tbRender();
+    },
   });
-  el.querySelector('[data-field="ability"]').addEventListener('change', e => {
-    s.ability = e.target.value.trim();
-    tbSyncPaste();
+  // Ability — smart picker, legal-set filtered (mega → base's abilities)
+  const _tbAbilitySource = () => {
+    const f = s.forme || (s.name ? jsForme(s.name, s.item) : '');
+    const legal = legalAbilities(f);
+    const cur = (s.ability||'').trim();
+    return (cur && legal.length && !legal.includes(cur)) ? [cur, ...legal] : (legal.length ? legal : ALL_ABILITIES);
+  };
+  attachSmartPicker(el.querySelector('[data-field="ability"]'), {
+    source: _tbAbilitySource,
+    defaultEmpty: _tbAbilitySource,
+    usage: () => 0,
+    renderOption: (v) => spRenderAbility(v, s.forme || jsForme(s.name, s.item)),
+    onPick: v => { s.ability = v; tbSyncPaste(); },
+    onClear: () => { s.ability = ''; tbSyncPaste(); },
   });
   el.querySelector('[data-field="nature"]').addEventListener('change', e => {
     s.nature = e.target.value;
     tbSyncPaste();
   });
+  // Moves — smart picker with BP-weighted usage sort
   el.querySelectorAll('[data-move]').forEach(inp => {
-    inp.addEventListener('change', e => {
-      const j = +e.target.dataset.move;
-      s.moves = s.moves || ['','','',''];
-      s.moves[j] = e.target.value.trim();
-      tbSyncPaste();
+    const j = +inp.dataset.move;
+    attachSmartPicker(inp, {
+      source: () => ALL_MOVES,
+      usage: (n) => DEX.moves[n]?.power || 0,
+      renderOption: spRenderMove,
+      onPick: v => { s.moves = s.moves || ['','','','']; s.moves[j] = v; tbSyncPaste(); },
+      onClear: () => { s.moves = s.moves || ['','','','']; s.moves[j] = ''; tbSyncPaste(); },
     });
   });
   el.querySelectorAll('.tb-ev-slider,.tb-ev-num').forEach(inp => {
