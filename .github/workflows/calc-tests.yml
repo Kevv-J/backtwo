@@ -31,7 +31,10 @@ concurrency:
 jobs:
   golden:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    # Bumped from 3 min: a cold CI env needs to scrape ~1490 pokepastes on
+    # first data build (build_db.py has no cache to reuse). Golden tests
+    # themselves run in <1 s once the data is present.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -40,10 +43,16 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Ensure data/dex.json exists (rebuild if a PR only touched code)
+      - name: Ensure data/dex.json + data/teams.json exist
+        # Both files are gitignored (regenerable), so on a fresh checkout we
+        # need to scrape teams first (build_db.py) then build the dex/HTML
+        # (build_dex.py, which reads data/teams.json at line 433).
         run: |
-          if [ ! -f data/dex.json ]; then
+          if [ ! -f data/dex.json ] || [ ! -f data/teams.json ]; then
             pip install --quiet -r requirements.txt
+            if [ ! -f data/teams.json ]; then
+              python build_db.py
+            fi
             python build_dex.py
           fi
 
