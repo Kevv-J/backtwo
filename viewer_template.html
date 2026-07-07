@@ -2147,12 +2147,16 @@ function applySlotAutoWire(p, m){
       if(!side[sk]){side[sk]=1;tracker.flags.push(sk);}
     }
   }
-  // Weather-setter abilities — overwrite weather (matches in-game switch-in behavior)
+  // Weather-setter abilities — apply ONLY when the field is neutral, or when
+  // the target weather is already in place (idempotent). If someone else has
+  // an override up (opponent's Drizzle, user-manual pick), respect it. Prior
+  // behavior slammed Torkoal's Sun back on every re-render, wiping the Rain
+  // the user had set to simulate the enemy Politoed still being active.
   const wk=WEATHER_SETTER[m.ability];
-  if(wk){weather=wk;tracker.weather=wk;}
-  // Terrain-setter abilities
+  if(wk && (weather==='none' || weather===wk)){weather=wk;tracker.weather=wk;}
+  // Terrain-setter abilities — same rule.
   const tk=TERRAIN_SETTER[m.ability];
-  if(tk){field.terrain=tk;tracker.terrain=tk;}
+  if(tk && (field.terrain==='none' || field.terrain===tk)){field.terrain=tk;tracker.terrain=tk;}
 }
 // After applying auto-wires, refresh the field-bar UI to reflect new state.
 function syncFieldUI(){
@@ -2320,17 +2324,25 @@ function calcDmg(atk,move,def,atkSide,defSide){
   }
   if(isCrit){if(aB<0)aB=0;if(dB>0)dB=0;}
   Aa=applyBoost(Aa,aB); D=applyBoost(D,dB);
-  // attacker stat-modifying abilities
-  if(phys && (atk.ability==='Huge Power'||atk.ability==='Pure Power')) Aa*=2;
-  if(!phys && atk.ability==='Solar Power' && (weather==='sun'||weather==='harshsun')) Aa=Math.floor(Aa*1.5);
+  // For Foul Play we're computing the DEFENDER's effective Atk. Ability, item,
+  // side (Flower Gift), and status modifiers must all read from the defender —
+  // the attacker's Huge Power / Choice Band / Guts / burn do NOT apply, and
+  // the DEFENDER's do. (Bulbapedia: "Attack modifiers from abilities, items,
+  // and stat stages of the defending Pokémon are used … not those of the
+  // attacking Pokémon.")
+  const aSrc     = isFoulPlay ? def      : atk;
+  const aItemSrc = isFoulPlay ? dItem    : aItem;
+  const aSideSrc = isFoulPlay ? defSide  : atkSide;
+  if(phys && (aSrc.ability==='Huge Power'||aSrc.ability==='Pure Power')) Aa*=2;
+  if(!phys && aSrc.ability==='Solar Power' && (weather==='sun'||weather==='harshsun')) Aa=Math.floor(Aa*1.5);
   // Guts: +50% Atk if burned (and ignores burn's halving)
-  const burnedAtk=(atk.status==='brn'&&phys&&atk.ability!=='Guts');
-  if(atk.status==='brn'&&phys&&atk.ability==='Guts') Aa=Math.floor(Aa*1.5);
-  // Flower Gift on attacker's side in Sun: +50% Atk
-  if(phys && atkSide.flowerGift && (weather==='sun'||weather==='harshsun')) Aa=Math.floor(Aa*1.5);
+  const burnedAtk=(aSrc.status==='brn'&&phys&&aSrc.ability!=='Guts');
+  if(aSrc.status==='brn'&&phys&&aSrc.ability==='Guts') Aa=Math.floor(Aa*1.5);
+  // Flower Gift on the Atk-owner's side in Sun: +50% Atk
+  if(phys && aSideSrc.flowerGift && (weather==='sun'||weather==='harshsun')) Aa=Math.floor(Aa*1.5);
   // items on stats (skipped under Magic Room)
-  if(aItem==='Choice Band'&&phys)Aa=Math.floor(Aa*1.5);
-  if(aItem==='Choice Specs'&&!phys)Aa=Math.floor(Aa*1.5);
+  if(aItemSrc==='Choice Band'&&phys)Aa=Math.floor(Aa*1.5);
+  if(aItemSrc==='Choice Specs'&&!phys)Aa=Math.floor(Aa*1.5);
   if(dItem==='Assault Vest'&&!phys)D=Math.floor(D*1.5);
   if(dItem==='Eviolite')D=Math.floor(D*1.5);
   // defender stat-modifying abilities
@@ -2590,11 +2602,11 @@ function slotHTML(p,title){
     return '';
   })()}
   <input id="${p}_search" placeholder="search any Pokémon…" list="formelist" autocomplete="off" onfocus="setTimeout(()=>this.select(),0)">
-  <select id="${p}_set"><option>— pick a Pokémon first —</option></select>
+  <input id="${p}_set" placeholder="— pick a Pokémon first —" autocomplete="off" onfocus="setTimeout(()=>this.select(),0)">
   <div class="fld3">
     <input id="${p}_item" list="itemlist" placeholder="Item" autocomplete="off" onfocus="setTimeout(()=>this.select(),0)">
     <input id="${p}_ability" list="abilitylist" placeholder="Ability" autocomplete="off" onfocus="setTimeout(()=>this.select(),0)">
-    <select id="${p}_nature" title="Nature shapes which stat is +10%/-10%">${ALL_NATURES.map(n=>`<option value="${esc(n)}">${esc(natureLabel(n))}</option>`).join('')}</select>
+    <input id="${p}_nature" title="Nature shapes which stat is +10%/-10%" autocomplete="off" onfocus="setTimeout(()=>this.select(),0)">
   </div>
   <div class="seclabel">Stat points <span class="sp-total" id="${p}_sptot">0 / 66</span></div>
   <table class="statedit"><colgroup><col class="statcol"><col class="spcol"><col></colgroup><thead><tr><th></th><th>SP</th><th>Boost</th></tr></thead><tbody>
@@ -2788,9 +2800,21 @@ function syncCounters(p,m){
   if(faVal)faVal.textContent=m.faintedAllies||0;
   if(thVal)thVal.textContent=m.timesHit||0;
 }
-function rebuildSetOptions(p,m){const ss=setsFor(m.forme).slice(0,10);
-  g(p+'_set').innerHTML=`<option value="-1">Most recent / default</option>`+
-    ss.map((s,i)=>`<option value="${i}">${esc(s.evs||'no EVs')} · ${esc(s.nature||'neutral')}${s.item&&s.item!=='-'?' · '+esc(s.item):''}${s.date?' · '+esc(s.date):''}</option>`).join('');}
+// Set-picker labels — stable per side, rebuilt when the forme changes. The
+// smart-picker treats each label as a value; onPick maps label → index.
+let _setLabels_a = ['— pick a Pokémon first —'];
+let _setLabels_b = ['— pick a Pokémon first —'];
+function _setLabelFor(s){
+  return `${s.evs||'no EVs'} · ${s.nature||'neutral'}${s.item&&s.item!=='-'?' · '+s.item:''}${s.date?' · '+s.date:''}`;
+}
+function rebuildSetOptions(p,m){
+  const ss=setsFor(m.forme).slice(0,10);
+  const labels=['Most recent / default', ...ss.map(_setLabelFor)];
+  if(p==='a') _setLabels_a=labels; else _setLabels_b=labels;
+  const inp=g(p+'_set');
+  inp.value=labels[0];
+  inp.title=labels[0];
+}
 function wireSlot(p,m){
   function applyForme(v){
     Object.assign(m,defaultSet(v));
@@ -2809,13 +2833,33 @@ function wireSlot(p,m){
     renderOption:spRenderForme,
     onPick:v=>{const r=resolveForme(v); if(r)applyForme(r);},
   });
-  g(p+'_set').addEventListener('change',e=>{const ss=setsFor(m.forme).slice(0,10),i=+e.target.value;
-    if(i<0||!ss[i])Object.assign(m,defaultSet(m.forme));
-    else{const s=ss[i];m.item=s.item||'';m.ability=s.ability||'';m.nature=s.nature||'Serious';m.ev=parseEVs(s.evs);m.boost=zeroBoost();m.moves=(s.moves||[]).slice(0,4);while(m.moves.length<4)m.moves.push('');m.status='ok';m.hpPct=100;}
-    correctMegaAbility(m);  // calc-side only
-    populateSlot(p,m);if(p==='a')selA=null;else selB=null;
-    afterSlotChange(p,m);
-    updateResults();});
+  // Preset spread picker — smart-picker with label→index lookup. Replaces the
+  // old native <select> (which rendered with an OS-native wavy focus pattern
+  // on Linux that clashed with the theme). openShowsAll: click always shows
+  // every spread — the current label ("Most recent / default") isn't useful
+  // as a filter, and the labels are too long to reasonably type-match.
+  attachSmartPicker(g(p+'_set'),{
+    source:()=>p==='a'?_setLabels_a:_setLabels_b,
+    defaultEmpty:()=>p==='a'?_setLabels_a:_setLabels_b,
+    usage:()=>0,
+    openShowsAll:true,
+    renderOption:(v)=>`<div class="sp-name" style="white-space:normal;line-height:1.4">${esc(v)}</div>`,
+    onPick:(label)=>{
+      const labels=p==='a'?_setLabels_a:_setLabels_b;
+      const ss=setsFor(m.forme).slice(0,10);
+      const i=labels.indexOf(label)-1;  // 0-th entry is "Most recent / default"
+      if(i<0||!ss[i])Object.assign(m,defaultSet(m.forme));
+      else{const s=ss[i];m.item=s.item||'';m.ability=s.ability||'';m.nature=s.nature||'Serious';m.ev=parseEVs(s.evs);m.boost=zeroBoost();m.moves=(s.moves||[]).slice(0,4);while(m.moves.length<4)m.moves.push('');m.status='ok';m.hpPct=100;}
+      correctMegaAbility(m);
+      populateSlot(p,m);if(p==='a')selA=null;else selB=null;
+      afterSlotChange(p,m);
+      updateResults();
+      // Restore the label in the input — populateSlot repaints all fields
+      // including this one via the "Most recent / default" label.
+      g(p+'_set').value=label;
+    },
+    onClear:()=>{ /* keep current values; deleting the label is a no-op */ },
+  });
   // Item + Ability inputs — smart pickers (replaces datalists)
   attachSmartPicker(g(p+'_item'),{
     source:()=>ALL_ITEMS,
@@ -2848,7 +2892,28 @@ function wireSlot(p,m){
       afterSlotChange(p,m);
       updateResults();},
   });
-  g(p+'_nature').addEventListener('change',()=>{readSlot(p,m);updateResults();});
+  // Nature — smart-picker (replaces native select). openShowsAll: click shows
+  // the full list of 22 natures instead of filtering by the current pick.
+  // Typing still narrows normally. onClear leaves the input empty so the user
+  // can type from scratch; state falls back to 'Serious' (neutral) until a
+  // pick lands. Blur restores the visible label to whatever state holds.
+  attachSmartPicker(g(p+'_nature'),{
+    source:()=>ALL_NATURES,
+    defaultEmpty:()=>ALL_NATURES,
+    usage:()=>0,
+    openShowsAll:true,
+    renderOption:spRenderNature,
+    onPick:(v)=>{m.nature=v;readSlot(p,m);updateResults();},
+    onClear:()=>{m.nature='Serious';readSlot(p,m);updateResults();},
+  });
+  g(p+'_nature').addEventListener('blur',()=>{
+    // If user cleared then walked away without picking, resync the field to
+    // the current state so it doesn't look empty.
+    setTimeout(()=>{
+      const el=g(p+'_nature');
+      if(el && el.value.trim()==='') el.value=m.nature||'Serious';
+    },200);
+  });
   // Calc slot deliberately has NO total-budget cap — users need freedom to
   // test what-if matchups like "max HP + max Def enemy". Per-stat 0-32 clamp
   // still applies (that's the SP hard limit); running total shows red when
@@ -3569,12 +3634,27 @@ function attachSmartPicker(input, opts){
       opt.addEventListener('mousedown',e=>{e.preventDefault();commit(opt.dataset.val);});
     });
   }
+  // When openShowsAll is true, the first render after focus ignores input.value
+  // and shows the full source list. Typing (input event) resumes normal
+  // filtering. Users don't have to backspace to see options they've already
+  // picked once.
+  let _showAllOnce = false;
   function update(){
-    matches=smartMatches(input.value, opts.source(), opts.usage||(()=>0), opts.defaultEmpty);
+    if(_showAllOnce){
+      // Bypass smartMatches' top-10 cap so click-to-open shows every option
+      // (22 natures, up to 11 preset spreads — we don't want any hidden).
+      _showAllOnce = false;
+      matches = (opts.source() || []).slice();
+    } else {
+      matches=smartMatches(input.value, opts.source(), opts.usage||(()=>0), opts.defaultEmpty);
+    }
     highlight=0;
     render();
   }
-  function open(){ensureDD();position();update();}
+  function open(){
+    if(opts.openShowsAll) _showAllOnce = true;
+    ensureDD();position();update();
+  }
   function close(){if(dd){dd.remove();dd=null;}}
   function commit(val){
     if(!val)val=matches[highlight]||matches[0];
