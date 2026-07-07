@@ -141,6 +141,38 @@
   .meta{color:var(--dim);font-size:12px}
   .chip{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:1px 7px;margin:2px 4px 2px 0;font-size:12px}
   .chip.rank{border-color:var(--accent2);color:var(--accent2)}
+  .chip-share{padding:0}
+  .chip-share-btn{background:transparent;border:none;color:var(--foreground);font:inherit;font-size:12px;padding:1px 7px;cursor:pointer;border-radius:6px;letter-spacing:.02em}
+  .chip-share-btn:hover{color:var(--atk-color)}
+  .chip-share-btn.copied{color:var(--good);font-weight:600}
+  /* Full-page shared-team view — reuses builder DOM via .tb-view modifier. */
+  #view-share .pad{padding:20px 24px 60px}
+  @media (max-width:640px){ #view-share .pad{padding:12px 10px 40px} }
+  .share-page{max-width:1180px;margin:0 auto}
+  .share-page-hero{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 22px;margin-bottom:16px;
+    display:flex;flex-wrap:wrap;align-items:flex-start;gap:14px 20px}
+  .share-page-hero-main{flex:1 1 320px;min-width:0}
+  .share-page-title{font-family:'Rajdhani','Inter',sans-serif;font-size:24px;font-weight:700;color:var(--foreground);line-height:1.15;margin:0 0 6px;letter-spacing:.01em}
+  .share-page-sub{color:var(--muted-foreground);font-size:13px;margin-bottom:10px;line-height:1.55}
+  .share-page-sub b{color:var(--foreground);font-weight:600}
+  .share-page-chips{display:flex;flex-wrap:wrap;gap:0}
+  .share-page-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding-top:2px}
+  .share-page-actions .btn{padding:7px 14px;font-size:13px;font-weight:600;border-radius:8px;cursor:pointer;font-family:inherit;
+    background:transparent;color:var(--foreground);border:1px solid var(--border)}
+  .share-page-actions .btn:hover{border-color:var(--atk-color);color:var(--atk-color)}
+  .share-page-actions .btn.primary{background:var(--atk-color);color:#0c0e12;border-color:var(--atk-color)}
+  .share-page-actions .btn.primary:hover{filter:brightness(1.1)}
+  .share-page-actions .btn.copied{background:var(--good-bg,rgba(16,185,129,0.14));color:var(--good);border-color:var(--good)}
+  .share-not-found{text-align:center;padding:60px 20px;color:var(--muted-foreground)}
+  .share-not-found h2{color:var(--foreground);font-family:'Rajdhani','Inter',sans-serif;margin:0 0 8px;font-size:22px}
+  /* Read-only variant of #builderoverlay markup — reuses .tb-slot etc styling. */
+  #builderoverlay.tb-view{position:static;inset:auto;background:transparent;padding:0;display:block;z-index:auto}
+  .tb-view .tb-box{background:transparent;border:none;padding:0;max-width:none;max-height:none;box-shadow:none;border-radius:0}
+  .tb-view .tb-header,.tb-view .tb-io,.tb-view .tb-io-toggle,.tb-view .tb-foot,.tb-view .tb-slot-clear{display:none}
+  .tb-view #tb-slots{padding:0}
+  .tb-view input,.tb-view select,.tb-view .tb-ev-slider{pointer-events:none;user-select:text;caret-color:transparent}
+  .tb-view input:focus,.tb-view select:focus{border-color:rgba(255,255,255,0.08);background:rgba(255,255,255,0.03)}
+  .tb-view .tb-slot:focus-within{border-color:var(--line)}
   .badge{font-size:10px;background:var(--warning-bg);color:var(--warning);border:1px solid var(--warning-border);border-radius:5px;padding:0 5px;margin-left:6px;white-space:nowrap}
   .mons{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-top:9px}
   .mon{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
@@ -1081,6 +1113,7 @@
   <div class="view" id="view-find"><div class="pad" id="findpad"></div></div>
   <div class="view" id="view-dmg"><div class="pad" id="dmgpad"></div></div>
   <div class="view" id="view-team"><div class="pad" id="teampad" data-tour="teams-view"></div></div>
+  <div class="view" id="view-share"><div class="pad" id="sharepad"></div></div>
 </main>
 
 <footer class="sitefoot">
@@ -1553,7 +1586,8 @@ function teamCard(t,focus,matchedSet){
     <span class="meta">${esc(t.creator||'')} ${t.event&&t.event!=='-'?'· '+esc(t.event):''}</span></div>
     <div>${t.rank&&t.rank!=='-'?`<span class="chip rank">${esc(t.rank)}</span>`:''}${t.date?`<span class="chip">${esc(t.date)}</span>`:''}
       ${t.pokepaste?`<span class="chip"><a href="${esc(t.pokepaste)}" target="_blank">pokepaste ↗</a></span>`:''}
-      ${t.source&&t.source!=='-'?`<span class="chip"><a href="${esc(t.source)}" target="_blank">source ↗</a></span>`:''}</div>
+      ${t.source&&t.source!=='-'?`<span class="chip"><a href="${esc(t.source)}" target="_blank">source ↗</a></span>`:''}
+      <span class="chip chip-share"><button class="chip-share-btn" data-share-tid="${esc(t.team_id)}" title="Copy share link + open full-page view">↗ Share</button></span></div>
     <div class="mons">${t.mons.map(m=>monCard(m,focus,matchedSet)).join('')}</div></div>`;
 }
 function monCard(m,focus,matchedSet){
@@ -3765,9 +3799,198 @@ function setView(v){view=v;
   }
   else if(v==='find')renderFind();
   else if(v==='dmg')renderDmg();
+  else if(v==='share'){ /* content rendered by renderSharedTeam via the router */ }
   else renderTeams();
   autoFocusForView(v);
 }
+
+// ─── Shared-team page (full-page read-only team view) ──────────────────────
+// Rendered when the URL hash is #/team/<team_id>. Reuses the Team Builder's
+// _tbSlotHTML so the 6-slot grid matches pixel-for-pixel; the .tb-view class
+// on the wrapper makes every input non-interactive without changing the look.
+let _shareTeamId = null;
+function renderSharedTeam(teamId){
+  _shareTeamId = teamId;
+  const pad = document.getElementById('sharepad');
+  if(!pad) return;
+  const team = (typeof TEAMS !== 'undefined' && Array.isArray(TEAMS)) ? TEAMS.find(t => t.team_id === teamId) : null;
+  if(!team){
+    pad.innerHTML = `<div class="share-not-found">
+      <h2>Team not found</h2>
+      <div>No registered team matches <code>${esc(teamId||'')}</code>.
+      It may have been removed, or the link is malformed.</div>
+      <div style="margin-top:16px"><a href="#/team" class="btn primary" style="display:inline-block;padding:8px 16px;text-decoration:none;background:var(--atk-color);color:#0c0e12;border-radius:8px;font-weight:600">Browse all teams</a></div>
+    </div>`;
+    return;
+  }
+  // Populate tbSlots from the team's mons so _tbSlotHTML has real data to render.
+  // Preserve any real user builder state — save it and restore when the share
+  // page unmounts. (Nav to another view calls renderSharedTeam-nothing, but on
+  // route-away the user just doesn't see the builder here anymore.)
+  const mons = (team.mons || []).slice(0, 6);
+  const asSlots = [];
+  for(let i=0; i<6; i++){
+    const m = mons[i];
+    if(m){
+      const evObj = zeroEV();
+      // team.mons[i].evs is a string like "32 HP / 2 Def / 32 Spe" — parse it.
+      if(typeof m.evs === 'string'){
+        m.evs.split('/').forEach(part => {
+          const mm = part.trim().match(/^(\d+)\s+(HP|Atk|Def|SpA|SpD|Spe)$/i);
+          if(mm){
+            const k = {HP:'hp',Atk:'atk',Def:'def',SpA:'spa',SpD:'spd',Spe:'spe'}[mm[2].replace(/^./, c => c.toUpperCase())];
+            if(k && evObj.hasOwnProperty(k)) evObj[k] = +mm[1];
+          }
+        });
+      } else if(m.evs && typeof m.evs === 'object'){
+        for(const [k, v] of Object.entries(m.evs)){
+          if(evObj.hasOwnProperty(k)) evObj[k] = +v || 0;
+        }
+      }
+      asSlots.push({
+        name: m.name || '',
+        forme: m.forme || m.name || '',
+        item: m.item || '',
+        ability: m.ability || '',
+        nature: m.nature || 'Serious',
+        ev: evObj,
+        moves: (m.moves && m.moves.slice(0, 4)) || ['','','',''],
+      });
+      while(asSlots[asSlots.length - 1].moves.length < 4) asSlots[asSlots.length - 1].moves.push('');
+    } else {
+      asSlots.push(_tbBlankSlot());
+    }
+  }
+  // Hero header — team-level metadata that the builder never shows.
+  const reg = team.reg || 'M-A';
+  const chips = [];
+  if(team.rank && team.rank !== '-') chips.push(`<span class="chip rank">${esc(team.rank)}</span>`);
+  if(team.date) chips.push(`<span class="chip">${esc(team.date)}</span>`);
+  chips.push(`<span class="chip regbadge ${reg==='M-B'?'mb':''}" style="margin:2px 4px 2px 0">${esc(reg)}</span>`);
+  if(team.pokepaste) chips.push(`<span class="chip"><a href="${esc(team.pokepaste)}" target="_blank" rel="noopener">pokepaste ↗</a></span>`);
+  if(team.source && team.source !== '-') chips.push(`<span class="chip"><a href="${esc(team.source)}" target="_blank" rel="noopener">source ↗</a></span>`);
+  const meta = [team.creator, (team.event && team.event !== '-') ? team.event : null].filter(Boolean).join(' · ');
+  const title = team.description || team.team_id;
+  const slotsHTML = asSlots.map((s, i) => _tbSlotHTML(s, i)).join('');
+  pad.innerHTML = `<div class="share-page">
+    <section class="share-page-hero">
+      <div class="share-page-hero-main">
+        <h1 class="share-page-title">${esc(title)}</h1>
+        <div class="share-page-sub">${meta ? esc(meta) : '<span style="opacity:.6">unattributed team</span>'}</div>
+        <div class="share-page-chips">${chips.join('')}</div>
+      </div>
+      <div class="share-page-actions">
+        <button class="btn primary" id="share-fight" data-tid="${esc(team.team_id)}">⚔ Fight this team</button>
+        <button class="btn" id="share-copypaste" title="Copy the Showdown export">Copy paste</button>
+        <button class="btn" id="share-copylink" title="Copy share URL">Copy link</button>
+      </div>
+    </section>
+    <div id="builderoverlay" class="open tb-view">
+      <div class="tb-box">
+        <div id="tb-slots" class="tb-slots">${slotsHTML}</div>
+      </div>
+    </div>
+  </div>`;
+  // Wire actions — no smart-picker or slot handlers (that's the whole point).
+  const fightBtn = document.getElementById('share-fight');
+  if(fightBtn) fightBtn.onclick = () => { fightThisTeam(team); };
+  const cpPaste = document.getElementById('share-copypaste');
+  if(cpPaste) cpPaste.onclick = () => {
+    const paste = team.mons.map(monToPaste).join('\n\n');
+    _shareDoCopy(cpPaste, paste, 'Copied paste ✓', 'Copy paste');
+    try{ tcount && tcount('share/team-paste','share: team paste'); }catch(e){}
+  };
+  const cpLink = document.getElementById('share-copylink');
+  if(cpLink) cpLink.onclick = () => {
+    const url = location.origin + location.pathname + '#/team/' + team.team_id;
+    _shareDoCopy(cpLink, url, 'Copied ✓', 'Copy link');
+    try{ tcount && tcount('share/team-link','share: team link'); }catch(e){}
+  };
+  try{ tcount && tcount('view/share','view: shared team ' + team.team_id); }catch(e){}
+}
+
+// Small clipboard helper — flip the button label to a success message for
+// 1600ms then restore. Matches the About-modal #share-copy pattern.
+function _shareDoCopy(btn, txt, doneLbl, origLbl){
+  const flip = () => {
+    btn.classList.add('copied');
+    btn.textContent = doneLbl;
+    setTimeout(() => { btn.classList.remove('copied'); btn.textContent = origLbl; }, 1600);
+    const live = document.getElementById('tttlive'); if(live) live.textContent = doneLbl;
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(flip).catch(() => _shareCopyFallback(txt, flip));
+  } else {
+    _shareCopyFallback(txt, flip);
+  }
+}
+function _shareCopyFallback(txt, done){
+  const ta = document.createElement('textarea');
+  ta.value = txt; ta.style.position='fixed'; ta.style.top='-9999px';
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); done(); }catch(e){}
+  ta.remove();
+}
+// Convert a mon record to its Showdown-style paste block. Mirrors the builder
+// export shape so shared paste = same thing user pastes into Showdown.
+function monToPaste(m){
+  const line1 = (m.forme || m.name) + (m.item ? ' @ ' + m.item : '');
+  const lines = [line1];
+  if(m.ability)  lines.push('Ability: ' + m.ability);
+  if(m.tera)     lines.push('Tera Type: ' + m.tera);
+  if(m.evs && (typeof m.evs === 'string') && m.evs.trim())     lines.push('EVs: ' + m.evs);
+  if(m.nature)   lines.push(m.nature + ' Nature');
+  if(m.ivs && (typeof m.ivs === 'string') && m.ivs.trim())     lines.push('IVs: ' + m.ivs);
+  (m.moves || []).forEach(mv => { if(mv) lines.push('- ' + mv); });
+  return lines.join('\n');
+}
+
+// ─── URL router ─────────────────────────────────────────────────────────────
+// Hash-based routes so a static file host with no server-side rewriting still
+// serves clean deep-links. Shapes:
+//   #/poke                 — Pokémon browse view (default)
+//   #/pokemon/<Name>       — Pokémon browse with detail loaded for <Name>
+//   #/find                 — Find Team view
+//   #/dmg                  — Damage Calc view
+//   #/team                 — Teams list view
+//   #/team/<team_id>       — Full-page shared team view (this feature)
+let _routerSuppressWrite = false;
+function _parseHash(){
+  const h = (location.hash || '').replace(/^#/, '');
+  const m = h.match(/^\/?(poke|pokemon|find|dmg|team|share)(?:\/(.+))?$/);
+  if(!m) return null;
+  return { seg: m[1], arg: m[2] ? decodeURIComponent(m[2]) : null };
+}
+function _applyRoute(route){
+  if(!route){ setView('poke'); return; }
+  _routerSuppressWrite = true;
+  try {
+    if(route.seg === 'pokemon' && route.arg){
+      selMon = route.arg;
+      setView('poke');
+    } else if(route.seg === 'team' && route.arg){
+      renderSharedTeam(route.arg);
+      setView('share');
+    } else if(route.seg === 'share' && route.arg){
+      renderSharedTeam(route.arg);
+      setView('share');
+    } else {
+      const v = (route.seg === 'pokemon') ? 'poke' : route.seg;
+      setView(v);
+    }
+  } finally {
+    _routerSuppressWrite = false;
+  }
+}
+function _writeHashForView(v){
+  if(_routerSuppressWrite) return;
+  // Don't overwrite the share hash when the user navigates within the share view.
+  let target = '#/' + v;
+  if(v === 'share' && _shareTeamId) target = '#/team/' + _shareTeamId;
+  if(location.hash === target) return;
+  try{ history.replaceState(null, '', target); }catch(e){ location.hash = target; }
+}
+addEventListener('hashchange', () => { _applyRoute(_parseHash()); });
 
 // Drop the user where they're most likely to start typing for each view.
 function autoFocusForView(v){
@@ -3879,6 +4102,26 @@ document.body.addEventListener('click',e=>{
   const fb=e.target.closest('.fightcardbtn');if(!fb)return;
   e.preventDefault();e.stopPropagation();
   const t=TEAMS.find(x=>x.team_id===fb.dataset.tid);if(t)fightThisTeam(t);
+});
+// Global delegation: "↗ Share" chips on team cards → copy link + open full-page view.
+document.body.addEventListener('click', e => {
+  const sb = e.target.closest('.chip-share-btn'); if(!sb) return;
+  e.preventDefault(); e.stopPropagation();
+  const tid = sb.dataset.shareTid;
+  const url = location.origin + location.pathname + '#/team/' + tid;
+  const origLbl = '↗ Share';
+  const flip = () => {
+    sb.classList.add('copied');
+    sb.textContent = 'Link copied ✓';
+    setTimeout(() => { sb.classList.remove('copied'); sb.textContent = origLbl; }, 1600);
+    const live = document.getElementById('tttlive'); if(live) live.textContent = 'Share link copied to clipboard';
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(flip).catch(() => _shareCopyFallback(url, flip));
+  } else {
+    _shareCopyFallback(url, flip);
+  }
+  try{ tcount && tcount('share/team-card', 'share: team card ' + tid); }catch(_){}
 });
 document.querySelectorAll('.regbtn').forEach(el=>el.onclick=()=>{
   regFilter=el.dataset.reg;
@@ -5544,6 +5787,7 @@ function tpageview(path, title){                  // SPA pageview per view switc
   const _orig=setView;
   setView=function(v){
     _orig(v);
+    _writeHashForView(v);
     tpageview('/'+v, 'backtwo — '+v);
     tcount('view/'+v, 'view: '+v);
   };
@@ -5554,7 +5798,13 @@ function tpageview(path, title){                  // SPA pageview per view switc
 // the tab to become visible before firing, since visibilityState:hidden
 // makes GoatCounter's auto-loader skip the initial hit.
 (function(){
-  const fireInit = ()=> setView('poke');
+  // Route from URL hash on boot — deep-links to a specific team, mon, or view.
+  // Falls back to the Pokémon landing when the hash is empty or malformed.
+  const fireInit = ()=> {
+    const route = _parseHash();
+    if(route) _applyRoute(route);
+    else setView('poke');
+  };
   if(document.visibilityState === 'hidden'){
     document.addEventListener('visibilitychange', function once(){
       if(document.visibilityState === 'visible'){
