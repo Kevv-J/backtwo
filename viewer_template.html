@@ -127,7 +127,7 @@
   .empty{color:var(--dim);padding:40px;text-align:center}
   h2{font-size:21px;margin:0 0 2px}
   .usage{color:var(--accent2);font-weight:600;margin-bottom:6px}
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:13px;margin:16px 0}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:13px;margin:16px 0}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:11px 13px}
   .card h3{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim)}
   .bar{display:flex;align-items:center;gap:8px;margin:3px 0}
@@ -738,10 +738,36 @@
                width .28s cubic-bezier(.2,.7,.2,1),height .28s cubic-bezier(.2,.7,.2,1)}
   #tourspot.open{display:block}
   /* ─── Tour tooltip ────────────────────────────────────────────────────── */
+  .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;padding:0;margin:-1px}
   #tourtip{display:none;position:fixed;z-index:195;background:var(--panel);border:1px solid var(--atk-color);
     border-radius:10px;padding:14px 16px;max-width:320px;min-width:260px;
-    box-shadow:0 12px 32px rgba(0,0,0,0.5);font-size:13px}
+    box-shadow:0 12px 32px rgba(0,0,0,0.5);font-size:13px;
+    max-height:calc(100vh - 32px);overflow-y:auto;overscroll-behavior:contain;
+    transition:top .28s cubic-bezier(.2,.7,.2,1), left .28s cubic-bezier(.2,.7,.2,1)}
   #tourtip.open{display:block}
+  #tourtip.scrolling,#tourtip.warp{transition:none}
+  #tourtip:focus{outline:none}
+  @media (max-width:640px){
+    #tourtip{transition:none;max-height:calc(100vh - var(--bottom-nav-h) - env(safe-area-inset-bottom) - 24px)}
+  }
+  /* Arrow — a rotated square anchored to the tooltip side pointing at the spotlight. */
+  .tt-arrow{position:absolute;width:12px;height:12px;background:var(--panel);border:1px solid var(--atk-color);transform:rotate(45deg);pointer-events:none}
+  #tourtip[data-arrow="top"] .tt-arrow{bottom:-7px;left:var(--tt-arrow-cross);border-top:none;border-left:none}
+  #tourtip[data-arrow="bottom"] .tt-arrow{top:-7px;left:var(--tt-arrow-cross);border-bottom:none;border-right:none}
+  #tourtip[data-arrow="left"] .tt-arrow{right:-7px;top:var(--tt-arrow-cross);border-left:none;border-bottom:none}
+  #tourtip[data-arrow="right"] .tt-arrow{left:-7px;top:var(--tt-arrow-cross);border-right:none;border-top:none}
+  #tourtip[data-arrow="bottom-left"] .tt-arrow{top:-7px;right:16px;border-bottom:none;border-right:none}
+  #tourtip[data-arrow="top-left"] .tt-arrow{bottom:-7px;right:16px;border-top:none;border-left:none}
+  #tourtip[data-arrow="center"] .tt-arrow{display:none}
+  @media (max-width:640px){.tt-arrow{display:none}}
+  #tourspot.warp{transition:none}
+  #tourspot.scrolling{transition:none}
+  /* Above the spotlight backdrop (190) but below the tooltip (195) so the
+     autocomplete list stays visible while the tour is highlighting a slot. */
+  body.tour-active .smartpicker-dropdown{z-index:194}
+  body.tour-active .find-dropdown{z-index:194}
+  #builderoverlay.tour-lock{pointer-events:none;user-select:none}
+  #builderoverlay.tour-lock .tb-slot input.tour-typing{caret-color:transparent}
   #tourtip .tt-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
   #tourtip .tt-count{color:var(--muted-foreground);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;letter-spacing:.08em}
   #tourtip .tt-x{background:transparent;border:none;color:var(--muted-foreground);cursor:pointer;font-size:14px;padding:2px 4px}
@@ -749,16 +775,19 @@
   #tourtip .tt-title{font-family:'Rajdhani','Inter',sans-serif;font-size:16px;font-weight:700;color:var(--foreground);margin-bottom:6px;line-height:1.3}
   #tourtip .tt-body{color:var(--muted-foreground);font-size:12.5px;line-height:1.55;margin-bottom:12px}
   #tourtip .tt-foot{display:flex;justify-content:space-between;align-items:center;gap:10px}
-  #tourtip .tt-dots{display:flex;gap:5px}
-  #tourtip .tt-dot{width:6px;height:6px;border-radius:50%;background:var(--border);transition:background .15s}
-  #tourtip .tt-dot.active{background:var(--atk-color)}
   #tourtip .tt-nav{display:flex;gap:6px}
+  #tourtip .tt-btn-toggle{color:var(--muted-foreground);min-width:74px;font-variant-numeric:tabular-nums;font-family:'Rajdhani','Inter',sans-serif;font-weight:600;letter-spacing:.04em}
+  #tourtip .tt-btn-toggle[aria-pressed="true"]{color:var(--atk-color);border-color:var(--atk-color);background:var(--atk-bg)}
   #tourtip .tt-btn{padding:5px 12px;font-size:11px;border-radius:5px;border:1px solid var(--border);
     background:transparent;color:var(--muted-foreground);cursor:pointer;font-family:inherit;font-weight:600}
-  #tourtip .tt-btn:hover,#tourtip .tt-btn:focus-visible{color:var(--foreground);border-color:var(--foreground);outline:none}
+  #tourtip .tt-btn:hover{color:var(--foreground);border-color:var(--foreground)}
+  #tourtip .tt-btn:focus-visible{color:var(--foreground);border-color:var(--foreground);box-shadow:0 0 0 2px var(--foreground);outline:none}
   #tourtip .tt-btn-primary{color:var(--atk-color);border-color:var(--atk-color)}
-  #tourtip .tt-btn-primary:hover,#tourtip .tt-btn-primary:focus-visible{background:var(--atk-color);color:#0c0e12}
+  #tourtip .tt-btn-primary:hover{background:var(--atk-color);color:#0c0e12}
+  #tourtip .tt-btn-primary:focus-visible{background:var(--atk-color);color:#0c0e12;box-shadow:0 0 0 2px var(--foreground)}
+  #tourtip .tt-x:focus-visible{color:var(--foreground);outline:2px solid var(--atk-color);outline-offset:2px;border-radius:3px}
   #tourtip .tt-btn:disabled{opacity:.35;cursor:not-allowed}
+  .tt-saved-chip{display:inline-block;margin-left:8px;padding:2px 8px;background:rgba(6,182,212,0.14);color:var(--atk-color);border:1px solid var(--atk-color);border-radius:12px;font-size:11px;font-weight:600;letter-spacing:.04em;animation:tour-flash-anim .5s ease}
   /* Typing indicator chip — bottom-center during long simulations */
   .tour-typing{display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:201;
     padding:8px 16px;background:rgba(6,182,212,0.14);color:var(--atk-color);
@@ -1030,8 +1059,8 @@
     <div class="tab" data-view="team">Teams</div>
   </div>
   <button class="reset-btn" id="resetbtn" title="Reset field, side effects, status, and HP on both combatants (does not clear your saved team)">↻ Reset</button>
-  <button class="help-pill" id="helppill" data-tour="help-pill" aria-label="Help menu" title="Help — take the tour, hotkeys, guide">?</button>
-  <div id="helpmenu" aria-hidden="true">
+  <button class="help-pill" id="helppill" data-tour="help-pill" aria-label="Help menu" aria-haspopup="menu" aria-controls="helpmenu" aria-expanded="false" title="Help — take the tour, hotkeys, guide">?</button>
+  <div id="helpmenu" role="menu" aria-hidden="true">
     <button class="hm-item" data-help="tour">↦ Take the tour</button>
     <button class="hm-item" data-help="hotkeys">⌘ Hotkeys (<span>?</span>)</button>
     <button class="hm-item" data-help="guide">📖 Open Guide</button>
@@ -1121,30 +1150,32 @@
     <div id="toursplash-title" class="ts-title">
       <span class="wm-a">back</span><span class="wm-b">two</span> — a VGC Champions companion
     </div>
-    <div class="ts-body">Meta browser, damage calc, and a team-preview scout. Take a 30-second tour so the good parts aren't hidden?</div>
+    <div class="ts-body">Meta browser, damage calc, and a team-preview scout. Take a quick guided tour so the good parts aren't hidden?</div>
     <label class="ts-nag"><input type="checkbox" id="tourskip"> Don't show again</label>
     <div class="ts-actions">
       <button class="ts-btn ts-btn-primary" id="tourskipbtn">Skip</button>
-      <button class="ts-btn ts-btn-accent" id="tourstartbtn">Take the 30s tour →</button>
+      <button class="ts-btn ts-btn-accent" id="tourstartbtn">Take the tour →</button>
     </div>
   </div>
 </div>
 <div id="tourspot" aria-hidden="true"></div>
-<div id="tourtip" role="dialog" aria-live="polite">
+<div id="tourtip" role="dialog" aria-modal="true" aria-labelledby="tttitle" aria-describedby="tttbody" tabindex="-1">
   <div class="tt-head">
     <span class="tt-count" id="tttcount">1 / 5</span>
     <button class="tt-x" id="ttx" aria-label="Close tour">✕</button>
   </div>
-  <div class="tt-title" id="tttitle"></div>
+  <h2 class="tt-title" id="tttitle"></h2>
   <div class="tt-body" id="tttbody"></div>
   <div class="tt-foot">
-    <div class="tt-dots" id="ttdots"></div>
     <div class="tt-nav">
-      <button class="tt-btn" id="ttprev">← Back</button>
-      <button class="tt-btn tt-btn-primary" id="ttnext">Next →</button>
+      <button class="tt-btn tt-btn-toggle" id="ttauto" aria-pressed="false" aria-label="Toggle autoplay" title="Auto-advance OFF — click to enable"><span class="tt-btn-glyph" aria-hidden="true">▶</span> Auto</button>
+      <button class="tt-btn" id="ttprev" aria-label="Previous step"><span aria-hidden="true">←</span> Back</button>
+      <button class="tt-btn tt-btn-primary" id="ttnext" aria-label="Next step">Next <span aria-hidden="true">→</span></button>
     </div>
   </div>
+  <div class="tt-arrow" aria-hidden="true"></div>
 </div>
+<div id="tttlive" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 
 <!-- ─── Team Builder — incomplete-save audit modal ───────────────────── -->
 <div id="tbaudit" onclick="if(event.target===this)_tbCancelSave()">
@@ -1204,9 +1235,9 @@
           <li>Reading a damage calc + copying the summary</li>
           <li>What's different in Reg B (Champions specifics)</li>
         </ol>
-        Until then, the 30-second interactive tour hits the highest-value flows.
+        Until then, the interactive tour hits the highest-value flows.
         <br><br>
-        <button class="ts-btn ts-btn-accent" onclick="closeGuide();startTour();">Take the tour</button>
+        <button class="ts-btn ts-btn-accent" id="guidetourbtn" aria-haspopup="dialog" onclick="closeGuide(true);startTour(0, this);">Take the tour</button>
       </div>
     </div>
   </div>
@@ -1432,7 +1463,7 @@ function renderLanding(){
         </div>
       `).join('')}
     </div>
-    <div class="landing-tip">tip — anywhere on the page, press <kbd style="font-family:inherit;background:var(--secondary);border:1px solid var(--border);border-radius:3px;padding:0 4px;color:var(--atk-color)">?</kbd> for the full hotkey list · <button class="landing-tour-btn" data-tour="landing-take-tour" onclick="startTour(0)">↦ Take the 30-second tour</button></div>
+    <div class="landing-tip">tip — anywhere on the page, press <kbd style="font-family:inherit;background:var(--secondary);border:1px solid var(--border);border-radius:3px;padding:0 4px;color:var(--atk-color)">?</kbd> for the full hotkey list · <button class="landing-tour-btn" data-tour="landing-take-tour" onclick="startTour(0, this)" aria-haspopup="dialog">↦ Take the guided tour</button></div>
   </div>`;
   // Wire feature-card clicks
   det.querySelectorAll('.landing-card').forEach(c=>c.addEventListener('click',()=>{
@@ -1456,7 +1487,7 @@ function renderLanding(){
       <div class="mhero-mantra">Read the back two.</div>
       <div class="mhero-stats"><b>${nTeams}</b> teams · <b>${nMons}</b> mons · Reg <b>${esc(reg)}</b></div>
       <div class="mhero-chips">${chipHTML}</div>
-      <button class="mhero-tour-btn" data-tour="landing-take-tour" onclick="startTour(0)">↦ Take the 30-second tour</button>
+      <button class="mhero-tour-btn" data-tour="landing-take-tour" onclick="startTour(0, this)" aria-haspopup="dialog">↦ Take the guided tour</button>
     </div>`);
     listEl.querySelectorAll('.mhero-chip').forEach(c=>c.addEventListener('click',()=>{
       const go=c.dataset.go;
@@ -3455,7 +3486,10 @@ function attachSmartPicker(input, opts){
   let dd=null, highlight=0, matches=[];
 
   function ensureDD(){
-    if(dd)return dd;
+    // Self-heal — if external cleanup (e.g. the tour) detached our dropdown,
+    // recreate rather than keep a stale closure ref that render()/position()
+    // would blindly write to.
+    if(dd && dd.isConnected) return dd;
     dd=document.createElement('div');
     dd.className='smartpicker-dropdown';
     document.body.appendChild(dd);
@@ -4223,6 +4257,9 @@ const TOUR_BIG6 = ['Charizard','Garchomp','Floette-Eternal','Kingambit','Whimsic
 
 // ── Primitives ─────────────────────────────────────────────────────────────
 const _sleep = (ms, signal) => new Promise((resolve, reject) => {
+  // Fast-forward path: user hit Next during a running setup. Skip all delays
+  // so the setup finishes ASAP with final state (no partial commits).
+  if(_tourCtx?.fastForward){ return resolve(); }
   const t = setTimeout(resolve, ms);
   if(!signal) return;
   if(signal.aborted){ clearTimeout(t); return reject(new DOMException('','AbortError')); }
@@ -4233,39 +4270,47 @@ const _sleep = (ms, signal) => new Promise((resolve, reject) => {
 // when it appears; timeout guards against selectors that never resolve.
 function _waitFor(sel, signal, timeoutMs=2500){
   return new Promise((resolve, reject) => {
+    if(_tourCtx?.fastForward) return resolve(document.querySelector(sel));
     const hit = document.querySelector(sel);
     if(hit) return resolve(hit);
     const obs = new MutationObserver(() => {
+      if(_tourCtx?.fastForward){ cleanup(); return resolve(document.querySelector(sel)); }
       const el = document.querySelector(sel);
       if(el){ cleanup(); resolve(el); }
     });
     obs.observe(document.body, { childList:true, subtree:true });
+    // Poll fastForward every 40ms so we don't wait on mutation-only signals.
+    const poll = setInterval(() => {
+      if(_tourCtx?.fastForward){ cleanup(); resolve(document.querySelector(sel)); }
+    }, 40);
     const to = setTimeout(() => { cleanup(); reject(new Error('waitFor timeout: '+sel)); }, timeoutMs);
     const onAbort = () => { cleanup(); reject(new DOMException('','AbortError')); };
     if(signal){
       if(signal.aborted){ cleanup(); return reject(new DOMException('','AbortError')); }
       signal.addEventListener('abort', onAbort, {once:true});
     }
-    function cleanup(){ obs.disconnect(); clearTimeout(to); signal?.removeEventListener('abort', onAbort); }
+    function cleanup(){ obs.disconnect(); clearTimeout(to); clearInterval(poll); signal?.removeEventListener('abort', onAbort); }
   });
 }
 
-// Given comma-separated selectors, return the first element currently VISIBLE
-// in the viewport. Falls back to the first matched element (any state) so the
-// caller can decide to scroll it in. Prevents "spotlight on a scrolled-off row".
+// Given comma-separated selectors, prefer in-viewport → visible-anywhere → first-existing.
+// Fixes the bug where a hidden first-selector match short-circuited the fallback chain.
 function _tourVisibleElement(selectors){
   if(!selectors) return null;
-  for(const s of selectors.split(',').map(x=>x.trim())){
+  let firstVisibleAnywhere = null;
+  let firstExisting = null;
+  for(const s of selectors.split(',').map(x => x.trim())){
     const all = document.querySelectorAll(s);
     for(const el of all){
+      if(!firstExisting) firstExisting = el;
       if(!el || el.offsetParent === null) continue;
       const r = el.getBoundingClientRect();
-      if(r.width > 0 && r.height > 0 && r.top >= 0 && r.bottom <= innerHeight) return el;
+      if(!(r.width > 0 && r.height > 0)) continue;
+      if(!firstVisibleAnywhere) firstVisibleAnywhere = el;
+      if(r.top >= 0 && r.bottom <= innerHeight) return el;
     }
-    const first = document.querySelector(s);
-    if(first) return first;
   }
-  return null;
+  return firstVisibleAnywhere || firstExisting;
 }
 
 // Bring an element into the viewport, adjusting EVERY scrollable ancestor
@@ -4275,6 +4320,7 @@ function _tourVisibleElement(selectors){
 // measurements are accurate.
 async function _tourBringIntoView(el){
   if(!el) return;
+  if(_tourCtx?.fastForward) return;  // skip smooth-scroll during Next-fast-forward
   const cs0 = getComputedStyle(el);
   if(cs0.position === 'fixed') return;  // already viewport-anchored
   // Walk up the ancestor chain, adjusting each scrollable container's
@@ -4308,10 +4354,14 @@ async function _tourBringIntoView(el){
 // timeout). Ensures spotlight targets exist before we try to position on them.
 function _tourGoToView(v, opts={}){
   return new Promise((resolve, reject) => {
-    // Close any tour modals that would occlude the new view.
+    // Fast path — same view, no work. Unconditionally resolve so any live
+    // tour overlays (builder, guide) stay intact. The old `padHas` sub-gate
+    // could false-negative on a cold-load first transition and re-fire setView,
+    // which unconditionally stripped #builderoverlay.open and wiped tbSlots.
+    if(typeof view === 'string' && view === v) return resolve();
+    // Actually changing view — close occluding tour modals now.
     document.getElementById('builderoverlay')?.classList.remove('open');
     document.getElementById('guidemodal')?.classList.remove('open');
-    if(typeof view === 'string' && view === v && document.querySelector('#view-'+v+' .pad')?.children?.length) return resolve();
     try{ setView(v); }catch(e){ /* fall through to observer */ }
     const padSel = '#view-'+v+' .pad, #view-'+v+' #list';
     const check = () => document.querySelector(padSel) && document.querySelector('#view-'+v+'.active');
@@ -4354,45 +4404,83 @@ async function _tourFillSmartPicker(inputEl, value, opts={}){
   await _sleep(220, signal);
 }
 
-// Fill all 6 builder slots with the Champions team roster. Each slot: name →
-// item → ability → nature → EVs (per-stat number input) → 4 moves. Timings
-// tuned so the whole thing runs in ~9s total.
+// Fill all 6 builder slots — state-first commit path. Previous version relied
+// on smart-picker's usage-sorted matches[0] which returned "Raichu-Mega-Y" for
+// "Raichu" (Mega-Y outranked base in the picker), and race-attacked stale DOM
+// refs after tbRender() blew away #tb-slots.innerHTML on every commit.
+//
+// New approach: mutate tbSlots[i] state directly (name/item/ability/nature/ev/moves),
+// call tbRender() once per slot, then wait a frame for layout to settle. The
+// per-character typing animation is still shown for the mon field only — the
+// rest of the fields snap in visually via the re-render for speed. This makes
+// the fill deterministic AND ~3× faster.
 async function _tourFillBuilder(team, signal){
-  for(let i=0; i<team.length; i++){
-    const slot = document.querySelector(`#tb-slots .tb-slot[data-i="${i}"]`);
-    if(!slot) return;
-    await _tourBringIntoView(slot);
-    if(signal?.aborted) return;
-    const spec = team[i];
-    await _tourFillSmartPicker(slot.querySelector('[data-field="name"]'),    spec.name,    { delay:35, signal });
-    if(signal?.aborted) return;
-    // Re-query — DOM was rebuilt by tbRender on the mon pick
-    const slot2 = document.querySelector(`#tb-slots .tb-slot[data-i="${i}"]`);
-    await _tourFillSmartPicker(slot2.querySelector('[data-field="item"]'),    spec.item,    { delay:35, signal });
-    if(signal?.aborted) return;
-    const slot3 = document.querySelector(`#tb-slots .tb-slot[data-i="${i}"]`);
-    await _tourFillSmartPicker(slot3.querySelector('[data-field="ability"]'), spec.ability, { delay:35, signal });
-    if(signal?.aborted) return;
-    const slot4 = document.querySelector(`#tb-slots .tb-slot[data-i="${i}"]`);
-    await _tourFillSmartPicker(slot4.querySelector('[data-field="nature"]'),  spec.nature,  { delay:35, signal });
-    if(signal?.aborted) return;
-    // EVs — set the number input directly + dispatch input
-    for(const [k, v] of Object.entries(spec.ev)){
-      const slot5 = document.querySelector(`#tb-slots .tb-slot[data-i="${i}"]`);
-      const ev = slot5.querySelector(`input.tb-ev-num[data-ev="${k}"]`);
-      if(!ev) continue;
-      ev.value = v;
-      ev.dispatchEvent(new Event('input', { bubbles:true }));
-      await _sleep(80, signal);
-    }
-    if(signal?.aborted) return;
-    // Moves
-    for(let m=0; m<4; m++){
-      if(!spec.moves[m]) continue;
-      const slotM = document.querySelector(`#tb-slots .tb-slot[data-i="${i}"]`);
-      await _tourFillSmartPicker(slotM.querySelector(`input[data-move="${m}"]`), spec.moves[m], { delay:30, signal });
+  const ov = document.getElementById('builderoverlay');
+  ov?.classList.add('tour-lock');
+  document.activeElement?.blur?.();
+  try {
+    // Wipe all 6 slots up-front so a stale user team can't leak into the
+    // Champions demo (e.g. moves the user had but our spec doesn't overwrite).
+    // Fresh _tbBlankSlot() shape matches what the builder expects.
+    for(let i=0; i<6; i++){ tbSlots[i] = _tbBlankSlot(); }
+    tbRender();
+    for(let i=0; i<team.length; i++){
       if(signal?.aborted) return;
+      const slot = document.querySelector(`#tb-slots .tb-slot[data-i="${i}"]`);
+      if(!slot) return;
+      await _tourBringIntoView(slot);
+      if(signal?.aborted) return;
+      const spec = team[i];
+
+      const nameInp = slot.querySelector('[data-field="name"]');
+      if(nameInp && !_tourCtx?.fastForward){
+        nameInp.readOnly = true;
+        nameInp.classList.add('tour-typing');
+        try {
+          nameInp.focus();
+          nameInp.value = '';
+          for(const ch of spec.name){
+            if(signal?.aborted) return;
+            nameInp.value += ch;
+            nameInp.dispatchEvent(new Event('input', { bubbles:true }));
+            await _sleep(28, signal);
+          }
+          await _sleep(180, signal);
+          document.querySelectorAll('.smartpicker-dropdown').forEach(d => d.remove());
+          nameInp.blur();
+          await _sleep(60, signal);
+        } finally {
+          nameInp.readOnly = false;
+          nameInp.classList.remove('tour-typing');
+        }
+      }
+      if(signal?.aborted) return;
+      // State-first commit. Blank base (already assigned above by _tbBlankSlot).
+      tbSlots[i].name    = spec.name;
+      tbSlots[i].item    = spec.item;
+      tbSlots[i].ability = spec.ability;
+      tbSlots[i].nature  = spec.nature;
+      tbSlots[i].forme   = jsForme(spec.name, spec.item) || spec.name;
+      tbSlots[i].moves   = ['','','',''];
+      for(let m=0; m<4; m++){ if(spec.moves[m]) tbSlots[i].moves[m] = spec.moves[m]; }
+      tbSlots[i].ev = zeroEV();
+      for(const [k, v] of Object.entries(spec.ev)){
+        if(tbSlots[i].ev.hasOwnProperty(k)) tbSlots[i].ev[k] = v;
+      }
+      try { correctMegaAbility(tbSlots[i]); } catch(_){}
+      // Only render per-slot in the normal path (user watches slots fill one
+      // by one). Under fastForward, skip the render — final tbRender at the
+      // end catches all commits and keeps us inside the 900ms budget.
+      if(!_tourCtx?.fastForward){
+        tbRender();
+        await _tourRafSleep(signal);
+        await _sleep(320, signal);
+      }
     }
+    // Belt-and-braces final render (also the only render in fastForward).
+    tbRender();
+  } finally {
+    ov?.classList.remove('tour-lock');
   }
 }
 
@@ -4406,128 +4494,195 @@ function _tourFlash(sel){
 }
 
 // ── 22-step tour config ────────────────────────────────────────────────────
-// Each step: { id, prereq(ctx), setup(ctx), spotlight, tip, autoAdvanceMs? }
-// prereq: run before the step (view switch, close-modals). Async.
+// Each step: { id, view?, prereq(ctx), setup(ctx), spotlight, tip, autoAdvanceMs? }
+// view:   if set, _runStep switches to this view before prereq (so Back/Next
+//         works regardless of traversal direction). Values: 'poke','find','dmg','team'.
+// prereq: run before the step (idempotent state setup). Async.
 // setup:  run after prereq (simulation like typing, clicking). Takes signal.
 // spotlight: selector OR fn returning selector. Resolved AFTER setup.
 // tip: { title, body, placement }
 // autoAdvanceMs: if set, auto-advance after N ms (unless user hits Skip/Next)
+// Ensure Garchomp's detail view is loaded (idempotent — used by detail-* steps
+// so hitting Back from find-view→stats still shows Garchomp's breakdown).
+async function _ensureDetailGarchomp(signal){
+  if(!document.querySelector('#detail .grid') || selMon !== 'Garchomp'){
+    q = ''; renderPokeList();
+    const row = document.querySelector('#list .row[data-name="Garchomp"]') || document.querySelector('#list .row');
+    if(row){ row.click(); await _waitFor('#detail .grid', signal, 2000).catch(()=>{}); }
+  }
+}
+
 const TOUR_STEPS = [
-  { id:'landing-btn',
-    prereq: async () => { await _tourGoToView('poke'); selMon = null; renderLanding(); await _sleep(150); },
+  { id:'landing-btn', view:'poke',
+    prereq: async () => { selMon = null; renderLanding(); await _sleep(150); },
     setup:  async () => {},
     spotlight: '.landing-tour-btn, .mhero-tour-btn',
     tip: { title:'This is where you re-launch the tour', body:'The button stays on the home page so you can replay any time — no localStorage tricks.', placement:'top' },
-    autoAdvanceMs: 3000 },
+    autoAdvanceMs: 2400 },
 
-  { id:'views',
-    prereq: async () => { await _tourGoToView('poke'); },
+  { id:'views', view:'poke',
+    prereq: async () => {},
     setup:  async (ctx) => {
+      // Position the spotlight on the tabs FIRST so the user is already looking
+      // there when the flash sequence starts. Otherwise the flash finishes
+      // before the spotlight lands and the user misses the animation.
+      const tabsEl = document.querySelector('.tabs') || document.getElementById('bottomnav');
+      if(tabsEl){
+        await _tourBringIntoView(tabsEl);
+        _positionSpot(tabsEl);
+        _positionTip(tabsEl, 'bottom');
+        document.getElementById('tourtip').classList.add('open');
+        await _sleep(400, ctx.signal);
+      }
       for(const v of ['find','dmg','team','poke']){
         if(ctx.signal.aborted) return;
         const sel = '.tabs .tab[data-view="'+v+'"], #bottomnav .bn[data-view="'+v+'"]';
         const el = document.querySelector(sel);
         if(el){ el.classList.add('tour-flash'); setTimeout(()=>el.classList.remove('tour-flash'), 500); }
-        await _sleep(280, ctx.signal);
+        await _sleep(320, ctx.signal);
       }
     },
     spotlight: '.tabs, #bottomnav',
-    tip: { title:'Four views · Pokémon · Find · Calc · Teams', body:'Everything backtwo does lives across these four tabs.', placement:'bottom' },
-    autoAdvanceMs: 3200 },
+    tip: { title:'Four views', body:'Pokémon · Find · Calc · Teams — everything backtwo does lives across these four tabs.', placement:'bottom' },
+    autoAdvanceMs: 2600 },
 
-  { id:'pick-mon',
-    prereq: async () => { await _tourGoToView('poke'); },
+  { id:'pick-mon', view:'poke',
+    prereq: async () => {},
     setup:  async (ctx) => {
       q = ''; renderPokeList();
       const row = document.querySelector('#list .row[data-name="Garchomp"]') || document.querySelector('#list .row');
+      if(!row){
+        const findIdx = TOUR_STEPS.findIndex(s => s.id === 'find-view');
+        if(findIdx > _tourStep) _runStep(findIdx);
+        return;
+      }
       await _tourBringIntoView(row);
       if(ctx.signal.aborted) return;
-      row.click();
+      // Show the click BEFORE it happens — spotlight+pulse the row, brief hold,
+      // then click. Users need to see WHERE the click landed, not just the result.
+      _positionSpot(row);
+      _positionTip(row, 'right');
+      document.getElementById('tourtip').classList.add('open');
+      row.classList.add('tour-focus');
+      try {
+        await _sleep(700, ctx.signal);
+        if(ctx.signal.aborted) return;
+        row.click();
+      } finally {
+        row.classList.remove('tour-focus');
+      }
       await _waitFor('#detail .grid', ctx.signal, 2000);
     },
     spotlight: '#detail h2',
-    tip: { title:'Click any mon → detailed breakdown', body:'Simulating a click on Garchomp — a top-usage pick to demo the flow.', placement:'right' },
+    tip: { title:'Click any mon → detailed breakdown', body:'Base stats, usage items, natures, and every registered team running it — one click away.', placement:'right' },
     autoAdvanceMs: 2600 },
 
-  { id:'stats',
-    prereq: async () => {},
-    setup:  async () => { await _tourBringIntoView(document.querySelector('[data-tour="detail-stats"]')); },
-    spotlight: '[data-tour="detail-stats"]',
-    tip: { title:'Base stats + types', body:'Full statline — good for judging speed tier, bulk, offensive presence.', placement:'right' },
-    autoAdvanceMs: 2400 },
-
-  { id:'speed',
-    prereq: async () => {},
-    setup:  async () => { await _tourBringIntoView(document.querySelector('[data-tour="detail-speed"]')); },
-    spotlight: '[data-tour="detail-speed"]',
-    tip: { title:'Speed tier — who out-speeds you', body:'Live-computed from the meta. Mons above out-speed you at ±0, mons below are slower.', placement:'left' },
-    autoAdvanceMs: 2800 },
-
-  { id:'items',
-    prereq: async () => {},
-    setup:  async () => { await _tourBringIntoView(document.querySelector('[data-tour="detail-items"]')); },
-    spotlight: '[data-tour="detail-items"]',
-    tip: { title:'Item distribution', body:'What Champions pilots actually run on this mon — usage-weighted across every registered team.', placement:'right' },
-    autoAdvanceMs: 2600 },
-
-  { id:'natures',
-    prereq: async () => {},
-    setup:  async () => { await _tourBringIntoView(document.querySelector('[data-tour="detail-natures"]')); },
-    spotlight: '[data-tour="detail-natures"]',
-    tip: { title:'Common natures', body:'Which +/- stat splits are meta on this mon.', placement:'left' },
-    autoAdvanceMs: 2400 },
-
-  { id:'teams-with',
-    prereq: async () => {},
-    setup:  async () => { await _tourBringIntoView(document.querySelector('[data-tour="detail-teams-list"] .tcard')); },
-    spotlight: '[data-tour="detail-teams-list"]',
-    tip: { title:'Every team running this mon', body:'Scroll through builds — spread + moves + item tell you what role the mon plays.', placement:'top' },
-    autoAdvanceMs: 2800 },
-
-  { id:'find-view',
-    prereq: async () => { await _tourGoToView('find'); },
-    setup:  async () => { await _tourBringIntoView(document.getElementById('findslots')); },
-    spotlight: '[data-tour="find-view"]',
-    tip: { title:'Find Team — scout the opponent', body:'Type the 6 mons you see at team preview. We match them to registered teams and hand you their full setup.', placement:'bottom' },
-    autoAdvanceMs: 2400 },
-
-  { id:'fill-find',
-    prereq: async () => { await _tourGoToView('find'); },
+  // Consolidated detail-walk: one step spotlights the whole detail grid and
+  // pulses each sub-card in sequence (stats → speed → items → natures). Beats
+  // four separate steps that felt like drive-by narration.
+  { id:'detail-walk', view:'poke',
+    prereq: async (ctx) => { await _ensureDetailGarchomp(ctx.signal); },
     setup:  async (ctx) => {
-      _tourShowTyping('Simulating an opponent\'s team preview…');
-      for(let i=0; i<6; i++){
-        if(ctx.signal.aborted) { _tourHideTyping(); return; }
-        const slot = document.querySelector('#findslots .find-slot[data-slot="'+i+'"]');
-        if(!slot) continue;
-        await _tourBringIntoView(slot);
-        // Find Team has its own inline typeahead (not the calc smart-picker).
-        // Flow: openFindSlot switches to edit mode → type into #find_input_i
-        // → closeFindSlot(i, true) resolves the top match into findPicks[i].
-        openFindSlot(i);
-        const inp = await _waitFor('#find_input_'+i, ctx.signal, 1000).catch(()=>null);
-        if(!inp) continue;
-        inp.focus(); inp.value = '';
-        inp.dispatchEvent(new Event('input', { bubbles:true }));
-        await _sleep(120, ctx.signal);
-        for(const ch of TOUR_BIG6[i]){
-          if(ctx.signal.aborted) { _tourHideTyping(); return; }
-          inp.value += ch;
-          inp.dispatchEvent(new Event('input', { bubbles:true }));
-          await _sleep(38, ctx.signal);
-        }
-        await _sleep(320, ctx.signal);
-        if(ctx.signal.aborted) { _tourHideTyping(); return; }
-        closeFindSlot(i, true);
-        await _sleep(200, ctx.signal);
+      const detail = document.querySelector('#detail .grid') || document.getElementById('detail');
+      if(!detail) return;
+      await _tourBringIntoView(detail);
+      _positionSpot(detail);
+      _positionTip(detail, 'right');
+      document.getElementById('tourtip').classList.add('open');
+      const cards = ['detail-stats','detail-speed','detail-items','detail-natures'];
+      const tip = document.getElementById('tttbody');
+      const labels = {
+        'detail-stats':   'Base stats + types — judge bulk, speed tier, offensive presence at a glance.',
+        'detail-speed':   'Speed tier — mons above out-speed at ±0, mons below are slower.',
+        'detail-items':   'Item distribution — usage-weighted across every registered team.',
+        'detail-natures': 'Common natures — which +/– stat splits the meta actually runs.',
+      };
+      for(const key of cards){
+        if(ctx.signal.aborted) return;
+        const el = document.querySelector('[data-tour="'+key+'"]');
+        if(!el) continue;
+        el.classList.add('tour-focus');
+        tip.textContent = labels[key];
+        await _sleep(950, ctx.signal);
+        el.classList.remove('tour-focus');
       }
-      _tourHideTyping();
     },
-    spotlight: '#findslots',
-    tip: { title:'The Big 6 — animating', body:'Charizard-Y · Garchomp · Floette-E-Mega · Kingambit · Whimsicott · Basculegion. Skip anytime to advance.', placement:'top' },
+    spotlight: '#detail .grid, #detail',
+    tip: { title:'Full breakdown — stats, speed, items, natures', body:'Base stats + types — judge bulk, speed tier, offensive presence at a glance.', placement:'right' },
     autoAdvanceMs: null },
 
-  { id:'find-results',
+  { id:'teams-with', view:'poke',
+    prereq: async (ctx) => { await _ensureDetailGarchomp(ctx.signal); },
+    setup:  async () => { await _tourBringIntoView(document.querySelector('[data-tour="detail-teams-list"] .tcard')); },
+    spotlight: '[data-tour="detail-teams-list"]',
+    tip: { title:'Every team running this mon', body:'Spread, moves, and item on each build tell you exactly what role the mon plays.', placement:'top' },
+    autoAdvanceMs: 2600 },
+
+  { id:'find-view', view:'find',
     prereq: async () => {},
+    setup:  async () => { await _tourBringIntoView(document.getElementById('findslots')); },
+    spotlight: '[data-tour="find-view"]',
+    tip: { title:'Find Team — scout the opponent', body:'Type the 6 mons from team preview. We match them to registered teams and hand you their full setup.', placement:'bottom' },
+    autoAdvanceMs: 2600 },
+
+  { id:'fill-find', view:'find',
+    prereq: async () => {},
+    setup:  async (ctx) => {
+      _tourShowTyping('Simulating an opponent\'s team preview…');
+      try {
+        // Tip stays anchored above the full find-slots row for the whole step
+        // — the per-slot dropdown appears BELOW each input, so re-anchoring
+        // the tip to the current slot would place it on top of the dropdown.
+        const wrap = document.getElementById('findslots');
+        for(let i=0; i<6; i++){
+          if(ctx.signal.aborted) return;
+          const slot = document.querySelector('#findslots .find-slot[data-slot="'+i+'"]');
+          if(!slot) continue;
+          await _tourBringIntoView(slot);
+          _positionSpot(slot);
+          if(wrap) _positionTip(wrap, 'top');
+          openFindSlot(i);
+          const inp = await _waitFor('#find_input_'+i, ctx.signal, 1000).catch(()=>null);
+          if(inp){
+            inp.focus(); inp.value = '';
+            inp.dispatchEvent(new Event('input', { bubbles:true }));
+            await _sleep(120, ctx.signal);
+            for(const ch of TOUR_BIG6[i]){
+              if(ctx.signal.aborted) return;
+              inp.value += ch;
+              inp.dispatchEvent(new Event('input', { bubbles:true }));
+              await _sleep(38, ctx.signal);
+            }
+            await _sleep(280, ctx.signal);
+            if(ctx.signal.aborted) return;
+          }
+          const matches = (typeof findMatches === 'function') ? findMatches(TOUR_BIG6[i]) : [];
+          if(matches.length) findPicks[i] = matches[0];
+          closeFindSlot(i, false);
+          const closedSlot = document.querySelector('#findslots .find-slot[data-slot="'+i+'"]');
+          if(closedSlot){ _positionSpot(closedSlot); if(wrap) _positionTip(wrap, 'top'); }
+          await _sleep(180, ctx.signal);
+        }
+        if(wrap) _positionSpot(wrap);
+      } finally {
+        _tourHideTyping();
+      }
+    },
+    spotlight: '#findslots .find-slot[data-slot="0"], #findslots',
+    tip: { title:'Fill from team preview', body:'Type the 6 mons you saw on the opposing team preview. We\'ll animate a Big 6 example so you can watch the flow.', placement:'top' },
+    autoAdvanceMs: null },
+
+  { id:'find-results', view:'find',
+    prereq: async (ctx) => {
+      // Idempotent — if the user is here fresh (Back from a later step), make
+      // sure findPicks is populated so #findresults actually has cards to show.
+      if(!(findPicks || []).some(Boolean)){
+        for(let i=0; i<6; i++){
+          const m = (typeof findMatches === 'function') ? findMatches(TOUR_BIG6[i]) : [];
+          if(m.length) findPicks[i] = m[0];
+        }
+      }
+    },
     setup:  async (ctx) => {
       // Trigger the search if not auto-run
       try { doFind && doFind(); } catch(e) {}
@@ -4535,79 +4690,184 @@ const TOUR_STEPS = [
       await _tourBringIntoView(document.querySelector('#findresults .tcard'));
     },
     spotlight: '[data-tour="find-results"]',
-    tip: { title:'Matching teams — exact + partial', body:'Green mons in each card matched your input. Perfect matches surface first.', placement:'top' },
-    autoAdvanceMs: 3000 },
+    tip: { title:'Matching teams — exact + partial', body:'Green mons matched your input. Perfect matches surface first, near-misses fall below.', placement:'top' },
+    autoAdvanceMs: 2600 },
 
-  { id:'fight-btn',
-    prereq: async () => {},
+  // Split into TWO steps so the spotlight lands correctly. Step A highlights
+  // the Fight button (no click); step B clicks it and spotlights the loaded
+  // enemy quick-pick row on the damage calc side.
+  { id:'fight-btn', view:'find',
+    prereq: async (ctx) => {
+      if(!(findPicks || []).some(Boolean)){
+        for(let i=0; i<6; i++){
+          const m = (typeof findMatches === 'function') ? findMatches(TOUR_BIG6[i]) : [];
+          if(m.length) findPicks[i] = m[0];
+        }
+      }
+      try { doFind && doFind(); } catch(e) {}
+      await _waitFor('#findresults .tcard', ctx.signal, 2500).catch(()=>{});
+    },
     setup:  async (ctx) => {
       const btn = document.querySelector('#findresults [data-tour="fight-btn"]');
       if(!btn) return;
       await _tourBringIntoView(btn);
-      await _sleep(700, ctx.signal);
-      if(ctx.signal.aborted) return;
-      btn.click();
-      await _tourGoToView('dmg');
-      await _waitFor('.dmgslot[data-p="b"] .ftbtn', ctx.signal, 2000).catch(()=>{});
+      btn.classList.add('tour-focus');
+      _tourCleanup.push(() => btn.classList.remove('tour-focus'));
     },
     spotlight: '#findresults [data-tour="fight-btn"]',
-    tip: { title:'⚔ Fight this team', body:'Loads their 6 mons as the enemy quick-pick strip in the damage calc.', placement:'left' },
-    autoAdvanceMs: 2800 },
+    tip: { title:'⚔ Fight this team', body:'One click loads the whole team as the enemy quick-pick strip in the calc.', placement:'top' },
+    autoAdvanceMs: 2200 },
 
-  { id:'myteam-block',
-    prereq: async () => { await _tourGoToView('dmg'); },
+  { id:'fight-btn-click', view:'find',
+    prereq: async (ctx) => {
+      if(!(findPicks || []).some(Boolean)){
+        for(let i=0; i<6; i++){
+          const m = (typeof findMatches === 'function') ? findMatches(TOUR_BIG6[i]) : [];
+          if(m.length) findPicks[i] = m[0];
+        }
+      }
+      try { doFind && doFind(); } catch(e) {}
+      await _waitFor('#findresults .tcard', ctx.signal, 2500).catch(()=>{});
+    },
+    setup:  async (ctx) => {
+      const btn = document.querySelector('#findresults [data-tour="fight-btn"]');
+      btn?.classList.remove('tour-focus');
+      if(btn){ btn.click(); }
+      await _tourGoToView('dmg');
+      // Signal the view change: pulse the Damage Calc tab briefly so the user
+      // registers where the click transported them before the spotlight moves
+      // to the enemy row.
+      const dmgTab = document.querySelector('.tabs .tab[data-view="dmg"], #bottomnav .bn[data-view="dmg"]');
+      if(dmgTab && !_tourCtx?.fastForward){
+        const spot = document.getElementById('tourspot');
+        const tip = document.getElementById('tourtip');
+        spot.classList.add('warp'); tip.classList.add('warp');
+        _positionSpot(dmgTab);
+        _positionTip(dmgTab, 'bottom');
+        tip.classList.add('open');
+        dmgTab.classList.add('tour-focus');
+        void spot.offsetWidth;
+        requestAnimationFrame(() => { spot.classList.remove('warp'); tip.classList.remove('warp'); });
+        await _sleep(700, ctx.signal);
+        dmgTab.classList.remove('tour-focus');
+      }
+      await _waitFor('.dmgslot[data-p="b"] .ftbtn', ctx.signal, 2500).catch(()=>{});
+    },
+    spotlight: '.dmgslot[data-p="b"] .myrow.ftmyrow, .dmgslot[data-p="b"] .myrow',
+    tip: { title:'Enemy loaded — quick-pick strip', body:'You\'re now on the Damage Calc. All 6 of their mons are one click away as the Enemy side.', placement:'top' },
+    autoAdvanceMs: 2600 },
+
+  { id:'myteam-block', view:'dmg',
+    prereq: async () => {},
     setup:  async () => {
       const d = document.querySelector('details.myteam');
       if(d) d.open = true;
       await _tourBringIntoView(d);
     },
     spotlight: '[data-tour="myteam-paste"]',
-    tip: { title:'Save your team once', body:'Paste from Showdown OR click "🛠 Build team →" for a friendlier form. Your team becomes the ally quick-picks.', placement:'bottom' },
-    autoAdvanceMs: 3000 },
+    tip: { title:'Save your team once', body:'Paste from Showdown, or click 🛠 Build team → for a form. Your team becomes the ally quick-picks in every calc.', placement:'bottom' },
+    autoAdvanceMs: 2800 },
 
-  { id:'open-builder',
-    prereq: async () => {},
+  // Same split for the Build team button — spotlight first, then click and
+  // spotlight the opened overlay.
+  { id:'open-builder-btn', view:'dmg',
+    prereq: async () => {
+      // Make sure the My Team details block is open so #mybuild is visible.
+      const d = document.querySelector('details.myteam');
+      if(d && !d.open) d.open = true;
+    },
     setup:  async (ctx) => {
       const btn = document.getElementById('mybuild');
       if(!btn) return;
       await _tourBringIntoView(btn);
-      await _sleep(400, ctx.signal);
-      if(ctx.signal.aborted) return;
-      btn.click();
+      btn.classList.add('tour-focus');
+      _tourCleanup.push(() => btn.classList.remove('tour-focus'));
+    },
+    spotlight: '#mybuild, [data-tour="open-builder"]',
+    tip: { title:'🛠 Build team — the friendlier way', body:'Opens the Team Builder overlay — dropdowns instead of a Showdown export paste.', placement:'top' },
+    autoAdvanceMs: 2000 },
+
+  { id:'open-builder-open', view:'dmg',
+    prereq: async () => {
+      const d = document.querySelector('details.myteam');
+      if(d && !d.open) d.open = true;
+    },
+    setup:  async (ctx) => {
+      const btn = document.getElementById('mybuild');
+      btn?.classList.remove('tour-focus');
+      if(btn) btn.click();
       await _waitFor('#builderoverlay.open #tb-slots .tb-slot', ctx.signal, 2000).catch(()=>{});
     },
-    spotlight: '[data-tour="open-builder"], #builderoverlay .tb-header',
-    tip: { title:'Team Builder — the friendly form', body:'6 slots, dropdowns for everything, live sync to a Showdown paste block.', placement:'left' },
-    autoAdvanceMs: 2400 },
+    spotlight: '#builderoverlay .tb-header, #builderoverlay .tb-box',
+    tip: { title:'Team Builder overlay', body:'Six slots, dropdowns for every field, live sync back to a Showdown paste. Champions team incoming.', placement:'bottom' },
+    autoAdvanceMs: 2600 },
 
-  { id:'fill-builder',
-    prereq: async () => {},
+  { id:'fill-builder', view:'dmg',
+    prereq: async (ctx) => {
+      // Ensure builder overlay is open — the previous step normally opens it,
+      // but Back-navigation to here needs it re-opened.
+      if(!document.querySelector('#builderoverlay.open')){
+        const btn = document.getElementById('mybuild');
+        if(btn){ btn.click(); await _waitFor('#builderoverlay.open #tb-slots .tb-slot', ctx.signal, 2000).catch(()=>{}); }
+      }
+    },
     setup:  async (ctx) => {
       _tourShowTyping('Filling a sample Champions team…');
-      await _tourFillBuilder(TOUR_CHAMPIONS_TEAM, ctx.signal);
-      _tourHideTyping();
+      try {
+        await _tourFillBuilder(TOUR_CHAMPIONS_TEAM, ctx.signal);
+      } finally {
+        _tourHideTyping();
+      }
     },
-    spotlight: '#tb-slots',
-    tip: { title:'Staraptor → Sableye → Milotic → Hydreigon → Raichu → Sneasler', body:'Watch each slot fill: mon → item → ability → nature → EVs → 4 moves. Skip to jump ahead.', placement:'right' },
+    spotlight: '#builderoverlay .tb-box, #builderoverlay',
+    tip: { title:'Auto-filling a sample Champions team', body:'Staraptor → Sableye → Milotic → Hydreigon → Raichu → Sneasler. Every field on every slot — mon, item, ability, nature, EVs, and moves — fills automatically.', placement:'right' },
     autoAdvanceMs: null },
 
-  { id:'save-builder',
-    prereq: async () => {},
+  { id:'save-builder', view:'dmg',
+    prereq: async (ctx) => {
+      // Re-open builder if it got closed. Unconditionally re-fill — the
+      // `anyNamed` heuristic couldn't distinguish "our Champions team is
+      // present" from "a stale partial user team is present"; unconditional
+      // fill wipes any staleness and guarantees the audit passes.
+      if(!document.querySelector('#builderoverlay.open')){
+        const btn = document.getElementById('mybuild');
+        if(btn){ btn.click(); await _waitFor('#builderoverlay.open #tb-slots .tb-slot', ctx.signal, 2000).catch(()=>{}); }
+      }
+      // Only re-fill if the state isn't already the Champions team — check for
+      // Sneasler in slot 5 as a signature. Avoids wiping mid-run when the
+      // overlay is intact.
+      const looksChampions = tbSlots?.[5]?.name === 'Sneasler'
+                          && tbSlots?.[0]?.name === 'Staraptor';
+      if(!looksChampions){
+        await _tourFillBuilder(TOUR_CHAMPIONS_TEAM, ctx.signal);
+      }
+    },
     setup:  async (ctx) => {
       const btn = document.querySelector('[data-tour="tb-save"]');
       if(!btn) return;
       await _tourBringIntoView(btn);
-      await _sleep(600, ctx.signal);
+      await _sleep(500, ctx.signal);
       if(ctx.signal.aborted) return;
       btn.click();
-      await _waitFor('.myrow .mybtn', ctx.signal, 2000).catch(()=>{});
+      // If the audit modal opens (defensive — should not happen post-fix), the
+      // team is filled correctly so "Save anyway" (_tbConfirmSave) is the right
+      // path. Silent _tbCancelSave would drop the team on the floor and leave
+      // .myrow empty for ally-pick.
+      const audit = document.getElementById('tbaudit');
+      if(audit?.classList.contains('open')){
+        _tbConfirmSave();
+      }
+      await _waitFor('.myrow .mybtn', ctx.signal, 1500).catch(()=>{});
     },
     spotlight: '[data-tour="tb-save"], .myrow',
-    tip: { title:'Saved — becomes your ally quick-picks', body:'Now every calc can auto-load one of your mons on the ally side with a single click.', placement:'top' },
+    tip: { title:'Saved — becomes your ally quick-picks', body:'Every calc can now load one of your mons on the ally side with a single click.', placement:'top' },
     autoAdvanceMs: 2400 },
 
-  { id:'ally-pick',
-    prereq: async () => { await _tourGoToView('dmg'); },
+  { id:'ally-pick', view:'dmg',
+    prereq: async (ctx) => {
+      const ov = document.querySelector('#builderoverlay.open');
+      if(ov){ const cx = document.querySelector('#builderoverlay [data-tb-close], #builderoverlay .tb-x'); cx && cx.click(); }
+    },
     setup:  async (ctx) => {
       // Find the Sneasler button in the ally quick-pick row (data-i=5 from
       // Champions team ordering — Sneasler is the 6th slot, index 5).
@@ -4616,16 +4876,19 @@ const TOUR_STEPS = [
       if(!btn) return;
       await _tourBringIntoView(btn);
       btn.classList.add('tour-focus');
-      await _sleep(900, ctx.signal);
-      if(ctx.signal.aborted) { btn.classList.remove('tour-focus'); return; }
-      btn.click();
-      btn.classList.remove('tour-focus');
+      try {
+        await _sleep(900, ctx.signal);
+        if(ctx.signal.aborted) return;
+        btn.click();
+      } finally {
+        btn.classList.remove('tour-focus');
+      }
     },
     spotlight: '.dmgslot[data-p="a"] .myrow',
-    tip: { title:'Ally: Sneasler', body:'Highlighted the quick-pick button before clicking so you see exactly which mon is being loaded.', placement:'right' },
-    autoAdvanceMs: 2400 },
+    tip: { title:'Ally: Sneasler', body:'Click any of your ally quick-picks to load that mon as the attacker.', placement:'right' },
+    autoAdvanceMs: 2200 },
 
-  { id:'enemy-pick',
+  { id:'enemy-pick', view:'dmg',
     prereq: async () => {},
     setup:  async (ctx) => {
       // Kingambit from the Big-6 fight team — data-fti=3 (0-indexed 4th slot).
@@ -4634,17 +4897,20 @@ const TOUR_STEPS = [
       if(!btn) return;
       await _tourBringIntoView(btn);
       btn.classList.add('tour-focus');
-      await _sleep(900, ctx.signal);
-      if(ctx.signal.aborted) { btn.classList.remove('tour-focus'); return; }
-      btn.click();
-      btn.classList.remove('tour-focus');
-      await _waitFor('#dmgresults .moverow', ctx.signal, 2000).catch(()=>{});
+      try {
+        await _sleep(900, ctx.signal);
+        if(ctx.signal.aborted) return;
+        btn.click();
+        await _waitFor('#dmgresults .moverow', ctx.signal, 2000).catch(()=>{});
+      } finally {
+        btn.classList.remove('tour-focus');
+      }
     },
     spotlight: '.dmgslot[data-p="b"] .myrow',
-    tip: { title:'Enemy: Kingambit', body:'Same highlight-then-click on the Fight-Team quick-pick row on the enemy slot.', placement:'left' },
-    autoAdvanceMs: 2400 },
+    tip: { title:'Enemy: Kingambit', body:'And any of the loaded opponents on the enemy side. Calc updates instantly.', placement:'left' },
+    autoAdvanceMs: 2200 },
 
-  { id:'matchup',
+  { id:'matchup', view:'dmg',
     prereq: async () => {},
     setup:  async (ctx) => {
       // Find Close Combat in Sneasler's move list and click it so its detail
@@ -4652,24 +4918,32 @@ const TOUR_STEPS = [
       const cc = [...document.querySelectorAll('#dmgresults .rescol[data-side="A"] .moverow')]
         .find(r => /close combat/i.test(r.textContent));
       if(cc) { cc.click(); await _sleep(200, ctx.signal); }
-      await _tourBringIntoView(document.getElementById('dmgresults'));
+      // Bring the selected row into view — spotlight target below is the row
+      // itself (not the whole results box), so the tooltip can sit under it
+      // without covering the KO chip.
+      const sel = document.querySelector('#dmgresults .rescol[data-side="A"] .moverow.sel')
+               || document.querySelector('#dmgresults .rescol[data-side="A"] .moverow');
+      await _tourBringIntoView(sel || document.getElementById('dmgresults'));
     },
-    spotlight: '#dmgresults',
-    tip: { title:'Sneasler → Close Combat → Kingambit', body:'4× SE Fighting on Dark/Steel + Unburden speed = guaranteed OHKO. Supreme Overlord doesn\'t save it.', placement:'left' },
-    autoAdvanceMs: 4500 },
+    spotlight: '#dmgresults .rescol[data-side="A"] .moverow.sel, #dmgresults .rescol[data-side="A"] .moverow',
+    tip: { title:'Sneasler → Close Combat → Kingambit', body:'4× SE Fighting on Dark/Steel + Unburden speed = guaranteed OHKO. Supreme Overlord doesn\'t save it.', placement:'bottom' },
+    autoAdvanceMs: 4000 },
 
-  { id:'teams-repo',
-    prereq: async () => { await _tourGoToView('team'); },
+  { id:'teams-repo', view:'team',
+    prereq: async () => {},
     setup:  async () => { await _tourBringIntoView(document.querySelector('#teampad .tcard')); },
     spotlight: '[data-tour="teams-view"]',
-    tip: { title:'Teams — the whole registered repository', body:'Search by player ("Wolfey"), event, or Pokémon. This is for research — for a real matchup, use Find Team → ⚔ Fight.', placement:'top' },
-    autoAdvanceMs: 2800 },
+    tip: { title:'Teams — the full registered archive', body:'Search by player ("Wolfey"), event, or Pokémon. Research mode — for a live matchup, use Find Team → ⚔ Fight.', placement:'top' },
+    autoAdvanceMs: 3000 },
 
+  // No `view` — help pill lives in the header on every desktop view, so
+  // switching to Pokémon just to spotlight it made the tab flash for no reason.
   { id:'help',
     prereq: async () => {},
     setup:  async () => {},
     spotlight: '[data-tour="help-pill"], #helppill',
-    tip: { title:'Everything else lives here', body:'Hotkeys (press ?), full Guide, or replay this tour. That\'s it — go cook.', placement:'bottom-left' },
+    tip: { title:'Everything else lives here', body:'Hotkeys (press ?) and the full Guide live behind this pill. Go cook.', placement:'bottom-left' },
+    skipIf: () => matchMedia('(max-width:640px)').matches,
     autoAdvanceMs: null },
 ];
 
@@ -4678,6 +4952,46 @@ let _tourStep = -1;
 let _tourAbort = null;     // AbortController for the currently-running step
 let _tourAutoTimer = null; // setTimeout id for the auto-advance
 let _tourCleanup = [];     // functions to run on tour end (e.g. restore <details> open state)
+let _tourBusy = false;     // true while setup() is running — Next uses this to fast-forward
+let _tourCtx  = null;      // live ctx; carries fastForward flag that _sleep short-circuits on
+let _tourCtxSeq = 0;       // monotonic ctx id — guards busy-flag writes against stale catches
+let _tourOpener = null;    // element to restore focus to when tour ends
+let _splashPrevFocus = null;
+let _guidePrev = null;
+let _tourListenersOn = false;  // scroll/resize listener lifecycle
+let _tourRAF = 0;              // rAF ticket for scroll-throttled reposition
+let _tourScrollingT = 0;       // debounce for .scrolling class
+
+// Autoplay is DEFAULT OFF. When on, every step's autoAdvanceMs is multiplied by
+// 1.6× — enough extra breathing room for a viewer who isn't actively clicking
+// Next, without dragging. 2.5× felt sluggish in testing. Persist across pages.
+const TOUR_AUTOPLAY_KEY = 'vgc.tour.autoplay';
+const TOUR_AUTOPLAY_MULT = 1.6;
+function _tourAutoplayOn(){ try{ return localStorage.getItem(TOUR_AUTOPLAY_KEY) === '1'; }catch(e){ return false; } }
+function _tourSetAutoplay(on){ try{ localStorage.setItem(TOUR_AUTOPLAY_KEY, on ? '1' : '0'); }catch(e){} _tourSyncAutoBtn(); }
+function _tourSyncAutoBtn(){
+  const b = document.getElementById('ttauto');
+  if(!b) return;
+  const on = _tourAutoplayOn();
+  b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  const glyph = b.querySelector('.tt-btn-glyph');
+  if(glyph) glyph.textContent = on ? '❚❚' : '▶';
+  else b.textContent = (on ? '❚❚' : '▶') + ' Auto';
+  b.title = on ? 'Auto-advance ON — click to switch to Manual' : 'Auto-advance OFF — click to enable';
+}
+function _tourScheduleAuto(i){
+  if(_tourAutoTimer){ clearTimeout(_tourAutoTimer); _tourAutoTimer = null; }
+  const step = TOUR_STEPS[i];
+  if(!step || !step.autoAdvanceMs) return;
+  if(!_tourAutoplayOn()) return;  // manual mode — user drives with Next
+  const ms = Math.round(step.autoAdvanceMs * TOUR_AUTOPLAY_MULT);
+  _tourAutoTimer = setTimeout(() => { _tourAutoTimer = null; if(_tourStep === i) _runStep(i + 1); }, ms);
+}
+async function _tourRafSleep(signal){
+  if(_tourCtx?.fastForward) return;
+  await new Promise(r => requestAnimationFrame(r));
+  await _sleep(40, signal);
+}
 
 function _tourEl(sel){
   if(typeof sel === 'function') sel = sel();
@@ -4706,26 +5020,74 @@ function _positionTip(el, placement){
   if(matchMedia('(max-width:640px)').matches) return;  // mobile: CSS docks to bottom
   const r = el.getBoundingClientRect();
   const t = tip.getBoundingClientRect();
-  const vw = innerWidth, vh = innerHeight, gap = 12;
-  const tryPlacement = (p) => {
-    switch(p){
-      case 'top':    return { top: r.top - t.height - gap, left: r.left + r.width/2 - t.width/2 };
-      case 'bottom': return { top: r.bottom + gap, left: r.left + r.width/2 - t.width/2 };
-      case 'left':   return { top: r.top + r.height/2 - t.height/2, left: r.left - t.width - gap };
-      case 'right':  return { top: r.top + r.height/2 - t.height/2, left: r.right + gap };
-      case 'bottom-left': return { top: r.bottom + gap, left: Math.max(8, r.right - t.width) };
-      case 'center': return { top: vh/2 - t.height/2, left: vw/2 - t.width/2 };
-      default:       return { top: r.bottom + gap, left: r.left };
-    }
+  const vw = innerWidth, vh = innerHeight, gap = 12, edge = 8;
+
+  // Position generators for each named placement.
+  const positions = {
+    top:           () => ({ top: r.top - t.height - gap,               left: r.left + r.width/2 - t.width/2 }),
+    bottom:        () => ({ top: r.bottom + gap,                        left: r.left + r.width/2 - t.width/2 }),
+    left:          () => ({ top: r.top + r.height/2 - t.height/2,      left: r.left - t.width - gap }),
+    right:         () => ({ top: r.top + r.height/2 - t.height/2,      left: r.right + gap }),
+    'bottom-left': () => ({ top: r.bottom + gap,                        left: Math.max(edge, r.right - t.width) }),
+    'top-left':    () => ({ top: r.top - t.height - gap,               left: Math.max(edge, r.right - t.width) }),
+    center:        () => ({ top: vh/2 - t.height/2,                     left: vw/2 - t.width/2 }),
   };
-  let {top, left} = tryPlacement(placement || 'bottom');
-  if(top < 8) top = r.bottom + gap;
-  if(top + t.height > vh - 8) top = r.top - t.height - gap;
-  if(top < 8) top = 8;
-  if(left < 8) left = 8;
-  if(left + t.width > vw - 8) left = vw - t.width - 8;
-  tip.style.top = top + 'px';
-  tip.style.left = left + 'px';
+
+  // Fallback chain per requested placement: try preferred → opposite → perpendicular.
+  // Ensures a tooltip that can't fit on the requested side flips instead of
+  // being clamped into the target (the "tooltip covers the Fight button" bug).
+  const chains = {
+    top:           ['top', 'bottom', 'right', 'left', 'bottom-left'],
+    bottom:        ['bottom', 'top', 'right', 'left', 'bottom-left'],
+    left:          ['left', 'right', 'top', 'bottom', 'bottom-left'],
+    right:         ['right', 'left', 'top', 'bottom', 'bottom-left'],
+    'bottom-left': ['bottom-left', 'top-left', 'bottom', 'top'],
+    center:        ['center'],
+  };
+
+  const overlaps = (top, left) =>
+    !(top + t.height <= r.top - 2 || top >= r.bottom + 2 || left + t.width <= r.left - 2 || left >= r.right + 2);
+  const clampToViewport = (top, left) => {
+    if(left < edge) left = edge;
+    if(left + t.width > vw - edge) left = vw - t.width - edge;
+    if(top < edge) top = edge;
+    if(top + t.height > vh - edge) top = vh - t.height - edge;
+    return { top, left };
+  };
+
+  const chain = chains[placement] || chains.bottom;
+  let chosen = null;
+  for(const p of chain){
+    const raw = positions[p]();
+    const clamped = clampToViewport(raw.top, raw.left);
+    if(!overlaps(clamped.top, clamped.left)){ chosen = clamped; break; }
+  }
+  // Last-ditch: pin to whichever edge has the most free space and accept partial
+  // overlap on that edge (better than covering the spotlight entirely).
+  if(!chosen){
+    const spaceTop = r.top, spaceBottom = vh - r.bottom, spaceLeft = r.left, spaceRight = vw - r.right;
+    const best = Math.max(spaceTop, spaceBottom, spaceLeft, spaceRight);
+    if(best === spaceBottom)      chosen = clampToViewport(r.bottom + gap, r.left + r.width/2 - t.width/2);
+    else if(best === spaceTop)    chosen = clampToViewport(r.top - t.height - gap, r.left + r.width/2 - t.width/2);
+    else if(best === spaceRight)  chosen = clampToViewport(r.top + r.height/2 - t.height/2, r.right + gap);
+    else                          chosen = clampToViewport(r.top + r.height/2 - t.height/2, r.left - t.width - gap);
+  }
+  tip.style.top = chosen.top + 'px';
+  tip.style.left = chosen.left + 'px';
+  // Arrow — read from chosen placement chain member (best-effort via inverse lookup).
+  const chosenName = (() => {
+    for(const p of chain){
+      const raw = positions[p]();
+      const clamped = clampToViewport(raw.top, raw.left);
+      if(clamped.top === chosen.top && clamped.left === chosen.left) return p;
+    }
+    return placement || 'bottom';
+  })();
+  tip.dataset.arrow = chosenName;
+  const cross = (chosenName === 'top' || chosenName === 'bottom')
+    ? Math.max(16, Math.min(t.width - 16, r.left + r.width/2 - chosen.left))
+    : Math.max(16, Math.min(t.height - 16, r.top + r.height/2 - chosen.top));
+  tip.style.setProperty('--tt-arrow-cross', cross + 'px');
 }
 
 // Bottom-center chip that appears during long simulations (typing 6 mons,
@@ -4749,49 +5111,110 @@ async function _runStep(i){
   // Cancel whatever the previous step was doing.
   if(_tourAbort){ _tourAbort.abort(); }
   if(_tourAutoTimer){ clearTimeout(_tourAutoTimer); _tourAutoTimer = null; }
+  const prevStep = TOUR_STEPS[_tourStep >= 0 ? _tourStep : 0];
   _tourAbort = new AbortController();
-  const ctx = { signal: _tourAbort.signal };
+  const ctx = { signal: _tourAbort.signal, fastForward: false, id: ++_tourCtxSeq };
+  _tourCtx = ctx;
+  _tourBusy = true;
   _tourStep = i;
   const step = TOUR_STEPS[i];
   if(!step) return _endTour('completed');
+  // Optional skipIf — mobile-only guards etc.
+  if(step.skipIf && step.skipIf()){
+    if(_tourCtx === ctx) _tourBusy = false;
+    return _runStep(i + 1);
+  }
 
-  // Update tip chrome NOW so the user sees where they are even during long setups.
+  const tip = document.getElementById('tourtip');
+  const spot = document.getElementById('tourspot');
+  // Hide tip during async setup so the previous step's tip doesn't hover over
+  // the new step's target while setup runs. Chrome is still populated so the
+  // live region announces on show.
+  tip.classList.remove('open');
   document.getElementById('tttitle').textContent = step.tip.title;
   document.getElementById('tttbody').textContent = step.tip.body;
   document.getElementById('tttcount').textContent = (i+1) + ' / ' + TOUR_STEPS.length;
-  document.getElementById('ttdots').innerHTML = TOUR_STEPS.map((_,k)=>`<span class="tt-dot${k===i?' active':''}"></span>`).join('');
   document.getElementById('ttprev').disabled = (i === 0);
-  document.getElementById('ttnext').textContent = (i === TOUR_STEPS.length - 1) ? 'Done ✓' : 'Next →';
+  const isLast = (i === TOUR_STEPS.length - 1);
+  const nextBtn = document.getElementById('ttnext');
+  // Preserve the aria-hidden right-arrow span so screen readers keep the label.
+  nextBtn.innerHTML = isLast ? 'Done <span aria-hidden="true">✓</span>' : 'Next <span aria-hidden="true">→</span>';
+  nextBtn.setAttribute('aria-label', isLast ? 'Finish tour' : 'Next step');
+  _tourSyncAutoBtn();
+  // Announce step in a single polite live region (aria-live on #tourtip caused
+  // stacked announcements per DOM mutation).
+  const live = document.getElementById('tttlive');
+  if(live) live.textContent = 'Step ' + (i+1) + ' of ' + TOUR_STEPS.length + '. ' + step.tip.title + '. ' + step.tip.body;
 
   try{
+    // Auto-switch to the step's home view before its prereq — makes every step
+    // self-contained regardless of traversal direction. When the view is
+    // actually changing, briefly flash the target tab so the user tracks the
+    // jump instead of just seeing content swap under them.
+    if(step.view){
+      const nowView = typeof view === 'string' ? view : null;
+      if(nowView && nowView !== step.view){
+        const tabSel = '.tabs .tab[data-view="'+step.view+'"], #bottomnav .bn[data-view="'+step.view+'"]';
+        const tabEl = document.querySelector(tabSel);
+        if(tabEl && !_tourCtx?.fastForward){
+          // Spotlight+pulse the target tab BEFORE the view actually changes.
+          const spot = document.getElementById('tourspot');
+          const tip = document.getElementById('tourtip');
+          spot.classList.add('warp'); tip.classList.add('warp');
+          _positionSpot(tabEl);
+          _positionTip(tabEl, 'bottom');
+          tip.classList.add('open');
+          tabEl.classList.add('tour-focus');
+          void spot.offsetWidth;
+          requestAnimationFrame(() => { spot.classList.remove('warp'); tip.classList.remove('warp'); });
+          await _sleep(650, ctx.signal);
+          tabEl.classList.remove('tour-focus');
+        }
+      }
+      await _tourGoToView(step.view);
+    }
+    if(ctx.signal.aborted) return;
     if(step.prereq) await step.prereq(ctx);
     if(ctx.signal.aborted) return;
     if(step.setup)  await step.setup(ctx);
     if(ctx.signal.aborted) return;
     // Resolve spotlight target (fn or string). Prefer in-viewport match.
     const el = _tourEl(step.spotlight);
+    // Warp (no transition) when crossing views so #tourspot doesn't slide
+    // across the whole viewport.
+    const warpNeeded = !prevStep || prevStep.view !== step.view;
     if(el){
-      // Move to viewport if needed — belt-and-braces since setup usually did this.
       await _tourBringIntoView(el);
       if(ctx.signal.aborted) return;
-      _positionSpot(el);
-      _positionTip(el, step.tip.placement);
+      if(warpNeeded){
+        spot.classList.add('warp'); tip.classList.add('warp');
+        _positionSpot(el);
+        _positionTip(el, step.tip.placement);
+        // Force layout flush, then release warp on next frame.
+        void spot.offsetWidth;
+        requestAnimationFrame(() => { spot.classList.remove('warp'); tip.classList.remove('warp'); });
+      } else {
+        _positionSpot(el);
+        _positionTip(el, step.tip.placement);
+      }
     } else {
-      // No spotlight target — hide spot but keep tip in center.
-      document.getElementById('tourspot').classList.remove('open');
-      document.getElementById('tourtip').classList.add('open');
+      spot.classList.remove('open');
+      tip.dataset.arrow = 'center';
     }
-    if(step.autoAdvanceMs){
-      _tourAutoTimer = setTimeout(() => {
-        _tourAutoTimer = null;
-        if(_tourStep === i) _runStep(i + 1);
-      }, step.autoAdvanceMs);
-    }
+    tip.classList.add('open');
+    // Move focus into the dialog so Enter/Space act on Next, not the opener.
+    // Guarded on ctx to avoid focus-stealing from a stale step.
+    if(_tourCtx === ctx){ tip.focus({preventScroll: true}); }
+    _tourScheduleAuto(i);
   } catch(e){
-    if(e.name === 'AbortError') return;  // Skip mid-step — next call handles the next step
+    if(_tourCtx !== ctx) return;  // stale — a newer step owns state now
+    if(e.name === 'AbortError'){ _tourBusy = false; return; }
     console.warn('[tour] step '+step.id+' error:', e);
-    _runStep(i + 1);  // recover gracefully
+    _tourBusy = false;
+    _runStep(i + 1);
+    return;
   }
+  if(_tourCtx === ctx) _tourBusy = false;
 }
 
 function _endTour(reason){
@@ -4800,10 +5223,42 @@ function _endTour(reason){
   _tourHideTyping();
   if(_tourAbort){ _tourAbort.abort(); _tourAbort = null; }
   if(_tourAutoTimer){ clearTimeout(_tourAutoTimer); _tourAutoTimer = null; }
+  _tourBusy = false;
+  _tourCtx = null;
   _tourStep = -1;
+  // Belt-and-braces DOM sweep for any step that forgot to register cleanup.
+  document.querySelectorAll('.tour-focus').forEach(el => el.classList.remove('tour-focus'));
+  document.querySelectorAll('.tt-saved-chip').forEach(el => el.remove());
+  document.body.classList.remove('tour-active');
+  document.getElementById('builderoverlay')?.classList.remove('tour-lock');
+  _setBackgroundInert(false);
+  _tourDetachListeners();
+  // Restore pre-tour team snapshot (see startGuidedTour for backup).
+  try{
+    const backup = localStorage.getItem('vgc_myteam_raw.pretour');
+    if(backup !== null){
+      if(backup === '') localStorage.removeItem('vgc_myteam_raw');
+      else localStorage.setItem('vgc_myteam_raw', backup);
+      try{ myTeam = parseShowdown(backup) || []; if(myTeam) myTeam.raw = backup; }catch(_){}
+      const ta = document.getElementById('myta'); if(ta) ta.value = backup;
+      try{ renderDmg && renderDmg(); }catch(_){}
+      localStorage.removeItem('vgc_myteam_raw.pretour');
+    }
+  }catch(e){}
   // Run cleanup handlers (restore <details> open state etc.)
   for(const fn of _tourCleanup){ try{ fn(); }catch(e){} }
   _tourCleanup = [];
+  // Land the user back on the home / Pokémon landing screen after a successful
+  // completion so they start exploring from the same place a first-visit does.
+  // Aborts (Esc / ✕) leave them where they were.
+  if(reason === 'completed'){
+    try{
+      setView('poke');
+      selMon = null;
+      renderLanding();
+      scrollTo({top: 0, behavior: 'smooth'});
+    }catch(e){}
+  }
   try{
     const st = JSON.parse(localStorage.getItem(TOUR_KEY) || '{}');
     st.lastCompletedAt = Date.now();
@@ -4811,9 +5266,23 @@ function _endTour(reason){
     delete st.index;
     localStorage.setItem(TOUR_KEY, JSON.stringify(st));
   }catch(e){}
+  // Restore focus to whoever opened the tour, with visibility guard.
+  const t = (_tourOpener && document.contains(_tourOpener) && _tourOpener.offsetParent !== null)
+    ? _tourOpener : document.getElementById('helppill');
+  t && t.focus && t.focus({preventScroll: true});
+  _tourOpener = null;
 }
 
-function startGuidedTour(startAt=0){
+function startGuidedTour(startAt=0, opener=null){
+  _tourOpener = opener || (document.activeElement !== document.body ? document.activeElement : null);
+  // Backup the user's saved team so the builder-demo Save doesn't permanently
+  // overwrite it. Restored on tour end (all reasons).
+  try{
+    if(localStorage.getItem('vgc_myteam_raw.pretour') === null){
+      const cur = localStorage.getItem('vgc_myteam_raw');
+      localStorage.setItem('vgc_myteam_raw.pretour', cur ?? '');
+    }
+  }catch(e){}
   try{
     const st = JSON.parse(localStorage.getItem(TOUR_KEY) || '{}');
     st.runCount = (st.runCount || 0) + 1;
@@ -4821,27 +5290,106 @@ function startGuidedTour(startAt=0){
     localStorage.setItem(TOUR_KEY, JSON.stringify(st));
   }catch(e){}
   _tourCleanup = [];
+  document.body.classList.add('tour-active');
+  _setBackgroundInert(true);
+  _tourAttachListeners();
   _runStep(startAt);
   try{ tcount && tcount('help/tour-start','help: tour start'); }catch(e){}
 }
-// Legacy alias — anything wired to old name still works.
-function startTour(startAt=0){ return startGuidedTour(startAt); }
+function startTour(startAt=0, opener=null){ return startGuidedTour(startAt, opener); }
 
 function _abortTour(){ _endTour('closed'); }
 
-// Wire tooltip buttons
-document.getElementById('ttnext').addEventListener('click', () => {
-  if(_tourStep >= TOUR_STEPS.length - 1) _endTour('completed');
-  else _runStep(_tourStep + 1);
-});
-document.getElementById('ttprev').addEventListener('click', () => {
-  if(_tourStep > 0) _runStep(_tourStep - 1);
-});
+// Shared advance helper — Next AND Prev both go through here so fast-forward
+// behavior is identical in both directions.
+async function _tourGoto(dir){
+  if(_tourBusy && _tourCtx){
+    _tourCtx.fastForward = true;
+    const t0 = Date.now();
+    while(_tourBusy && Date.now() - t0 < 900){
+      await new Promise(r => setTimeout(r, 0));
+    }
+  }
+  if(dir > 0){
+    if(_tourStep >= TOUR_STEPS.length - 1) _endTour('completed');
+    else _runStep(_tourStep + 1);
+  } else {
+    if(_tourStep > 0) _runStep(_tourStep - 1);
+  }
+}
+async function _tourNext(){ return _tourGoto(+1); }
+async function _tourPrev(){ return _tourGoto(-1); }
+
+document.getElementById('ttnext').addEventListener('click', _tourNext);
+document.getElementById('ttprev').addEventListener('click', _tourPrev);
 document.getElementById('ttx').addEventListener('click', _abortTour);
+
+// Focus containment — mark the app's non-tour regions inert so Tab and pointer
+// events can't reach controls under the spotlight.
+function _setBackgroundInert(on){
+  const roots = [document.querySelector('header'), document.querySelector('main'),
+                 document.getElementById('bottomnav'), document.querySelector('footer.sitefoot')];
+  for(const r of roots){
+    if(!r) continue;
+    if(on) r.setAttribute('inert', '');
+    else r.removeAttribute('inert');
+  }
+}
+
+// rAF-throttled reposition; attached only while a tour is running so no
+// dangling capture-scroll listeners are left on the page.
+function _tourReposeSchedule(){
+  if(_tourStep < 0 || _tourRAF) return;
+  const spot = document.getElementById('tourspot');
+  const tip = document.getElementById('tourtip');
+  spot.classList.add('scrolling');
+  tip.classList.add('scrolling');
+  clearTimeout(_tourScrollingT);
+  _tourScrollingT = setTimeout(() => { spot.classList.remove('scrolling'); tip.classList.remove('scrolling'); }, 150);
+  _tourRAF = requestAnimationFrame(() => {
+    _tourRAF = 0;
+    if(_tourStep < 0) return;
+    if(matchMedia('(max-width:640px)').matches) return;
+    const step = TOUR_STEPS[_tourStep];
+    const el = _tourEl(step?.spotlight);
+    if(!el) return;
+    _positionSpot(el);
+    _positionTip(el, step.tip.placement);
+  });
+}
+function _tourAttachListeners(){
+  if(_tourListenersOn) return;
+  addEventListener('resize', _tourReposeSchedule);
+  addEventListener('scroll', _tourReposeSchedule, { passive:true, capture:true });
+  _tourListenersOn = true;
+}
+function _tourDetachListeners(){
+  if(!_tourListenersOn) return;
+  removeEventListener('resize', _tourReposeSchedule);
+  removeEventListener('scroll', _tourReposeSchedule, { capture:true });
+  if(_tourRAF){ cancelAnimationFrame(_tourRAF); _tourRAF = 0; }
+  _tourListenersOn = false;
+}
+// Autoplay toggle — persists in localStorage. When flipping ON mid-step,
+// immediately schedule the current step's auto-advance so the user doesn't
+// have to wait for the NEXT step to start.
+document.getElementById('ttauto').addEventListener('click', () => {
+  const wasOn = _tourAutoplayOn();
+  _tourSetAutoplay(!wasOn);
+  if(!wasOn && _tourStep >= 0 && !_tourBusy){
+    _tourScheduleAuto(_tourStep);
+  } else if(wasOn && _tourAutoTimer){
+    clearTimeout(_tourAutoTimer); _tourAutoTimer = null;
+  }
+});
+_tourSyncAutoBtn();
 
 // Splash modal — pre-tour intro
 function _showSplash(){
+  _splashPrevFocus = document.activeElement;
   document.getElementById('toursplash').classList.add('open');
+  _setBackgroundInert(true);
+  document.getElementById('tourstartbtn')?.focus({preventScroll: true});
 }
 function _closeSplash(){
   document.getElementById('toursplash').classList.remove('open');
@@ -4852,69 +5400,112 @@ function _closeSplash(){
       localStorage.setItem(TOUR_KEY, JSON.stringify(st));
     }catch(e){}
   }
+  // Only lift inert if the tour didn't take over.
+  if(_tourStep < 0) _setBackgroundInert(false);
+  _splashPrevFocus?.focus?.({preventScroll: true});
+  _splashPrevFocus = null;
 }
 document.getElementById('tourskipbtn').addEventListener('click', () => {
   _closeSplash();
   try{ tcount && tcount('help/tour-skip','help: tour skip'); }catch(e){}
 });
-document.getElementById('tourstartbtn').addEventListener('click', () => {
-  _closeSplash();
-  startGuidedTour(0);
+document.getElementById('tourstartbtn').addEventListener('click', (e) => {
+  const opener = _splashPrevFocus;
+  _splashPrevFocus = null;  // don't restore to opener — tour will own focus
+  document.getElementById('toursplash').classList.remove('open');
+  startGuidedTour(0, opener);
 });
 
 // Guide modal
 function openGuide(){
+  _guidePrev = document.activeElement;
   document.getElementById('guidemodal').classList.add('open');
+  _setBackgroundInert(true);
+  document.getElementById('guidetourbtn')?.focus({preventScroll: true});
   try{ tcount && tcount('help/guide-open','help: guide open'); }catch(e){}
 }
-function closeGuide(){
+function closeGuide(handoff){
   document.getElementById('guidemodal').classList.remove('open');
+  if(handoff){
+    // Caller (Take-the-tour button) will start the tour and own focus; skip restore.
+    _guidePrev = null;
+    return;
+  }
+  if(_tourStep < 0) _setBackgroundInert(false);
+  _guidePrev?.focus?.({preventScroll: true});
+  _guidePrev = null;
 }
 
 // Help pill + menu
 const _helpPill = document.getElementById('helppill');
 const _helpMenu = document.getElementById('helpmenu');
+function _syncHelpAria(){
+  if(!_helpPill || !_helpMenu) return;
+  const open = _helpMenu.classList.contains('open');
+  _helpMenu.setAttribute('aria-hidden', open ? 'false' : 'true');
+  _helpPill.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
 if(_helpPill){
   _helpPill.addEventListener('click', (e) => {
     e.stopPropagation();
     _helpMenu.classList.toggle('open');
     _helpPill.classList.toggle('open');
+    _syncHelpAria();
+    if(_helpMenu.classList.contains('open')){
+      const first = _helpMenu.querySelector('.hm-item');
+      first?.focus?.({preventScroll: true});
+    }
   });
   document.addEventListener('click', (e) => {
     if(!_helpMenu.contains(e.target) && e.target !== _helpPill){
-      _helpMenu.classList.remove('open');
-      _helpPill.classList.remove('open');
+      if(_helpMenu.classList.contains('open')){
+        _helpMenu.classList.remove('open');
+        _helpPill.classList.remove('open');
+        _syncHelpAria();
+      }
     }
   });
   _helpMenu.addEventListener('click', (e) => {
     const btn = e.target.closest('.hm-item'); if(!btn) return;
-    _helpMenu.classList.remove('open'); _helpPill.classList.remove('open');
     const kind = btn.dataset.help;
-    if(kind === 'tour')    startGuidedTour(0);
+    // Close menu AFTER capturing opener (so restore has a valid target).
+    _helpMenu.classList.remove('open'); _helpPill.classList.remove('open'); _syncHelpAria();
+    if(kind === 'tour')    startGuidedTour(0, btn);
     if(kind === 'hotkeys') document.getElementById('helpoverlay').style.display = 'flex';
     if(kind === 'guide')   openGuide();
     if(kind === 'about')   document.getElementById('aboutoverlay')?.classList.add('open');
   });
 }
 
-// Esc closes the topmost tour modal.
+// Esc closes the topmost tour modal; Arrow/Home/End/Enter/Space nav the tour.
+// Guarded so keys in focused inputs (EV, ability search) keep native behavior.
 document.addEventListener('keydown', (e) => {
-  if(e.key !== 'Escape') return;
-  if(document.getElementById('toursplash')?.classList.contains('open')){ _closeSplash(); return; }
-  if(document.getElementById('guidemodal')?.classList.contains('open')){ closeGuide(); return; }
-  if(_tourStep >= 0){ _abortTour(); return; }
+  if(e.key === 'Escape'){
+    if(_helpMenu?.classList.contains('open')){
+      _helpMenu.classList.remove('open'); _helpPill.classList.remove('open'); _syncHelpAria();
+      _helpPill?.focus?.({preventScroll: true});
+      return;
+    }
+    if(document.getElementById('toursplash')?.classList.contains('open')){ _closeSplash(); return; }
+    if(document.getElementById('guidemodal')?.classList.contains('open')){ closeGuide(); return; }
+    if(_tourStep >= 0){ _abortTour(); return; }
+    return;
+  }
+  if(_tourStep < 0) return;
+  if(document.getElementById('toursplash')?.classList.contains('open')) return;
+  const active = document.activeElement;
+  const isField = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT' || active.isContentEditable);
+  if(isField) return;
+  if(e.key === 'ArrowLeft'){ e.preventDefault(); _tourPrev(); return; }
+  if(e.key === 'ArrowRight'){ e.preventDefault(); _tourNext(); return; }
+  if(e.key === 'Home'){ e.preventDefault(); _runStep(0); return; }
+  if(e.key === 'End'){ e.preventDefault(); _runStep(TOUR_STEPS.length - 1); return; }
+  if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); _tourNext(); return; }
 });
 
-// Reposition on resize / scroll while the tour is open — cheap, no re-run.
-function _tourReposition(){
-  if(_tourStep < 0) return;
-  const step = TOUR_STEPS[_tourStep];
-  if(!step) return;
-  const el = _tourEl(step.spotlight);
-  if(el){ _positionSpot(el); _positionTip(el, step.tip.placement); }
-}
-addEventListener('resize', _tourReposition);
-addEventListener('scroll', _tourReposition, { passive:true, capture:true });
+// Reposition-on-scroll is now lazily attached in startGuidedTour and detached
+// in _endTour (see _tourAttachListeners / _tourReposeSchedule above) — so no
+// dangling always-live capture-scroll listener on the page.
 
 // First-visit auto-splash — suppressed for:
 //  · returning visitors who dismissed or completed the tour
