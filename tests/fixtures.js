@@ -36,7 +36,6 @@ export function mkSide(opts = {}) {
     powerSpot: opts.powerSpot ? 1 : 0,
     battery: opts.battery ? 1 : 0,
     steelySpirit: opts.steelySpirit ? 1 : 0,
-    fairyAura: opts.fairyAura ? 1 : 0,
     crit: opts.crit ? 1 : 0,
   };
 }
@@ -48,6 +47,7 @@ export function mkField(opts = {}) {
     gravity: opts.gravity ? 1 : 0,
     magicRoom: opts.magicRoom ? 1 : 0,
     wonderRoom: opts.wonderRoom ? 1 : 0,
+    fairyAura: opts.fairyAura ? 1 : 0,
   };
 }
 

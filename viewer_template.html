@@ -321,7 +321,8 @@
   .hpbar::-webkit-slider-runnable-track{height:8px;border-radius:4px;background:linear-gradient(to right,var(--good),var(--accent2),var(--bad))}
   .hpbar::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--txt);margin-top:-3px;cursor:pointer}
   .hprow{display:flex;align-items:center;gap:8px}
-  .hpv{width:64px;font-size:12px;padding:5px 7px;font-variant-numeric:tabular-nums;text-align:right}
+  .hpv{width:64px;font-size:12px;padding:5px 7px;font-variant-numeric:tabular-nums;text-align:right;-moz-appearance:textfield}
+  .hpv::-webkit-inner-spin-button,.hpv::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
   .hplabel{font-family:'JetBrains Mono',ui-monospace,monospace;font-weight:500;font-size:10px;color:var(--muted-foreground)}
   /* Stateful counter rows (Last Respects fainted teammates, Rage Fist times-hit) */
   .counters{margin:7px 0}
@@ -334,10 +335,17 @@
   .counterstep button:hover{border-color:var(--atk-color);color:var(--atk-color)}
   .counterstep button:active{background:var(--atk-bg)}
   .counterval{min-width:24px;text-align:center;font-family:'JetBrains Mono',ui-monospace,monospace;font-weight:700;color:var(--atk-color);font-size:13px;font-variant-numeric:tabular-nums}
-  /* Field section */
+  /* Field section — spans full width and centers its content so the shared
+     weather/terrain/field toggles read as "the whole battlefield", not as
+     belonging to either the Ally or Enemy column. */
   .fieldbar{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:12px}
-  .fline{display:grid;grid-template-columns:64px 1fr;gap:8px;align-items:start;margin:5px 0}
-  .flbl{color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:.5px;font-weight:600;padding-top:4px}
+  .fieldbar-inner{max-width:920px;margin:0 auto}
+  .fline{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:6px 10px;margin:5px 0}
+  .flbl{color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:.5px;font-weight:600;min-width:60px;text-align:right;flex:0 0 auto}
+  .fline .btnrow{justify-content:center;flex-wrap:wrap}
+  @media (max-width:640px){
+    .flbl{min-width:0;text-align:left;flex:1 0 100%}
+  }
   /* Fight bar */
   /* Stance toggle (Aegislash Shield ⇄ Blade) — only rendered by
      syncStanceToggle() when the loaded forme has a stance variant. */
@@ -2083,11 +2091,13 @@ const SIDE_FX=[
   ['powerSpot','Power Spot','×1.3 ally damage'],
   ['battery','Battery','×1.3 ally special'],
   ['steelySpirit','Steely Spirit','×1.5 ally Steel moves'],
-  ['fairyAura','Fairy Aura','×1.33 all Fairy moves on the field'],
   ['crit','Crit','×1.5; ignores defender +boosts'],
 ];
-function newSide(){return{reflect:0,lightScreen:0,auroraVeil:0,tailwind:0,helpingHand:0,friendGuard:0,flowerGift:0,powerSpot:0,battery:0,steelySpirit:0,fairyAura:0,crit:0};}
-function newField(){return{terrain:'none',trickRoom:0,gravity:0,magicRoom:0,wonderRoom:0};}
+function newSide(){return{reflect:0,lightScreen:0,auroraVeil:0,tailwind:0,helpingHand:0,friendGuard:0,flowerGift:0,powerSpot:0,battery:0,steelySpirit:0,crit:0};}
+// Fairy Aura lives on `field` (not per-side) — Mega Floette-Eternal's aura
+// affects Fairy moves regardless of which side fires them, so a global toggle
+// matches the in-game reality better than a per-side flag.
+function newField(){return{terrain:'none',trickRoom:0,gravity:0,magicRoom:0,wonderRoom:0,fairyAura:0};}
 let A=newMon(),B=newMon(),doubles=true,weather='none',myTeam=[],selA=null,selB=null;
 let field=newField(),sideA=newSide(),sideB=newSide();
 let fightTeam=null;  // {team, mons, sourceTeamId} when "Fight this team" is active
@@ -2107,6 +2117,10 @@ const SIDE_BUFF_ABILITY={
   'Steely Spirit':'steelySpirit',
   'Flower Gift':'flowerGift',   // sun-conditional
   'Friend Guard':'friendGuard',
+};
+// Field-level auto-set abilities — apply to the whole field, not one side.
+// Idempotent on re-render (mirrors the weather/terrain setter fix).
+const FIELD_BUFF_ABILITY={
   'Fairy Aura':'fairyAura',     // Champions Mega Floette-Eternal signature
 };
 const WEATHER_SETTER={
@@ -2125,14 +2139,18 @@ const TERRAIN_SETTER={
 // Tracker remembers what THIS slot auto-set so loading a different mon
 // cleanly clears the previous auto-set (only what we set; user manual
 // changes are preserved).
-let _autoWiredA={flags:[], weather:null, terrain:null};
-let _autoWiredB={flags:[], weather:null, terrain:null};
+let _autoWiredA={flags:[], fieldFlags:[], weather:null, terrain:null};
+let _autoWiredB={flags:[], fieldFlags:[], weather:null, terrain:null};
 function applySlotAutoWire(p, m){
   const side=p==='a'?sideA:sideB;
   const tracker=p==='a'?_autoWiredA:_autoWiredB;
   // Clear previously-set side flags (only those we set; user-toggled flags stay)
   tracker.flags.forEach(k=>{side[k]=0;});
   tracker.flags=[];
+  // Clear previously-set field flags (Fairy Aura etc.) — only if THIS slot set
+  // it AND user hasn't manually flipped it since.
+  tracker.fieldFlags.forEach(k=>{field[k]=0;});
+  tracker.fieldFlags=[];
   // Clear previously-set weather/terrain if it's still the value we set
   // (don't override the user's manual change).
   if(tracker.weather && weather===tracker.weather){weather='none';}
@@ -2146,6 +2164,12 @@ function applySlotAutoWire(p, m){
     if(!(sk==='flowerGift' && weather!=='sun' && weather!=='harshsun')){
       if(!side[sk]){side[sk]=1;tracker.flags.push(sk);}
     }
+  }
+  // Field-buff abilities (Fairy Aura) — apply once to the whole field. Same
+  // idempotency rule as weather: don't clobber if the field flag is already on.
+  const fk=FIELD_BUFF_ABILITY[m.ability];
+  if(fk){
+    if(!field[fk]){field[fk]=1;tracker.fieldFlags.push(fk);}
   }
   // Weather-setter abilities — apply ONLY when the field is neutral, or when
   // the target weather is already in place (idempotent). If someone else has
@@ -2162,6 +2186,11 @@ function applySlotAutoWire(p, m){
 function syncFieldUI(){
   syncBtnGroup('weat', weather);
   syncBtnGroup('terr', field.terrain);
+  // rm buttons are toggle-style (Trick Room / Gravity / Fairy Aura / Magic /
+  // Wonder Room). Sync each button's .active class to its state key.
+  document.querySelectorAll('[data-grp="rm"]').forEach(b => {
+    b.classList.toggle('active', !!field[b.dataset.v]);
+  });
 }
 function targetSlot(defaultP){return pinned==='a'?'b':pinned==='b'?'a':defaultP;}
 function zeroEV(){return{hp:0,atk:0,def:0,spa:0,spd:0,spe:0};}
@@ -2509,8 +2538,10 @@ function calcDmg(atk,move,def,atkSide,defSide){
   if(atkSide.powerSpot) mod=chainMod(mod,M(1.3));
   if(atkSide.battery && !phys) mod=chainMod(mod,M(1.3));
   if(atkSide.steelySpirit && moveType==='steel') mod=chainMod(mod,M(1.5));
-  // Fairy Aura is a FIELD aura — affects Fairy moves regardless of source side
-  if(moveType==='fairy' && (atkSide.fairyAura || defSide.fairyAura)) mod=chainMod(mod,M(1.33));
+  // Fairy Aura is a FIELD aura — affects Fairy moves regardless of source side.
+  // Stored on `field` (not per-side) since a single Fairy Aura mon powers both
+  // sides' Fairy moves in-game.
+  if(moveType==='fairy' && field.fairyAura) mod=chainMod(mod,M(1.33));
   // Friend Guard (doubles only, on defender's side)
   if(defSide.friendGuard && doubles) mod=chainMod(mod,M(0.75));
   // Screens (don't apply on crit)
@@ -2573,7 +2604,14 @@ function koNote(r){
   const cur=r.curHP??r.hp;
   const hpTag=r.curHpPct<100?` at ${r.curHpPct}% HP`:'';
   if(r.lo>=cur)return `guaranteed OHKO${hpTag}`;
-  if(r.hi>=cur)return `possible OHKO${hpTag}`;
+  if(r.hi>=cur){
+    // Include the roll-based OHKO probability so the copy-able line shows the
+    // same "6%" the on-screen KO chip does. 16 fixed rolls per calc.
+    const pct = r.rolls
+      ? ` (${Math.round(r.rolls.filter(x=>x>=cur).length/16*100)}%)`
+      : '';
+    return `possible OHKO${pct}${hpTag}`;
+  }
   const hi=Math.ceil(cur/r.hi), lo=Math.ceil(cur/r.lo);
   return (hi===lo?`${hi}HKO`:`${hi}–${lo}HKO`)+hpTag;
 }
@@ -2589,8 +2627,10 @@ function slotHTML(p,title){
       return `<div class="myrow"><span class="small">My team:</span> ${myTeam.map((mon,i)=>`<button class="mybtn" data-p="${p}" data-i="${i}">${pokeSprite(mon.forme,'24')}${esc(mon.forme)}</button>`).join('')}</div>`;
     }
     if(p==='b' && fightTeam){
+      // Short "Enemy:" label mirrors ally's "My team:" so the row width and
+      // wrap point line up. Full team name lives on the title tooltip.
       const teamLbl=esc(fightTeam.team.description||fightTeam.team.team_id);
-      return `<div class="myrow ftmyrow"><span class="small" title="${teamLbl}">Fighting <b>${teamLbl.length>28?teamLbl.slice(0,26)+'…':teamLbl}</b>:</span> ${fightTeam.mons.map((m,i)=>`<button class="mybtn ftbtn ${B.forme===(m.forme||m.name)?'active':''}" data-fti="${i}">${pokeSprite(m.forme||m.name,'24')}${esc(m.forme||m.name)}</button>`).join('')} <button class="ftclear-inline" id="ftclear" title="Clear fight team">×</button></div>`;
+      return `<div class="myrow ftmyrow"><span class="small" title="${teamLbl}">Enemy:</span> ${fightTeam.mons.map((m,i)=>`<button class="mybtn ftbtn ${B.forme===(m.forme||m.name)?'active':''}" data-fti="${i}">${pokeSprite(m.forme||m.name,'24')}${esc(m.forme||m.name)}</button>`).join('')} <button class="ftclear-inline" id="ftclear" title="Clear fight team">×</button></div>`;
     }
     // Placeholder row for alignment when the other slot has one visible
     const other=p==='a'?'b':'a';
@@ -2751,10 +2791,13 @@ function syncHPUI(p,m){
   const stats=statsOf(m);
   const max=stats?.hp||0;
   const cur=max?Math.round(max*pct/100):0;
-  hp.value=pct;
+  hp.value=Math.round(pct);        // range slider snaps to integer steps
   hpv.value=cur;
   hpv.max=max||999;
-  lbl.textContent=max?`${pct}% · ${cur} / ${max}`:`${pct}%`;
+  // Round the % for the label only — the actual m.hpPct stays as a float so
+  // typing `1` HP doesn't get rounded to `2` on the round-trip through %.
+  const pctLabel=Math.round(pct);
+  lbl.textContent=max?`${pctLabel}% · ${cur} / ${max}`:`${pctLabel}%`;
 }
 
 // Show/hide counter rows based on which moves are in the current set.
@@ -2951,7 +2994,9 @@ function wireSlot(p,m){
     const stats=statsOf(m);const max=stats?.hp||0;
     if(!max)return;
     const cur=Math.max(0,Math.min(max, +g(p+'_hpv').value||0));
-    m.hpPct=Math.round((cur/max)*100);
+    // Keep pct as a float so the exact HP the user typed round-trips cleanly
+    // through syncHPUI (previous Math.round pushed `1` HP to display as `2`).
+    m.hpPct=(cur/max)*100;
     syncHPUI(p,m);updateResults();
   });
   // Counter steppers — show/hide tracked via syncCounters; values clamp here
@@ -3110,7 +3155,7 @@ function calcSummary(atk, def, mv, info, r, aS, dS){
   if(aS.powerSpot) mods.push('with an ally’s Power Spot');
   if(aS.battery && !phys) mods.push('with an ally’s Battery');
   if(aS.steelySpirit && r.moveType==='steel') mods.push('with an ally’s Steely Spirit');
-  if((aS.fairyAura||dS.fairyAura) && r.moveType==='fairy') mods.push('under Fairy Aura');
+  if(field.fairyAura && r.moveType==='fairy') mods.push('under Fairy Aura');
   if(aS.flowerGift && phys && (weather==='sun'||weather==='harshsun')) mods.push('with an ally’s Flower Gift');
   if(dS.flowerGift && !phys && (weather==='sun'||weather==='harshsun')) mods.push('with the defender’s Flower Gift');
   // Weather (always call out if active — it may or may not affect the roll but tells the reader the field state)
@@ -3129,6 +3174,14 @@ function calcSummary(atk, def, mv, info, r, aS, dS){
   const pctLo=r.pctLo.toFixed(1), pctHi=r.pctHi.toFixed(1);
   const ko=koNote(r);
   const aFor=atk.forme||'?', dFor=def.forme||'?';
+  // For Foul Play the attacking stat is the defender's, so putting "16+ Atk"
+  // next to the attacker's name reads as if the attacker had those EVs. Drop
+  // the Atk block from the attacker slot and inline it on the defender side
+  // (matches how Showdown-style paste calcs show it).
+  if(isFoulPlay){
+    const foulAtkPart = `${aEV}${aNat} ${aStatLbl}${aBstr}`.trim();
+    return `${aFor} ${mv}${spread} vs. ${dEVhp} HP / ${dEV}${dNat} ${dStatLbl}${dBstr}${dItemStr} / ${foulAtkPart} ${dFor}${modStr}: ${r.lo}-${r.hi} (${pctLo}% - ${pctHi}%) — ${ko}`;
+  }
   return `${aEV}${aNat} ${aStatLbl}${aBstr}${aItemStr} ${aFor} ${mv}${spread} vs. ${dEVhp} HP / ${dEV}${dNat} ${dStatLbl}${dBstr}${dItemStr} ${dFor}${modStr}: ${r.lo}-${r.hi} (${pctLo}% - ${pctHi}%) — ${ko}`;
 }
 function moveDetailHTML(side,atk,def,i){const mv=atk.moves[i];const info=DEX.moves[mv];
@@ -3156,7 +3209,15 @@ function moveDetailHTML(side,atk,def,i){const mv=atk.moves[i];const info=DEX.mov
   Object.entries(dS).forEach(([k,v])=>{if(v&&k!=='tailwind'&&k!=='crit')ctx.push('def '+k);});
   if(r.intimidate&&!ctx.includes('Intimidate (-1 Atk)'))ctx.push('<span style="color:var(--accent2)">Intimidate −1 Atk</span>');
   const hitLab=r.hits>1?` · <b style="color:var(--accent2)">${r.hits} hits</b>${r.perHit?` (${r.perHit.map(h=>h.l+'–'+h.h).join(' + ')})`:''}`:'';
-  const bpLab=(r.bp!==r.bpRaw)?`${r.bp} BP <span class="small">(${r.bpRaw} base, scaled)</span>`:`${r.bp} BP`;
+  let bpLab=(r.bp!==r.bpRaw)?`${r.bp} BP <span class="small">(${r.bpRaw} base, scaled)</span>`:`${r.bp} BP`;
+  // Foul Play — replace the fixed 95 with the defender's Atk stat since that's
+  // the only variable the calc actually reads. Keep the "BP" slot so the line
+  // reads the same shape as every other move; the value swap alone communicates
+  // "this is Garchomp's Atk being used, not Oranguru's".
+  if(mv==='Foul Play' && info.category==='physical'){
+    const defAtk = statsOf(def)?.atk;
+    if(defAtk) bpLab = `${defAtk} BP`;
+  }
   // Recoil damage to the attacker — Brave Bird etc. (% of damage dealt) or
   // Mind Blown / Steel Beam (% of attacker's max HP). Rock Head prevents
   // damage-based recoil; Magic Guard prevents both.
@@ -3314,7 +3375,11 @@ function renderDmg(){
         <button id="mysave" class="btn">Save my team</button>
         <button id="mybuild" data-tour="open-builder" class="btn btn-alt" title="Build a team with dropdowns instead of pasting">🛠 Build team →</button>
       </div></details>
+    <div id="matrixpane"></div>
+    <div id="speedribbon" class="speedribbon"></div>
+    <div class="dmgtop">${slotHTML('a','Ally')}${slotHTML('b','Enemy')}</div>
     <div class="fieldbar">
+      <div class="fieldbar-inner">
       <div class="fline"><span class="flbl">Weather</span><div class="btnrow">
         ${WEATHERS.map(([k,lab])=>`<button class="optbtn weat-${k} ${weather===k?'active':''}" data-grp="weat" data-v="${k}">${lab}</button>`).join('')}
       </div></div>
@@ -3322,17 +3387,16 @@ function renderDmg(){
         ${TERRAINS.map(([k,lab])=>`<button class="optbtn terr-${k} ${field.terrain===k?'active':''}" data-grp="terr" data-v="${k}">${lab}</button>`).join('')}
       </div></div>
       <div class="fline"><span class="flbl">Field</span><div class="btnrow">
-        <button class="optbtn ${field.trickRoom?'active':''}" data-grp="rm" data-v="trickRoom">Trick Room</button>
-        <button class="optbtn ${field.gravity?'active':''}" data-grp="rm" data-v="gravity">Gravity</button>
+        <button class="optbtn ${field.trickRoom?'active':''}" data-grp="rm" data-v="trickRoom" title="×0.5 turn order — slower moves first">Trick Room</button>
+        <button class="optbtn ${field.gravity?'active':''}" data-grp="rm" data-v="gravity" title="Ground hits Flying; suppresses Levitate">Gravity</button>
+        <button class="optbtn ${field.fairyAura?'active':''}" data-grp="rm" data-v="fairyAura" title="×1.33 all Fairy moves on the field (Mega Floette-Eternal)">Fairy Aura</button>
         <details class="rare-fields"><summary class="optbtn rare-summary" title="Magic Room / Wonder Room — &lt;1% of VGC games">+ rare</summary><div class="rare-row">
           <button class="optbtn ${field.magicRoom?'active':''}" data-grp="rm" data-v="magicRoom">Magic Room</button>
           <button class="optbtn ${field.wonderRoom?'active':''}" data-grp="rm" data-v="wonderRoom">Wonder Room</button>
         </div></details>
       </div></div>
+      </div>
     </div>
-    <div id="matrixpane"></div>
-    <div id="speedribbon" class="speedribbon"></div>
-    <div class="dmgtop">${slotHTML('a','Ally')}${slotHTML('b','Enemy')}</div>
     <div id="dmgresults"></div>
     <div class="small calcfoot"><b>VGC doubles only.</b> Champions ruleset (lv50, IVs max, 1 SP = 8 EV — 32 SP/stat ≡ old 252 EV cap, 66 SP total). <b>Modeled:</b> STAB · type chart · spread · stat boosts · status (burn/frostbite/Guts) · current HP (Multiscale) · weather (incl. extremes Harsh Sun/Heavy Rain/Strong Winds) · terrains (Electric/Grassy/Misty/Psychic, grounded only; Grassy halves EQ) · screens (×0.5 singles / ×2/3 doubles, Aurora Veil snow-only; crit bypasses) · Helping Hand · Friend Guard (doubles) · Power Spot · Battery · Steely Spirit · Flower Gift · Crit (ignores +def/-atk boosts; Sniper ×2.25) · Trick/Magic/Wonder Room · Gravity (ground hits Flying, suppresses Levitate) · <b>multi-hit moves</b> (Triple Axel/Triple Kick escalating BP; Population Bomb/Bullet Seed; Skill Link → max hits) · <b>Intimidate auto-apply</b> (with Clear Body / Hyper Cutter / Inner Focus / Scrappy / Own Tempo / Oblivious immunity; Defiant counters; Competitive on special) · <b>contact/flag abilities</b>: Tough Claws ×1.3 (contact) · Iron Fist ×1.2 (punch) · Mega Launcher ×1.5 (pulse) · Strong Jaw ×1.5 (bite) · Sharpness ×1.5 (slicing) · Punk Rock ×1.3 atk / ×0.5 def (sound) · Soundproof immune (sound) · Bulletproof immune (bullet) · Fluffy ×0.5 contact + ×2 fire · -ate abilities (Pixilate/Aerilate/Refrigerate/Galvanize: Normal→type ×1.2 STAB) · Adaptability · Technician · Tinted Lens · Huge/Pure Power · Solar Power · Sand Force · Sniper · Neuroforce · Levitate / type-absorb immunities · Multiscale / Shadow Shield · Filter / Solid Rock / Prism Armor · Thick Fat · Heatproof · Purifying Salt · Fur Coat · Ice Scales · Choice/Specs/Life Orb/AV/Eviolite/type-boost items · Muscle Band ×1.1 phys · Wise Glasses ×1.1 spec · Expert Belt ×1.2 SE · Iron Ball grounding. · <b>Champions specifics:</b> Fire Mane (Mega Pyroar) · Fairy Aura toggle (Mega Floette-Eternal) · Eelevate ground-immunity (Mega Eelektross) · Mega Sol personal-sun (Mega Meganium) · Dragonize (Mega Feraligatr, Normal→Dragon ×1.2 STAB) · Piercing Drill (Mega Excadrill, note only — Protect not modeled) · Weather Ball type shift · Reg-B patches (Make It Rain acc 100→95, move BP shifts).</div>`;
   wireSlot('a',A);wireSlot('b',B);

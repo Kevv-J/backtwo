@@ -18,7 +18,8 @@ test('Fairy Aura toggle: Fairy moves ×1.33 field-wide', () => {
   const atk = mkMon({ forme: 'Floette-Eternal-Mega', ability: 'Fairy Aura', nature: 'Modest', ev: { spa: 32 }, moves: ['Dazzling Gleam'] });
   const def = mkMon({ forme: 'Kingambit', ev: { hp: 32 } });
   const off = calc({ atk, def, sA: mkSide(), sB: mkSide(), w: 'none', f: mkField(), move: 'Dazzling Gleam' });
-  const on = calc({ atk, def, sA: mkSide({ fairyAura: true }), sB: mkSide(), w: 'none', f: mkField(), move: 'Dazzling Gleam' });
+  // Fairy Aura is a FIELD flag now (not per-side) — mkField sets it globally.
+  const on = calc({ atk, def, sA: mkSide(), sB: mkSide(), w: 'none', f: mkField({ fairyAura: true }), move: 'Dazzling Gleam' });
   assertRatio(on.hi / off.hi, 1.33, 'Fairy Aura toggle');
 });
 
