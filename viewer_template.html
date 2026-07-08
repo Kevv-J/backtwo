@@ -2076,7 +2076,11 @@ function hitsOf(moveName, ability){
   return 3;
 }
 // Statuses (used in calcDmg + UI buttons)
-const STATUSES=[['ok','OK'],['brn','BRN'],['frz','FRZ'],['par','PAR'],['slp','SLP'],['psn','PSN'],['tox','TOX'],['fbt','FBT']];
+// Champions status list: BRN / FRZ / PAR / SLP / PSN / TOX. Frostbite (fbt)
+// was introduced in Legends: Arceus and does NOT exist in Champions — the
+// mainline Freeze mechanic is what's live (with the Champions 25%-thaw-per-
+// turn tweak). Verified against ChampsDex + Game8 + Serebii Champions pages.
+const STATUSES=[['ok','OK'],['brn','BRN'],['frz','FRZ'],['par','PAR'],['slp','SLP'],['psn','PSN'],['tox','TOX']];
 const WEATHERS=[['none','—'],['sun','Sun'],['rain','Rain'],['sand','Sand'],['snow','Snow'],['harshsun','Harsh Sun'],['heavyrain','Heavy Rain'],['strongwinds','Strong Winds']];
 const TERRAINS=[['none','—'],['electric','Electric'],['grassy','Grassy'],['misty','Misty'],['psychic','Psychic']];
 // Side-effect button definitions (key, label, tooltip)
@@ -2556,7 +2560,6 @@ function calcDmg(atk,move,def,atkSide,defSide){
   if(isCrit) mod=chainMod(mod,M(1.5));
   // Burn: halve physical (after STAB/type). Skip if Guts applied above.
   if(burnedAtk) mod=chainMod(mod,M(0.5));
-  if(atk.status==='fbt' && !phys) mod=chainMod(mod,M(0.5));
   const hp=ds.hp;
   const range=sp=>{
     if(hits===1){
@@ -3168,12 +3171,15 @@ function calcSummary(atk, def, mv, info, r, aS, dS){
   // Status
   if(atk.status==='brn' && phys && atk.ability!=='Guts') mods.push('while burned');
   else if(atk.status==='brn' && phys && atk.ability==='Guts') mods.push('with Guts (burned)');
-  if(atk.status==='fbt' && !phys) mods.push('while frostbitten');
   if(r.isCrit) mods.push('on a critical hit');
   const modStr=mods.length?' '+mods.join(' '):'';
   const pctLo=r.pctLo.toFixed(1), pctHi=r.pctHi.toFixed(1);
   const ko=koNote(r);
-  const aFor=atk.forme||'?', dFor=def.forme||'?';
+  // Use the effective forme so `megaOff` (user opted out of the mega) shows
+  // the base name — the calc engine is already using base stats/ability, so
+  // saying "Tyranitar-Mega" while running the calc as base Tyranitar was
+  // internally inconsistent.
+  const aFor=effectiveForme(atk)||'?', dFor=effectiveForme(def)||'?';
   // For Foul Play the attacking stat is the defender's, so putting "16+ Atk"
   // next to the attacker's name reads as if the attacker had those EVs. Drop
   // the Atk block from the attacker slot and inline it on the defender side
@@ -3234,7 +3240,7 @@ function moveDetailHTML(side,atk,def,i){const mv=atk.moves[i];const info=DEX.mov
   }
   const summary=calcSummary(atk,def,mv,info,r,aS,dS);
   return `<div class="detail"><div class="calcline"><span class="calcline-txt">${esc(summary)}</span><button class="calcline-copy" type="button" data-copy="${esc(summary)}" title="Copy Showdown-style summary">Copy</button></div>
-    <div style="margin-top:6px">${esc(atk.forme)}${aBoost} <b>${r.isCrit?'(crit) ':''}${esc(mv)}</b> (${bpLab}${r.eff!==1?', '+r.eff+'×':''}${r.moveType!==info.type?' · type→'+esc(r.moveType):''}${hitLab}) vs ${esc(def.forme)}${dBoost}:
+    <div style="margin-top:6px">${esc(effectiveForme(atk))}${aBoost} <b>${r.isCrit?'(crit) ':''}${esc(mv)}</b> (${bpLab}${r.eff!==1?', '+r.eff+'×':''}${r.moveType!==info.type?' · type→'+esc(r.moveType):''}${hitLab}) vs ${esc(effectiveForme(def))}${dBoost}:
     <b>${r.lo}–${r.hi}</b> (<b style="color:${dmgColor(r.pctHi)}">${r.pctLo.toFixed(1)}–${r.pctHi.toFixed(1)}%</b> of ${r.hp} HP) — ${koNote(r)}${sp}${berry}${pdNote}</div>
     ${ctx.length?`<div class="small" style="margin-top:2px">${ctx.join(' · ')}</div>`:''}
     ${recoilLine}
@@ -3398,7 +3404,7 @@ function renderDmg(){
       </div>
     </div>
     <div id="dmgresults"></div>
-    <div class="small calcfoot"><b>VGC doubles only.</b> Champions ruleset (lv50, IVs max, 1 SP = 8 EV — 32 SP/stat ≡ old 252 EV cap, 66 SP total). <b>Modeled:</b> STAB · type chart · spread · stat boosts · status (burn/frostbite/Guts) · current HP (Multiscale) · weather (incl. extremes Harsh Sun/Heavy Rain/Strong Winds) · terrains (Electric/Grassy/Misty/Psychic, grounded only; Grassy halves EQ) · screens (×0.5 singles / ×2/3 doubles, Aurora Veil snow-only; crit bypasses) · Helping Hand · Friend Guard (doubles) · Power Spot · Battery · Steely Spirit · Flower Gift · Crit (ignores +def/-atk boosts; Sniper ×2.25) · Trick/Magic/Wonder Room · Gravity (ground hits Flying, suppresses Levitate) · <b>multi-hit moves</b> (Triple Axel/Triple Kick escalating BP; Population Bomb/Bullet Seed; Skill Link → max hits) · <b>Intimidate auto-apply</b> (with Clear Body / Hyper Cutter / Inner Focus / Scrappy / Own Tempo / Oblivious immunity; Defiant counters; Competitive on special) · <b>contact/flag abilities</b>: Tough Claws ×1.3 (contact) · Iron Fist ×1.2 (punch) · Mega Launcher ×1.5 (pulse) · Strong Jaw ×1.5 (bite) · Sharpness ×1.5 (slicing) · Punk Rock ×1.3 atk / ×0.5 def (sound) · Soundproof immune (sound) · Bulletproof immune (bullet) · Fluffy ×0.5 contact + ×2 fire · -ate abilities (Pixilate/Aerilate/Refrigerate/Galvanize: Normal→type ×1.2 STAB) · Adaptability · Technician · Tinted Lens · Huge/Pure Power · Solar Power · Sand Force · Sniper · Neuroforce · Levitate / type-absorb immunities · Multiscale / Shadow Shield · Filter / Solid Rock / Prism Armor · Thick Fat · Heatproof · Purifying Salt · Fur Coat · Ice Scales · Choice/Specs/Life Orb/AV/Eviolite/type-boost items · Muscle Band ×1.1 phys · Wise Glasses ×1.1 spec · Expert Belt ×1.2 SE · Iron Ball grounding. · <b>Champions specifics:</b> Fire Mane (Mega Pyroar) · Fairy Aura toggle (Mega Floette-Eternal) · Eelevate ground-immunity (Mega Eelektross) · Mega Sol personal-sun (Mega Meganium) · Dragonize (Mega Feraligatr, Normal→Dragon ×1.2 STAB) · Piercing Drill (Mega Excadrill, note only — Protect not modeled) · Weather Ball type shift · Reg-B patches (Make It Rain acc 100→95, move BP shifts).</div>`;
+    <div class="small calcfoot"><b>VGC doubles only.</b> Champions ruleset (lv50, IVs max, 1 SP = 8 EV — 32 SP/stat ≡ old 252 EV cap, 66 SP total). <b>Modeled:</b> STAB · type chart · spread · stat boosts · status (burn/Guts) · current HP (Multiscale) · weather (incl. extremes Harsh Sun/Heavy Rain/Strong Winds) · terrains (Electric/Grassy/Misty/Psychic, grounded only; Grassy halves EQ) · screens (×0.5 singles / ×2/3 doubles, Aurora Veil snow-only; crit bypasses) · Helping Hand · Friend Guard (doubles) · Power Spot · Battery · Steely Spirit · Flower Gift · Crit (ignores +def/-atk boosts; Sniper ×2.25) · Trick/Magic/Wonder Room · Gravity (ground hits Flying, suppresses Levitate) · <b>multi-hit moves</b> (Triple Axel/Triple Kick escalating BP; Population Bomb/Bullet Seed; Skill Link → max hits) · <b>Intimidate auto-apply</b> (with Clear Body / Hyper Cutter / Inner Focus / Scrappy / Own Tempo / Oblivious immunity; Defiant counters; Competitive on special) · <b>contact/flag abilities</b>: Tough Claws ×1.3 (contact) · Iron Fist ×1.2 (punch) · Mega Launcher ×1.5 (pulse) · Strong Jaw ×1.5 (bite) · Sharpness ×1.5 (slicing) · Punk Rock ×1.3 atk / ×0.5 def (sound) · Soundproof immune (sound) · Bulletproof immune (bullet) · Fluffy ×0.5 contact + ×2 fire · -ate abilities (Pixilate/Aerilate/Refrigerate/Galvanize: Normal→type ×1.2 STAB) · Adaptability · Technician · Tinted Lens · Huge/Pure Power · Solar Power · Sand Force · Sniper · Neuroforce · Levitate / type-absorb immunities · Multiscale / Shadow Shield · Filter / Solid Rock / Prism Armor · Thick Fat · Heatproof · Purifying Salt · Fur Coat · Ice Scales · Choice/Specs/Life Orb/AV/Eviolite/type-boost items · Muscle Band ×1.1 phys · Wise Glasses ×1.1 spec · Expert Belt ×1.2 SE · Iron Ball grounding. · <b>Champions specifics:</b> Fire Mane (Mega Pyroar) · Fairy Aura toggle (Mega Floette-Eternal) · Eelevate ground-immunity (Mega Eelektross) · Mega Sol personal-sun (Mega Meganium) · Dragonize (Mega Feraligatr, Normal→Dragon ×1.2 STAB) · Piercing Drill (Mega Excadrill, note only — Protect not modeled) · Weather Ball type shift · Reg-B patches (Make It Rain acc 100→95, move BP shifts).</div>`;
   wireSlot('a',A);wireSlot('b',B);
   // Field button handlers (single-click). Doubles is hard-pinned (see line ~838) — no Singles toggle in UI.
   document.querySelectorAll('[data-grp="weat"]').forEach(b=>b.onclick=()=>{
