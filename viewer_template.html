@@ -3732,15 +3732,18 @@ function updateFindFightBtn(){
 }
 
 // Feature 2a: seed the typed picks as the persistent Enemy Team + jump to calc.
+// Each mon is populated with defaultSet(forme) — the most-common EV spread from
+// the archive for that forme + most-recent moves/item/ability — so the enemy is
+// actually fightable out of the box, not just an empty forme.
 function findFightThese(){
   const picks=findPicks.filter(Boolean);
   if(picks.length<2) return;
-  // Synthesize mon-shaped objects; correctMegaAbility etc. happen at load time.
   const mons=picks.map(name=>{
     const forme=(typeof resolveForme==='function'?resolveForme(name):null)||name;
-    return {name:forme, forme, item:'', ability:'', nature:'Serious',
-      evs:'', ev:zeroEV(), boost:zeroBoost(), moves:['','','',''],
-      status:'ok', hpPct:100};
+    // defaultSet returns a fully-populated mon shape (item/ability/nature/ev/moves)
+    // or a blank shell when the forme has no archive sets. Either way it's the
+    // right structure for slot loading and Team Builder editing.
+    return defaultSet(forme);
   });
   // Persist so the calc's slot-B chip strip + matrix pick it up on renderDmg.
   const raw=serializeShowdown(mons);
