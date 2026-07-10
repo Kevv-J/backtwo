@@ -3290,6 +3290,33 @@ const TERRAIN_LABEL={electric:'Electric',grassy:'Grassy',psychic:'Psychic',misty
 // in a way a reader expects to see spelled out. Berries/resist-type items aren't modeled.
 const ATK_ITEM_INLINE=new Set(['Choice Band','Choice Specs','Life Orb','Expert Belt','Muscle Band','Wise Glasses','Metronome']);
 const DEF_ITEM_INLINE=new Set(['Assault Vest','Eviolite']);
+// Abilities that materially affect the damage roll (mult, immunity, crit,
+// stat scaling, multi-hit, type-shift, -ate). Rendered inline after the item
+// so the copy line reads Showdown-shaped: "… Life Orb Adaptability Basculegion Wave Crash …".
+// Utility abilities (Sturdy without a crit, Chlorophyll, Static, etc.) are omitted
+// because they don't change the printed range.
+const DMG_ABILITY_INLINE=new Set([
+  // Attacker offense: type/STAB/BP/crit/multi-hit boosters
+  'Adaptability','Sniper','Technician','Tinted Lens','Sheer Force',
+  'Iron Fist','Strong Jaw','Mega Launcher','Sharpness','Tough Claws',
+  'Punk Rock','Solar Power','Sand Force','Rocky Payload','Neuroforce',
+  'Water Bubble','Steelworker','Transistor','Dragons Maw',
+  'Huge Power','Pure Power','Guts',
+  'Parental Bond','Skill Link','Supreme Overlord',
+  'Steely Spirit','Analytic',
+  'Protosynthesis','Quark Drive',
+  // Type-shift abilities that grant STAB on the shifted type
+  'Pixilate','Refrigerate','Aerilate','Galvanize','Normalize','Liquid Voice',
+  // Champions-invented
+  'Fire Mane','Dragonize','Eelevate','Mega Sol','Piercing Drill',
+  // Defender: damage reducers / immunities
+  'Multiscale','Shadow Shield','Filter','Solid Rock','Prism Armor',
+  'Ice Scales','Fur Coat','Thick Fat','Heatproof','Purifying Salt',
+  'Fluffy','Bulletproof','Soundproof','Levitate',
+  'Volt Absorb','Water Absorb','Flash Fire','Dry Skin','Sap Sipper',
+  'Motor Drive','Storm Drain','Lightning Rod','Well-Baked Body',
+  'Overcoat','Battle Armor','Shell Armor','Disguise',
+]);
 // Build a Showdown-style single-line damage summary. Mirrors calcDmg's logic —
 // changes to modifiers there need reflection here (or the string drifts from reality).
 function calcSummary(atk, def, mv, info, r, aS, dS){
@@ -3323,6 +3350,13 @@ function calcSummary(atk, def, mv, info, r, aS, dS){
   const dItem=field.magicRoom?'':def.item;
   const aItemStr=(aItem && (ATK_ITEM_INLINE.has(aItem) || ITEM_TYPE_BOOST[aItem]===r.moveType))?` ${aItem}`:'';
   const dItemStr=(dItem && DEF_ITEM_INLINE.has(dItem))?` ${dItem}`:'';
+  // Inline abilities (attacker/defender) when damage-relevant. Mirrors Showdown's
+  // "4 Atk Life Orb Adaptability Kingdra ..." format — ability sits right after
+  // the item, before the mon name. Solves the ambiguity where two calc lines
+  // read identically but produce very different damage because one side has
+  // Adaptability or Multiscale in play.
+  const aAbilStr=(atk.ability && DMG_ABILITY_INLINE.has(atk.ability))?` ${atk.ability}`:'';
+  const dAbilStr=(def.ability && DMG_ABILITY_INLINE.has(def.ability))?` ${def.ability}`:'';
   const spread=(r.isSpread && doubles)?' (spread)':'';
   // Trailing modifiers (Showdown reads left→right: field then side then hit-time)
   const mods=[];
@@ -3366,9 +3400,9 @@ function calcSummary(atk, def, mv, info, r, aS, dS){
   // (matches how Showdown-style paste calcs show it).
   if(isFoulPlay){
     const foulAtkPart = `${aEV}${aNat} ${aStatLbl}${aBstr}`.trim();
-    return `${aFor} ${mv}${spread} vs. ${dEVhp} HP / ${dEV}${dNat} ${dStatLbl}${dBstr}${dItemStr} / ${foulAtkPart} ${dFor}${modStr}: ${r.lo}-${r.hi} (${pctLo}% - ${pctHi}%) — ${ko}`;
+    return `${aAbilStr?aAbilStr.trim()+' ':''}${aFor} ${mv}${spread} vs. ${dEVhp} HP / ${dEV}${dNat} ${dStatLbl}${dBstr}${dItemStr}${dAbilStr} / ${foulAtkPart} ${dFor}${modStr}: ${r.lo}-${r.hi} (${pctLo}% - ${pctHi}%) — ${ko}`;
   }
-  return `${aEV}${aNat} ${aStatLbl}${aBstr}${aItemStr} ${aFor} ${mv}${spread} vs. ${dEVhp} HP / ${dEV}${dNat} ${dStatLbl}${dBstr}${dItemStr} ${dFor}${modStr}: ${r.lo}-${r.hi} (${pctLo}% - ${pctHi}%) — ${ko}`;
+  return `${aEV}${aNat} ${aStatLbl}${aBstr}${aItemStr}${aAbilStr} ${aFor} ${mv}${spread} vs. ${dEVhp} HP / ${dEV}${dNat} ${dStatLbl}${dBstr}${dItemStr}${dAbilStr} ${dFor}${modStr}: ${r.lo}-${r.hi} (${pctLo}% - ${pctHi}%) — ${ko}`;
 }
 function moveDetailHTML(side,atk,def,i){const mv=atk.moves[i];const info=DEX.moves[mv];
   if(!info)return '<div class="detail small">Type a move to see its calc.</div>';
