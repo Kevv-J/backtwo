@@ -377,6 +377,9 @@
   .fightcardbtn:hover{background:var(--accent);color:#0c0e12}
   /* My-team details/summary */
   details.myteam{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:12px}
+  /* Ally/Enemy team blocks sit side-by-side on wide screens, stack on narrow. */
+  .teamsrow{display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+  .teamsrow > details.myteam{flex:1 1 320px;min-width:0;margin-bottom:0}
   details.myteam summary{cursor:pointer;list-style:none;font-weight:600;display:flex;align-items:center;gap:6px}
   details.myteam summary::-webkit-details-marker{display:none}
   details.myteam summary::after{content:'▾';color:var(--muted-foreground);margin-left:auto;font-size:11px;transition:transform .15s}
@@ -553,6 +556,11 @@
   .moverow .mvcat.special{color:var(--cat-spec)}
   .moverow .mvcat.status{color:var(--cat-stat)}
   .moverow .mvbp{font-family:'JetBrains Mono',ui-monospace,monospace;color:var(--muted-foreground)}
+  /* Accuracy < 100%: amber pill so it stands out visually */
+  .moverow .mvacc{color:var(--warning)}
+  /* Priority ≠ 0: green if faster (+1/+2/+3), red if slower (-1..). */
+  .moverow .mvprio.pos{color:var(--good)}
+  .moverow .mvprio.neg{color:var(--bad)}
   .restitle-hp{font-family:'JetBrains Mono',ui-monospace,monospace;color:var(--muted-foreground);font-size:10px;font-weight:500;letter-spacing:0;text-transform:none}
   /* SP-total counter (shows N/66, red when over) */
   .sp-total{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;color:var(--muted-foreground);font-weight:500;letter-spacing:0;text-transform:none}
@@ -3228,7 +3236,11 @@ function moveListHTML(side,atk,def){
     const info=DEX.moves[mv];
     const selCls=sel?'sel':'';
     const bestCls=(sortIdx===0 && kind==='damage')?'bestrow':'';
-    const moveMeta=info?`<span class="mvmeta"><span class="mvcat ${info.category}">${info.category==='physical'?'Phys':info.category==='special'?'Spec':'Stat'}</span>${info.power?`<span class="mvbp">${info.power} BP</span>`:''}${info.spread?'<span class="mvbp">· spread</span>':''}</span>`:'';
+    const prioBadge = (info && typeof info.priority === 'number' && info.priority !== 0)
+      ? `<span class="mvbp mvprio ${info.priority>0?'pos':'neg'}">· ${info.priority>0?'+':''}${info.priority} prio</span>` : '';
+    const accBadge = (info && typeof info.accuracy === 'number' && info.accuracy < 100)
+      ? `<span class="mvbp mvacc">· ${info.accuracy}%</span>` : '';
+    const moveMeta=info?`<span class="mvmeta"><span class="mvcat ${info.category}">${info.category==='physical'?'Phys':info.category==='special'?'Spec':'Stat'}</span>${info.power?`<span class="mvbp">${info.power} BP</span>`:''}${info.spread?'<span class="mvbp">· spread</span>':''}${prioBadge}${accBadge}</span>`:'';
     // The detail block follows the row inline when this row is selected.
     const detailBlock = sel ? moveDetailHTML(side, atk, def, i) : '';
     // Rich hover tooltip: BP · category · type, accuracy, priority, effects, PP.
@@ -3553,19 +3565,21 @@ function renderDmg(){
     <datalist id="itemlist">${ALL_ITEMS.map(i=>`<option value="${esc(i)}">`).join('')}</datalist>
     <datalist id="movelist">${ALL_MOVES.map(mv=>`<option value="${esc(mv)}">`).join('')}</datalist>
     <datalist id="abilitylist">${ALL_ABILITIES.map(a=>`<option value="${esc(a)}">`).join('')}</datalist>
+    <div class="teamsrow">
     <details class="myteam" data-tour="myteam-paste" ${myTeam.length?'':'open'}><summary>${myTeam.length?'<span class="myteam-lbl"><span class="myteam-ic">🎒</span><strong>My Team</strong> <span class="small myteam-hint">tap to edit</span></span>':'<strong>Paste your team</strong> <span class="small">Showdown export — saved in this browser, used for quick-picks</span>'}</summary>
       <textarea id="myta" placeholder="Garchomp @ Sitrus Berry&#10;Ability: Rough Skin&#10;EVs: 32 Atk / 32 Spe&#10;Jolly Nature&#10;- Earthquake&#10;- Dragon Claw&#10;...">${esc(myTeam.raw||'')}</textarea>
       <div class="myteam-actions">
         <button id="mysave" class="btn">Save my team</button>
         <button id="mybuild" data-tour="open-builder" class="btn btn-alt" title="Build a team with dropdowns instead of pasting">🛠 Build team →</button>
       </div></details>
-    <details class="myteam enemyteam" ${enemyTeam.length?'':''}><summary>${enemyTeam.length?'<span class="myteam-lbl"><span class="myteam-ic">⚔</span><strong>Enemy Team</strong> <span class="small myteam-hint">tap to edit</span></span>':'<span class="myteam-lbl"><span class="myteam-ic">⚔</span><strong>Enemy Team</strong> <span class="small">open-team-sheet opponent — quick-pick chips appear on the Enemy slot</span></span>'}</summary>
+    <details class="myteam enemyteam"><summary>${enemyTeam.length?'<span class="myteam-lbl"><span class="myteam-ic">⚔</span><strong>Enemy Team</strong> <span class="small myteam-hint">tap to edit</span></span>':'<span class="myteam-lbl"><span class="myteam-ic">⚔</span><strong>Enemy Team</strong> <span class="small">open-team-sheet opponent — quick-pick chips appear on the Enemy slot</span></span>'}</summary>
       <textarea id="enemyta" placeholder="Landorus-Therian @ Assault Vest&#10;Ability: Intimidate&#10;EVs: 32 HP / 32 Atk / 32 Spe&#10;Adamant Nature&#10;- Earthquake&#10;- Rock Slide&#10;...">${esc(enemyTeam.raw||'')}</textarea>
       <div class="myteam-actions">
         <button id="enemysave" class="btn">Save enemy team</button>
         <button id="enemybuild" class="btn btn-alt" title="Build the enemy team with dropdowns instead of pasting">🛠 Build enemy team →</button>
         ${enemyTeam.length?'<button id="enemyclear" class="btn btn-alt" title="Clear the saved enemy team">Clear</button>':''}
       </div></details>
+    </div>
     <div id="matrixpane"></div>
     <div id="speedribbon" class="speedribbon"></div>
     <div class="dmgtop">${slotHTML('a','Ally')}${slotHTML('b','Enemy')}</div>
