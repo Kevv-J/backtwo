@@ -99,7 +99,7 @@ globalThis.__setState = function(atk, def, sa, sb, w, f) {
   A = atk; B = def; sideA = sa; sideB = sb; weather = w; field = f;
 };
 globalThis.__exportCalc = { calcDmg, effectiveBP, statsOf, pokeRound,
-  chainMod, applyMod, M, FP_ONE, newSide, newField, newMon, DEX };
+  chainMod, applyMod, M, FP_ONE, newSide, newField, newMon, DEX, parseShowdown };
 `;
 const combined = stubDoc
   + scripts.map((body, i) =>
@@ -124,7 +124,7 @@ try {
 const _exp = ctx.__exportCalc;
 export const {
   calcDmg, effectiveBP, statsOf, pokeRound, chainMod, applyMod, M, FP_ONE,
-  newSide, newField, newMon, DEX,
+  newSide, newField, newMon, DEX, parseShowdown,
 } = _exp;
 
 export function setState({ atk, def, sA, sB, w, f }) {

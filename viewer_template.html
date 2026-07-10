@@ -2243,16 +2243,28 @@ function isGrounded(mon){const types=DEX.formes[mon.forme]?.types||[];
   if(mon.ability==='Levitate' || mon.ability==='Eelevate')return false;
   if(mon.item==='Air Balloon')return false;
   return true;}
+// Known Showdown metadata prefixes we ignore. Champions is IVs-max / L50 always,
+// no Tera, so IV/Level/Tera/Happiness/Shiny lines carry no state — but they must
+// NOT fall through to the "unmatched line = move" branch below.
+const _SHOWDOWN_META_PREFIXES = ['IVs:','Level:','Shiny:','Happiness:','Tera Type:','Gigantamax:','Hidden Power:','Dynamax Level:','Gender:'];
 function parseShowdown(text){return text.replace(/\r/g,'').split(/\n\s*\n/).map(block=>{
   const lines=block.split('\n').map(l=>l.trim()).filter(Boolean);if(!lines.length)return null;
   const mon={name:'',item:'',ability:'',nature:'Serious',evs:'',moves:[]};let head=lines[0];
   if(head.includes(' @ ')){const[a,b]=head.split(' @ ');head=a;mon.item=b.trim();}
   head=head.replace(/\((M|F)\)/,'').trim();const nick=head.match(/^(.*?)\s*\(([^)]+)\)\s*$/);
   mon.name=(nick?nick[2]:head).trim();
-  lines.slice(1).forEach(s=>{if(s.startsWith('- '))mon.moves.push(s.slice(2).trim());
-    else if(s.startsWith('Ability:'))mon.ability=s.split(':')[1].trim();
-    else if(s.startsWith('EVs:'))mon.evs=s.split(':')[1].trim();
-    else if(s.endsWith(' Nature'))mon.nature=s.replace(' Nature','').trim();});
+  lines.slice(1).forEach(s=>{
+    if(s.startsWith('- ')){mon.moves.push(s.slice(2).trim());return;}
+    if(s.startsWith('Ability:')){mon.ability=s.split(':')[1].trim();return;}
+    if(s.startsWith('EVs:')){mon.evs=s.split(':')[1].trim();return;}
+    if(s.endsWith(' Nature')){mon.nature=s.replace(' Nature','').trim();return;}
+    if(_SHOWDOWN_META_PREFIXES.some(p=>s.startsWith(p)))return;   // skip known metadata
+    // Lenient fallback: users often paste move lists without the "- " prefix
+    // (copy-paste from Discord / Google Doc / screenshot OCR), which used to
+    // drop those lines silently. Anything that isn't a known metadata key
+    // AND we still have room for a move, take it as a move.
+    if(mon.moves.length<4) mon.moves.push(s.trim());
+  });
   if(!mon.name)return null;mon.forme=jsForme(mon.name,mon.item);mon.ev=parseEVs(mon.evs);mon.boost=zeroBoost();
   mon.status='ok';mon.hpPct=100;
   while(mon.moves.length<4)mon.moves.push('');mon.moves=mon.moves.slice(0,4);return mon;}).filter(Boolean);}
