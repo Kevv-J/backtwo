@@ -3716,11 +3716,15 @@ function renderDmg(){
 // Lead matchup matrix: my team × opposing team. Each cell shows best-move % from
 // that pairing. Click a cell to load both slots and scroll back to the regular view.
 // Enemy source is fightTeam (transient) OR enemyTeam (persistent) — same UI shape.
+// User's manual open/close state for the matrix. Collapsed by default; every
+// re-render (chip click, forme change, updateResults tick) reuses this flag so
+// the panel doesn't spring open every time a slot changes.
+let matrixOpen = false;
 function renderMatrix(){
   const el=g('matrixpane'); if(!el) return;
   const enemyMons = fightTeam ? fightTeam.mons : (enemyTeam.length ? enemyTeam : null);
   if(!myTeam.length || !enemyMons){ el.innerHTML=''; return; }
-  let html=`<details class="mxwrap" open><summary><strong>Matchup matrix</strong> <span class="small">${myTeam.length}×${enemyMons.length} · best move % · click any cell to load</span></summary>`;
+  let html=`<details class="mxwrap"${matrixOpen?' open':''}><summary><strong>Matchup matrix</strong> <span class="small">${myTeam.length}×${enemyMons.length} · best move % · click any cell to load</span></summary>`;
   html+=`<table class="mxgrid"><thead><tr><th></th>`;
   enemyMons.forEach(b=>{html+=`<th>${esc(b.forme||b.name)}</th>`;});
   html+=`</tr></thead><tbody>`;
@@ -3748,6 +3752,8 @@ function renderMatrix(){
     loadIntoSlot('a',A,myTeam[+c.dataset.ai]);
     loadIntoSlot('b',B,enemyMons[+c.dataset.bi]);
   });
+  // Persist the user's open/close pick — <details> fires `toggle` on every change.
+  el.querySelector('.mxwrap')?.addEventListener('toggle', e => { matrixOpen = e.target.open; });
 }
 // (renderFightBar removed — fight-team chips now render inline inside slot B
 //  via slotHTML; see the ftmyrow branch there.)
