@@ -486,6 +486,13 @@
   .smartpicker-option .sp-cat.special{background:rgba(96,165,250,0.18);color:var(--cat-spec);border:1px solid rgba(96,165,250,0.35)}
   .smartpicker-option .sp-cat.status{background:rgba(148,163,184,0.15);color:var(--cat-stat);border:1px solid rgba(148,163,184,0.30)}
   .smartpicker-option .sp-bp{flex-shrink:0;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;color:var(--muted-foreground);min-width:32px;text-align:right}
+  /* Priority + accuracy chips in the move-picker dropdown. Accuracy lives
+     ONLY here (not in the calc results row) since some moves bypass accuracy
+     checks entirely, so surfacing "90%" on the results panel would mislead. */
+  .smartpicker-option .sp-acc{flex-shrink:0;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;color:var(--warning);min-width:36px;text-align:right}
+  .smartpicker-option .sp-prio{flex-shrink:0;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;min-width:44px;text-align:right}
+  .smartpicker-option .sp-prio.pos{color:var(--good)}
+  .smartpicker-option .sp-prio.neg{color:var(--bad)}
   .smartpicker-empty{padding:8px 12px;color:var(--muted-foreground);font-size:11px;font-style:italic}
   /* Find Team slot grid — 1×6 compact row. Slot height fixed; dropdown floats
      absolutely below the editing slot so siblings never resize. */
@@ -3184,9 +3191,7 @@ function moveTooltipText(mv){
   const cat=info.category==='physical'?'Physical':info.category==='special'?'Special':'Status';
   const typ=info.type?info.type.replace(/^./,c=>c.toUpperCase()):'—';
   lines.push(`${bp}${cat} · ${typ}`);
-  const acc=info.accuracy;
-  if(acc===true||acc==null)lines.push('Accuracy: never misses');
-  else if(typeof acc==='number')lines.push(`Accuracy: ${acc}%`);
+  // Accuracy intentionally omitted — see moveListHTML for why (bypass moves).
   if(typeof info.priority==='number'&&info.priority!==0){
     lines.push(`Priority: ${info.priority>0?'+':''}${info.priority}`);
   }
@@ -3236,11 +3241,13 @@ function moveListHTML(side,atk,def){
     const info=DEX.moves[mv];
     const selCls=sel?'sel':'';
     const bestCls=(sortIdx===0 && kind==='damage')?'bestrow':'';
+    // Priority stays in the calc row (never bypassed by move mechanics).
+    // Accuracy is NOT shown here — it lives on the move-picker dropdown instead
+    // because moves like Kowtow Cleave bypass accuracy checks entirely, so a
+    // listed "90%" would mislead the user reading the results panel.
     const prioBadge = (info && typeof info.priority === 'number' && info.priority !== 0)
       ? `<span class="mvbp mvprio ${info.priority>0?'pos':'neg'}">· ${info.priority>0?'+':''}${info.priority} prio</span>` : '';
-    const accBadge = (info && typeof info.accuracy === 'number' && info.accuracy < 100)
-      ? `<span class="mvbp mvacc">· ${info.accuracy}%</span>` : '';
-    const moveMeta=info?`<span class="mvmeta"><span class="mvcat ${info.category}">${info.category==='physical'?'Phys':info.category==='special'?'Spec':'Stat'}</span>${info.power?`<span class="mvbp">${info.power} BP</span>`:''}${info.spread?'<span class="mvbp">· spread</span>':''}${prioBadge}${accBadge}</span>`:'';
+    const moveMeta=info?`<span class="mvmeta"><span class="mvcat ${info.category}">${info.category==='physical'?'Phys':info.category==='special'?'Spec':'Stat'}</span>${info.power?`<span class="mvbp">${info.power} BP</span>`:''}${info.spread?'<span class="mvbp">· spread</span>':''}${prioBadge}</span>`:'';
     // The detail block follows the row inline when this row is selected.
     const detailBlock = sel ? moveDetailHTML(side, atk, def, i) : '';
     // Rich hover tooltip: BP · category · type, accuracy, priority, effects, PP.
@@ -4049,7 +4056,15 @@ function spRenderMove(name){
   const cat=info.category||'status';
   const bp=info.power?`<span class="sp-bp">${info.power} BP</span>`:'';
   const chip=info.type?`<span class="mv typeonly t-${info.type}" style="font-size:9px;padding:1px 5px">${info.type.slice(0,3).toUpperCase()}</span>`:'';
-  return `${chip}<span class="sp-name">${esc(name)}</span><span class="sp-cat ${cat}">${catLab}</span>${bp}`;
+  // Priority + accuracy pills — only shown when non-default, so 100%-accurate,
+  // priority-0 moves stay tidy. Bypass moves (Kowtow Cleave, Feint, ...) still
+  // list an accuracy number in the dex; that's fine here because the picker is
+  // an informational surface, not the results panel.
+  const prio=(typeof info.priority==='number' && info.priority!==0)
+    ? `<span class="sp-prio ${info.priority>0?'pos':'neg'}">${info.priority>0?'+':''}${info.priority} prio</span>` : '';
+  const acc=(typeof info.accuracy==='number' && info.accuracy<100)
+    ? `<span class="sp-acc">${info.accuracy}%</span>` : '';
+  return `${chip}<span class="sp-name">${esc(name)}</span><span class="sp-cat ${cat}">${catLab}</span>${bp}${prio}${acc}`;
 }
 
 function updateFindDropdown(i){
