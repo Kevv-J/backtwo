@@ -413,6 +413,9 @@
   .calcline-copy{flex-shrink:0;font-size:10px;padding:2px 8px;background:rgba(6,182,212,0.15);color:var(--accent);border:1px solid rgba(6,182,212,0.35);border-radius:3px;cursor:pointer;letter-spacing:.05em;text-transform:uppercase;font-weight:600}
   .calcline-copy:hover{background:rgba(6,182,212,0.25)}
   .calcline-copy.done{background:var(--good-bg);color:var(--good);border-color:var(--good-border)}
+  .mvuse{flex-shrink:0;margin-left:6px;font-size:10px;padding:1px 7px;background:rgba(139,92,246,0.16);color:#c4b5fd;border:1px solid rgba(139,92,246,0.35);border-radius:3px;cursor:pointer;letter-spacing:.06em;text-transform:uppercase;font-weight:700;font-family:inherit}
+  .mvuse:hover{background:rgba(139,92,246,0.28)}
+  .mvuse.done{background:var(--good-bg);color:var(--good);border-color:var(--good-border)}
   /* KO chip — Figma translucent style */
   .kochip{display:inline-block;border-radius:3px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:6px;white-space:nowrap;border:1px solid;letter-spacing:.06em;text-transform:uppercase}
   .kochip.kosure{background:var(--good-bg);color:var(--good);border-color:var(--good-border)}
@@ -2103,9 +2106,11 @@ function newSide(){return{reflect:0,lightScreen:0,auroraVeil:0,tailwind:0,helpin
 // affects Fairy moves regardless of which side fires them, so a global toggle
 // matches the in-game reality better than a per-side flag.
 function newField(){return{terrain:'none',trickRoom:0,gravity:0,magicRoom:0,wonderRoom:0,fairyAura:0};}
-let A=newMon(),B=newMon(),doubles=true,weather='none',myTeam=[],selA=null,selB=null;
+let A=newMon(),B=newMon(),doubles=true,weather='none',myTeam=[],enemyTeam=[],selA=null,selB=null;
 let field=newField(),sideA=newSide(),sideB=newSide();
-let fightTeam=null;  // {team, mons, sourceTeamId} when "Fight this team" is active
+let fightTeam=null;  // {team, mons, sourceTeamId} when "Fight this team" is active (transient — from archive browse)
+// enemyTeam: persisted-to-localStorage mirror of myTeam, for open-team-sheet tournaments
+// and Find-Team's "Fight These 6". Slot B falls back to enemyTeam when fightTeam is null.
 let pinned=null;     // 'a' | 'b' | null — which slot is pinned (locked from quick-pick overwriting)
 
 // (Ally bar removed per user feedback — the underlying side-effect flags
@@ -2234,6 +2239,7 @@ function parseShowdown(text){return text.replace(/\r/g,'').split(/\n\s*\n/).map(
   mon.status='ok';mon.hpPct=100;
   while(mon.moves.length<4)mon.moves.push('');mon.moves=mon.moves.slice(0,4);return mon;}).filter(Boolean);}
 try{const raw=localStorage.getItem('vgc_myteam_raw');if(raw){myTeam=parseShowdown(raw);myTeam.raw=raw;}}catch(e){}
+try{const raw=localStorage.getItem('vgc_enemyteam_raw');if(raw){enemyTeam=parseShowdown(raw);enemyTeam.raw=raw;}}catch(e){}
 function setTs(d){const t=Date.parse(d);return isNaN(t)?0:t;}
 function setsFor(forme){const e=idx.get(forme);if(!e)return[];const map={};
   e.sets.forEach(s=>{const k=[s.item,s.evs,s.nature,(s.moves||[]).join(',')].join('|');const t=setTs(s.date);
@@ -2642,11 +2648,17 @@ function slotHTML(p,title){
       const teamLbl=esc(fightTeam.team.description||fightTeam.team.team_id);
       return `<div class="myrow ftmyrow"><span class="small" title="${teamLbl}">Enemy:</span> ${fightTeam.mons.map((m,i)=>`<button class="mybtn ftbtn ${B.forme===(m.forme||m.name)?'active':''}" data-fti="${i}">${pokeSprite(m.forme||m.name,'24')}${esc(m.forme||m.name)}</button>`).join('')} <button class="ftclear-inline" id="ftclear" title="Clear fight team">×</button></div>`;
     }
+    if(p==='b' && enemyTeam.length){
+      // Persistent enemy team (saved via paste or Enemy-Team builder).
+      return `<div class="myrow ftmyrow"><span class="small" title="Saved enemy team">Enemy:</span> ${enemyTeam.map((mon,i)=>`<button class="mybtn etbtn ${B.forme===mon.forme?'active':''}" data-eti="${i}">${pokeSprite(mon.forme,'24')}${esc(mon.forme)}</button>`).join('')}</div>`;
+    }
     // Placeholder row for alignment when the other slot has one visible
     const other=p==='a'?'b':'a';
-    const showPlaceholder = (p==='a' && fightTeam) || (p==='b' && myTeam.length);
+    const showPlaceholder = (p==='a' && (fightTeam || enemyTeam.length)) || (p==='b' && myTeam.length);
     if(showPlaceholder){
-      const sampleForme = p==='a' ? (fightTeam.mons[0]?.forme||fightTeam.mons[0]?.name||'') : myTeam[0].forme;
+      const sampleForme = p==='a'
+        ? (fightTeam ? (fightTeam.mons[0]?.forme||fightTeam.mons[0]?.name||'') : (enemyTeam[0]?.forme||''))
+        : myTeam[0].forme;
       return `<div class="myrow" aria-hidden="true" style="visibility:hidden"><span class="small">My team:</span><button class="mybtn">${pokeSprite(sampleForme,'24')}placeholder</button></div>`;
     }
     return '';
@@ -3068,6 +3080,130 @@ function survivalNote(r, def){
   if(def.ability==='Disguise' && def.forme && def.forme.startsWith('Mimikyu')) return ' <span class="survive">⛨ Disguise</span>';
   return '';
 }
+// ==== Move-effect helpers (Use button + tooltip) ==============================
+// Applied when the user clicks the "Use" button next to a move to auto-set the
+// stat stages the move would cause (Shell Smash +2/+2/+2/-1/-1 on self, Growl -1
+// to foe, Close Combat -1/-1 on self after damage, etc.). Ability quirks
+// (Contrary, Simple, Clear Body, Defiant, Competitive, Hyper Cutter, Big Pecks)
+// are respected on both attacker (self-effects) and defender (opponent-caused).
+const _STAT_LABEL={atk:'Atk',def:'Def',spa:'SpA',spd:'SpD',spe:'Spe'};
+const _STATUS_LABEL={brn:'burn',par:'paralysis',frz:'freeze',psn:'poison',tox:'toxic',slp:'sleep'};
+function _clampStage(v){return Math.max(-6,Math.min(6,v|0));}
+function setStage(sideKey,stat,value){
+  const m=sideKey==='a'?A:B;
+  if(!m||!(stat in (m.boost||zeroBoost())))return;
+  if(!m.boost)m.boost=zeroBoost();
+  m.boost[stat]=_clampStage(value);
+}
+function bumpStage(sideKey,stat,delta){
+  const m=sideKey==='a'?A:B;if(!m)return;
+  setStage(sideKey,stat,(m.boost?.[stat]||0)+delta);
+}
+// Contrary flips, Simple doubles. Applied to a mon's own self-boost delta.
+function _transformSelfDelta(delta,ability){
+  if(ability==='Contrary')return -delta;
+  if(ability==='Simple')return delta*2;
+  return delta;
+}
+// Applied to a delta that the *opponent* is trying to put on this mon.
+// Returns {delta, retaliate:{stat,delta}?} — retaliate is the Defiant/Competitive bump.
+function _transformIncomingDelta(delta,stat,ability){
+  if(ability==='Contrary')return {delta:-delta};
+  if(ability==='Simple')return {delta:delta*2};
+  if(delta<0){
+    if(ability==='Clear Body'||ability==='White Smoke'||ability==='Full Metal Body')return {delta:0};
+    if(ability==='Hyper Cutter'&&stat==='atk')return {delta:0};
+    if(ability==='Big Pecks'&&stat==='def')return {delta:0};
+    if(ability==='Defiant')return {delta,retaliate:{stat:'atk',delta:2}};
+    if(ability==='Competitive')return {delta,retaliate:{stat:'spa',delta:2}};
+  }
+  return {delta};
+}
+// Does this move have a deterministic stat-change effect a "Use" button can apply?
+function moveHasStageEffect(mv){
+  const info=DEX.moves[mv];if(!info)return false;
+  const has=o=>o&&Object.keys(o).length>0;
+  if(info.self&&has(info.self.boosts))return true;
+  if(has(info.boosts))return true;
+  const secs=info.secondaries||(info.secondary?[info.secondary]:[]);
+  return secs.some(s=>s&&s.chance===100&&(has(s.boosts)||(s.self&&has(s.self.boosts))));
+}
+// Apply the move's stat effects; returns short human summary of what happened.
+function applyMoveEffects(atkSideKey,defSideKey,mv){
+  const info=DEX.moves[mv];if(!info)return '';
+  const atk=atkSideKey==='a'?A:B, def=defSideKey==='a'?A:B;
+  if(!atk||!def)return '';
+  const atkAbil=atk.ability||'', defAbil=def.ability||'';
+  const applied=[]; let atkTouched=false, defTouched=false;
+  const toAtk=(stat,delta)=>{
+    const d=_transformSelfDelta(delta,atkAbil);if(!d)return;
+    bumpStage(atkSideKey,stat,d);atkTouched=true;
+    applied.push(`Self ${_STAT_LABEL[stat]||stat.toUpperCase()} ${d>0?'+':''}${d}`);
+  };
+  const toDef=(stat,delta)=>{
+    const {delta:d,retaliate}=_transformIncomingDelta(delta,stat,defAbil);
+    if(d){bumpStage(defSideKey,stat,d);defTouched=true;
+      applied.push(`Foe ${_STAT_LABEL[stat]||stat.toUpperCase()} ${d>0?'+':''}${d}`);}
+    if(retaliate){bumpStage(defSideKey,retaliate.stat,retaliate.delta);defTouched=true;
+      applied.push(`Foe ${_STAT_LABEL[retaliate.stat]} +${retaliate.delta}`);}
+  };
+  // 1) User-side effect from damage moves (Close Combat, Draco Meteor, Superpower, ...)
+  const selfBoosts=info.self&&info.self.boosts;
+  if(selfBoosts)Object.entries(selfBoosts).forEach(([k,v])=>toAtk(k,v));
+  // 2) Status-move primary boosts, target dictated by mvTarget
+  if(info.boosts){
+    const selfTarget=info.mvTarget==='self';
+    Object.entries(info.boosts).forEach(([k,v])=>selfTarget?toAtk(k,v):toDef(k,v));
+  }
+  // 3) 100%-chance secondary boosts (Icy Wind Spe -1; some carry self-drops too)
+  const secs=info.secondaries||(info.secondary?[info.secondary]:[]);
+  secs.forEach(s=>{
+    if(!s||s.chance!==100)return;
+    if(s.boosts)Object.entries(s.boosts).forEach(([k,v])=>toDef(k,v));
+    if(s.self&&s.self.boosts)Object.entries(s.self.boosts).forEach(([k,v])=>toAtk(k,v));
+  });
+  if(atkTouched)renderFinals(atkSideKey,atk);
+  if(defTouched)renderFinals(defSideKey,def);
+  if(applied.length)updateResults();
+  return applied.join(', ');
+}
+// Attribute-safe multi-line tooltip content for the move row.
+function _attrEsc(s){return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function moveTooltipText(mv){
+  const info=DEX.moves[mv];if(!info)return '';
+  const lines=[];
+  const bp=info.power?`${info.power} BP · `:'';
+  const cat=info.category==='physical'?'Physical':info.category==='special'?'Special':'Status';
+  const typ=info.type?info.type.replace(/^./,c=>c.toUpperCase()):'—';
+  lines.push(`${bp}${cat} · ${typ}`);
+  const acc=info.accuracy;
+  if(acc===true||acc==null)lines.push('Accuracy: never misses');
+  else if(typeof acc==='number')lines.push(`Accuracy: ${acc}%`);
+  if(typeof info.priority==='number'&&info.priority!==0){
+    lines.push(`Priority: ${info.priority>0?'+':''}${info.priority}`);
+  }
+  if(info.spread)lines.push('Spread move (0.75× in doubles)');
+  const fmtBoosts=o=>Object.entries(o).map(([k,v])=>`${_STAT_LABEL[k]||k.toUpperCase()} ${v>0?'+':''}${v}`).join(', ');
+  if(info.self&&info.self.boosts)lines.push(`Effect: Self ${fmtBoosts(info.self.boosts)}`);
+  if(info.boosts){
+    const t=info.mvTarget==='self'?'Self':'Foe';
+    lines.push(`Effect: ${t} ${fmtBoosts(info.boosts)}`);
+  }
+  const secs=info.secondaries||(info.secondary?[info.secondary]:[]);
+  secs.forEach(s=>{
+    if(!s)return;
+    const parts=[];
+    if(s.status)parts.push(_STATUS_LABEL[s.status]||s.status);
+    else if(s.volatileStatus==='flinch')parts.push('flinch');
+    else if(s.volatileStatus==='confusion')parts.push('confusion');
+    if(s.boosts)Object.entries(s.boosts).forEach(([k,v])=>parts.push(`Foe ${_STAT_LABEL[k]||k.toUpperCase()} ${v>0?'+':''}${v}`));
+    if(s.self&&s.self.boosts)Object.entries(s.self.boosts).forEach(([k,v])=>parts.push(`Self ${_STAT_LABEL[k]||k.toUpperCase()} ${v>0?'+':''}${v}`));
+    if(parts.length)lines.push(`${s.chance}% chance: ${parts.join(', ')}`);
+  });
+  if(typeof info.pp==='number')lines.push(`PP: ${info.pp}`);
+  return lines.join('\n');
+}
+
 function moveListHTML(side,atk,def){
   const aS=side==='A'?sideA:sideB, dS=side==='A'?sideB:sideA;
   const rows=(atk.moves||[]).map((mv,i)=>{
@@ -3095,18 +3231,31 @@ function moveListHTML(side,atk,def){
     const moveMeta=info?`<span class="mvmeta"><span class="mvcat ${info.category}">${info.category==='physical'?'Phys':info.category==='special'?'Spec':'Stat'}</span>${info.power?`<span class="mvbp">${info.power} BP</span>`:''}${info.spread?'<span class="mvbp">· spread</span>':''}</span>`:'';
     // The detail block follows the row inline when this row is selected.
     const detailBlock = sel ? moveDetailHTML(side, atk, def, i) : '';
-    if(kind==='status') return `<div class="moverow ${selCls}" data-side="${side}" data-i="${i}"><span class="mvname">${esc(mv)}</span>${moveTypeChip(mv)}${moveMeta}<span class="rpct"><span class="small">status</span></span></div>${detailBlock}`;
-    if(!r) return `<div class="moverow ${selCls}" data-side="${side}" data-i="${i}"><span class="mvname">${esc(mv)}</span>${moveTypeChip(mv)}${moveMeta}<span class="rpct"><span class="small">—</span></span></div>${detailBlock}`;
+    // Rich hover tooltip: BP · category · type, accuracy, priority, effects, PP.
+    const tipBase=moveTooltipText(mv);
+    // "Use" button auto-applies stat-stage effects (self/target boosts, Contrary/Simple/etc. respected)
+    const useBtn=moveHasStageEffect(mv)
+      ? `<button class="mvuse" data-side="${side}" data-i="${i}" title="Apply this move's stat-stage effects">Use</button>`
+      : '';
+    if(kind==='status'){
+      const tipAttr=tipBase?` title="${_attrEsc(tipBase)}"`:'';
+      return `<div class="moverow ${selCls}" data-side="${side}" data-i="${i}"${tipAttr}><span class="mvname">${esc(mv)}</span>${moveTypeChip(mv)}${moveMeta}<span class="rpct"><span class="small">status</span></span>${useBtn}</div>${detailBlock}`;
+    }
+    if(!r){
+      const tipAttr=tipBase?` title="${_attrEsc(tipBase)}"`:'';
+      return `<div class="moverow ${selCls}" data-side="${side}" data-i="${i}"${tipAttr}><span class="mvname">${esc(mv)}</span>${moveTypeChip(mv)}${moveMeta}<span class="rpct"><span class="small">—</span></span>${useBtn}</div>${detailBlock}`;
+    }
     const col=dmgColor(r.pctHi);
     const koCls=koClass(r);
     const koLab=koText(r);
     const eff=effChip(r.eff);
     const surv=survivalNote(r, def);
-    // HP-after-attack: tooltip on the row
+    // HP-after-attack: leading line of the tooltip; then move details.
     const rmin=Math.max(0,100-r.pctHi).toFixed(0);
     const rmax=Math.max(0,100-r.pctLo).toFixed(0);
     const after=`Leaves defender at ${rmin}–${rmax}% HP`;
-    return `<div class="moverow ${selCls} ${bestCls} ${koCls}" data-side="${side}" data-i="${i}" title="${after}" data-rmin="${rmin}" data-rmax="${rmax}"><span class="mvname">${esc(mv)}</span>${moveTypeChip(mv)}${moveMeta}${eff}<span class="rpct" style="color:${col}">${r.pctLo.toFixed(1)}–${r.pctHi.toFixed(1)}%</span><span class="kochip ${koCls}">${koLab}</span>${surv}</div>${detailBlock}`;
+    const tipCombined=tipBase?`${after}\n\n${tipBase}`:after;
+    return `<div class="moverow ${selCls} ${bestCls} ${koCls}" data-side="${side}" data-i="${i}" title="${_attrEsc(tipCombined)}" data-rmin="${rmin}" data-rmax="${rmax}"><span class="mvname">${esc(mv)}</span>${moveTypeChip(mv)}${moveMeta}${eff}<span class="rpct" style="color:${col}">${r.pctLo.toFixed(1)}–${r.pctHi.toFixed(1)}%</span><span class="kochip ${koCls}">${koLab}</span>${surv}${useBtn}</div>${detailBlock}`;
   }).join('');
 }
 function boostLabel(n){return n?` <span class="small" style="color:${n>0?'var(--good)':'var(--bad)'}">${n>0?'+':''}${n}</span>`:'';}
@@ -3343,6 +3492,20 @@ function updateResults(){const el=g('dmgresults');
       try{document.execCommand('copy');btn.classList.add('done');btn.textContent='Copied';setTimeout(()=>{btn.classList.remove('done');btn.textContent='Copy';},1200);}catch{}
       document.body.removeChild(ta);
     });
+  });
+  el.querySelectorAll('.mvuse').forEach(btn=>btn.onclick=e=>{
+    e.stopPropagation();
+    const side=btn.dataset.side, i=+btn.dataset.i;
+    const atkSideKey=side==='A'?'a':'b';
+    const defSideKey=atkSideKey==='a'?'b':'a';
+    const atkMon=atkSideKey==='a'?A:B;
+    const mv=atkMon?.moves?.[i];
+    if(!mv)return;
+    const summary=applyMoveEffects(atkSideKey,defSideKey,mv);
+    // Brief "done" flash — updateResults() rebuilds the row so we lose the ref
+    // right away, but the flash lands before the re-render steals it.
+    btn.classList.add('done');btn.textContent='✓';
+    try{tcount('calc/use-move',mv);}catch(_){}
   });}
 function loadIntoSlot(p,m,src){m.forme=src.forme;m.item=src.item||'';m.ability=src.ability||'';
   m.nature=src.nature||'Serious';
@@ -3396,6 +3559,13 @@ function renderDmg(){
         <button id="mysave" class="btn">Save my team</button>
         <button id="mybuild" data-tour="open-builder" class="btn btn-alt" title="Build a team with dropdowns instead of pasting">🛠 Build team →</button>
       </div></details>
+    <details class="myteam enemyteam" ${enemyTeam.length?'':''}><summary>${enemyTeam.length?'<span class="myteam-lbl"><span class="myteam-ic">⚔</span><strong>Enemy Team</strong> <span class="small myteam-hint">tap to edit</span></span>':'<span class="myteam-lbl"><span class="myteam-ic">⚔</span><strong>Enemy Team</strong> <span class="small">open-team-sheet opponent — quick-pick chips appear on the Enemy slot</span></span>'}</summary>
+      <textarea id="enemyta" placeholder="Landorus-Therian @ Assault Vest&#10;Ability: Intimidate&#10;EVs: 32 HP / 32 Atk / 32 Spe&#10;Adamant Nature&#10;- Earthquake&#10;- Rock Slide&#10;...">${esc(enemyTeam.raw||'')}</textarea>
+      <div class="myteam-actions">
+        <button id="enemysave" class="btn">Save enemy team</button>
+        <button id="enemybuild" class="btn btn-alt" title="Build the enemy team with dropdowns instead of pasting">🛠 Build enemy team →</button>
+        ${enemyTeam.length?'<button id="enemyclear" class="btn btn-alt" title="Clear the saved enemy team">Clear</button>':''}
+      </div></details>
     <div id="matrixpane"></div>
     <div id="speedribbon" class="speedribbon"></div>
     <div class="dmgtop">${slotHTML('a','Ally')}${slotHTML('b','Enemy')}</div>
@@ -3433,9 +3603,20 @@ function renderDmg(){
   document.querySelectorAll('[data-grp="rm"]').forEach(b=>b.onclick=()=>{const k=b.dataset.v;field[k]=field[k]?0:1;b.classList.toggle('active',!!field[k]);updateResults();});
   g('mysave').onclick=()=>{const raw=g('myta').value;try{localStorage.setItem('vgc_myteam_raw',raw);}catch(e){}
     myTeam=parseShowdown(raw);myTeam.raw=raw;renderDmg();};
-  const mybuild=g('mybuild'); if(mybuild) mybuild.onclick=()=>openBuilder();
+  const mybuild=g('mybuild'); if(mybuild) mybuild.onclick=()=>openBuilder('ally');
+  const enemysave=g('enemysave'); if(enemysave) enemysave.onclick=()=>{
+    const raw=g('enemyta').value;
+    try{localStorage.setItem('vgc_enemyteam_raw',raw);}catch(e){}
+    enemyTeam=parseShowdown(raw);enemyTeam.raw=raw;renderDmg();
+  };
+  const enemybuild=g('enemybuild'); if(enemybuild) enemybuild.onclick=()=>openBuilder('enemy');
+  const enemyclear=g('enemyclear'); if(enemyclear) enemyclear.onclick=()=>{
+    enemyTeam=[]; enemyTeam.raw='';
+    try{localStorage.removeItem('vgc_enemyteam_raw');}catch(e){}
+    renderDmg();
+  };
   // My-team quick picks (slot A). Only the mybtns that have data-i (i.e., not
-  // ftbtn siblings that only carry data-fti) trigger the my-team load.
+  // ftbtn/etbtn siblings) trigger the my-team load.
   document.querySelectorAll('.mybtn[data-i]').forEach(b=>b.onclick=()=>{
     const p=targetSlot(b.dataset.p);
     loadIntoSlot(p, p==='a'?A:B, myTeam[+b.dataset.i]);
@@ -3444,6 +3625,11 @@ function renderDmg(){
   document.querySelectorAll('.ftbtn[data-fti]').forEach(b=>b.onclick=()=>{
     const p=targetSlot('b');
     loadIntoSlot(p, p==='a'?A:B, fightTeam.mons[+b.dataset.fti]);
+  });
+  // Persistent enemy-team quick picks (slot B, when no fightTeam is active).
+  document.querySelectorAll('.etbtn[data-eti]').forEach(b=>b.onclick=()=>{
+    const p=targetSlot('b');
+    loadIntoSlot(p, p==='a'?A:B, enemyTeam[+b.dataset.eti]);
   });
   // Pin/lock buttons in the slot headers
   document.querySelectorAll('.pinbtn').forEach(b=>b.onclick=()=>{
@@ -3459,16 +3645,18 @@ function renderDmg(){
 }
 // Lead matchup matrix: my team × opposing team. Each cell shows best-move % from
 // that pairing. Click a cell to load both slots and scroll back to the regular view.
+// Enemy source is fightTeam (transient) OR enemyTeam (persistent) — same UI shape.
 function renderMatrix(){
   const el=g('matrixpane'); if(!el) return;
-  if(!myTeam.length || !fightTeam){ el.innerHTML=''; return; }
-  let html=`<details class="mxwrap" open><summary><strong>Matchup matrix</strong> <span class="small">${myTeam.length}×${fightTeam.mons.length} · best move % · click any cell to load</span></summary>`;
+  const enemyMons = fightTeam ? fightTeam.mons : (enemyTeam.length ? enemyTeam : null);
+  if(!myTeam.length || !enemyMons){ el.innerHTML=''; return; }
+  let html=`<details class="mxwrap" open><summary><strong>Matchup matrix</strong> <span class="small">${myTeam.length}×${enemyMons.length} · best move % · click any cell to load</span></summary>`;
   html+=`<table class="mxgrid"><thead><tr><th></th>`;
-  fightTeam.mons.forEach(b=>{html+=`<th>${esc(b.forme||b.name)}</th>`;});
+  enemyMons.forEach(b=>{html+=`<th>${esc(b.forme||b.name)}</th>`;});
   html+=`</tr></thead><tbody>`;
   myTeam.forEach((a,ai)=>{
     html+=`<tr><th>${esc(a.forme)}</th>`;
-    fightTeam.mons.forEach((b,bi)=>{
+    enemyMons.forEach((b,bi)=>{
       const aMon={...a, ev:a.ev||parseEVs(a.evs||''), boost:zeroBoost(), status:'ok', hpPct:100};
       const bMon={...b, forme:b.forme||b.name, ev:b.ev||parseEVs(b.evs||''), boost:zeroBoost(), status:'ok', hpPct:100};
       let best={pctHi:-1, pctLo:0, mv:'', isImmune:false};
@@ -3488,7 +3676,7 @@ function renderMatrix(){
   el.innerHTML=html;
   el.querySelectorAll('.mxcell[data-ai]').forEach(c=>c.onclick=()=>{
     loadIntoSlot('a',A,myTeam[+c.dataset.ai]);
-    loadIntoSlot('b',B,fightTeam.mons[+c.dataset.bi]);
+    loadIntoSlot('b',B,enemyMons[+c.dataset.bi]);
   });
 }
 // (renderFightBar removed — fight-team chips now render inline inside slot B
@@ -3519,15 +3707,51 @@ function renderFind(){
     </div>
     <div class="findbtns">
       <button class="btn" id="findbtn">⌕ Find teams</button>
+      <button class="btn" id="findfight" title="Load the mons you typed as the Enemy Team and jump to the damage calc">⚔ Fight these <span id="findfight-n">6</span></button>
       <button class="btn" id="findclear" style="border-color:var(--line);color:var(--dim)">Clear all</button>
       <span class="small" id="findstat"></span>
     </div>
     <div id="findresults" data-tour="find-results"></div>`;
   wireFindSlots();
   g('findbtn').onclick=doFind;
+  g('findfight').onclick=findFightThese;
+  updateFindFightBtn();
   g('findclear').onclick=()=>{findPicks=['','','','','',''];findSlotState=Array(6).fill('display');renderFind();};
   // Auto-run if there's already content
   if(findPicks.some(p=>p))doFind();
+}
+
+// Enable "Fight these N" only when >=2 slots have a mon; update its label live.
+function updateFindFightBtn(){
+  const btn=g('findfight'); if(!btn) return;
+  const n=findPicks.filter(Boolean).length;
+  const nEl=g('findfight-n'); if(nEl) nEl.textContent=n;
+  btn.disabled = n < 2;
+  btn.style.opacity = n < 2 ? '0.4' : '';
+  btn.style.pointerEvents = n < 2 ? 'none' : '';
+}
+
+// Feature 2a: seed the typed picks as the persistent Enemy Team + jump to calc.
+function findFightThese(){
+  const picks=findPicks.filter(Boolean);
+  if(picks.length<2) return;
+  // Synthesize mon-shaped objects; correctMegaAbility etc. happen at load time.
+  const mons=picks.map(name=>{
+    const forme=(typeof resolveForme==='function'?resolveForme(name):null)||name;
+    return {name:forme, forme, item:'', ability:'', nature:'Serious',
+      evs:'', ev:zeroEV(), boost:zeroBoost(), moves:['','','',''],
+      status:'ok', hpPct:100};
+  });
+  // Persist so the calc's slot-B chip strip + matrix pick it up on renderDmg.
+  const raw=serializeShowdown(mons);
+  enemyTeam=mons; enemyTeam.raw=raw;
+  try{localStorage.setItem('vgc_enemyteam_raw',raw);}catch(e){}
+  // Clear any transient fightTeam so slot B falls back to the persistent enemyTeam.
+  fightTeam=null;
+  setView('dmg');
+  // Auto-load first mon into slot B for one-click flow.
+  if(mons[0]) loadIntoSlot('b',B,mons[0]);
+  try{tcount && tcount('find/fight-typed','find: fight typed '+mons.length);}catch(e){}
 }
 
 // Render a single slot in its current state (display empty / display filled / editing).
@@ -3876,6 +4100,7 @@ function handleFindKeydown(e,i){
 
 // Debounced live-find — once 2+ slots are filled, results auto-update.
 function scheduleLiveFind(){
+  updateFindFightBtn();
   if(findLiveTimer)clearTimeout(findLiveTimer);
   findLiveTimer=setTimeout(()=>{
     if(findPicks.filter(Boolean).length>=2)doFind();
@@ -4217,7 +4442,11 @@ document.addEventListener('keydown',e=>{
   if(view!=='dmg') return;
   if(e.key>='1' && e.key<='6'){
     const i=+e.key-1;
-    const src = (e.shiftKey ? myTeam[i] : (fightTeam?.mons[i] || myTeam[i]));
+    // 1..6 → enemy slot from fightTeam > enemyTeam > myTeam (fallback);
+    // Shift+1..6 → ally slot from myTeam.
+    const src = e.shiftKey
+      ? myTeam[i]
+      : (fightTeam?.mons[i] || enemyTeam[i] || myTeam[i]);
     if(!src) return;
     const tgt = e.shiftKey ? targetSlot('a') : targetSlot('b');
     loadIntoSlot(tgt, tgt==='a'?A:B, src);
@@ -4229,10 +4458,12 @@ document.addEventListener('keydown',e=>{
   if(e.key==='r'||e.key==='R'){field.trickRoom=!field.trickRoom;document.querySelector('[data-grp="rm"][data-v="trickRoom"]')?.classList.toggle('active',!!field.trickRoom);updateResults();e.preventDefault();return;}
   if(e.key==='c'||e.key==='C'){sideA.crit=sideA.crit?0:1;syncFxRow('a',sideA);updateResults();e.preventDefault();return;}
   if(e.key==='Escape'){if(fightTeam){fightTeam=null;renderDmg();e.preventDefault();}return;}
-  if((e.key==='['||e.key===']') && fightTeam){
-    const idx=fightTeam.mons.findIndex(m=>(m.forme||m.name)===B.forme);
-    const dir=e.key===']'?1:-1, next=((idx>=0?idx:0)+dir+fightTeam.mons.length)%fightTeam.mons.length;
-    loadIntoSlot('b',B,fightTeam.mons[next]);
+  if(e.key==='['||e.key===']'){
+    const mons=fightTeam?.mons || (enemyTeam.length?enemyTeam:null);
+    if(!mons) return;
+    const idx=mons.findIndex(m=>(m.forme||m.name)===B.forme);
+    const dir=e.key===']'?1:-1, next=((idx>=0?idx:0)+dir+mons.length)%mons.length;
+    loadIntoSlot('b',B,mons[next]);
     e.preventDefault();return;
   }
   if(e.key==='?'){showHelpOverlay(true);e.preventDefault();return;}
@@ -4394,22 +4625,30 @@ function serializeShowdown(mons){
   }).join('\n\n');
 }
 let tbSlots = [];  // 6 slots, each a mon-shaped object
+let tbMode = 'ally';  // 'ally' → myTeam / #myta ; 'enemy' → enemyTeam / #enemyta
 function _tbBlankSlot(){
   return {name:'',forme:'',item:'',ability:'',nature:'Serious',
     ev:zeroEV(),evs:'',boost:zeroBoost(),moves:['','','',''],
     status:'ok',hpPct:100};
 }
-function openBuilder(){
-  // Seed slots from the current textarea (or myTeam), padded to 6.
-  const raw = document.getElementById('myta')?.value || myTeam.raw || '';
+function openBuilder(mode){
+  tbMode = mode === 'enemy' ? 'enemy' : 'ally';
+  // Seed slots from the mode's textarea (or persisted team), padded to 6.
+  const pasteId = tbMode === 'enemy' ? 'enemyta' : 'myta';
+  const team = tbMode === 'enemy' ? enemyTeam : myTeam;
+  const raw = document.getElementById(pasteId)?.value || team.raw || '';
   const parsed = raw ? parseShowdown(raw) : [];
   tbSlots = [];
   for(let i=0;i<6;i++) tbSlots.push(parsed[i] ? {...parsed[i]} : _tbBlankSlot());
   document.getElementById('tb-paste').value = raw;
+  // Header title flips per mode; underlying overlay markup is shared.
+  const titleEl = document.querySelector('#builderoverlay .tb-title');
+  if(titleEl) titleEl.textContent = tbMode === 'enemy' ? 'Enemy Team Builder' : 'Team Builder';
   document.getElementById('builderoverlay').classList.add('open');
+  document.getElementById('builderoverlay').dataset.mode = tbMode;
   document.getElementById('tb-io').classList.remove('open');
   tbRender();
-  try{ tcount && tcount('builder/open','builder: open'); }catch(e){}
+  try{ tcount && tcount('builder/open','builder: open ' + tbMode); }catch(e){}
 }
 function closeBuilder(){
   document.getElementById('builderoverlay').classList.remove('open');
@@ -4626,14 +4865,17 @@ function _tbAudit(){
 }
 function _tbDoSave(){
   const raw = serializeShowdown(tbSlots);
-  try{ localStorage.setItem('vgc_myteam_raw', raw); }catch(e){}
-  myTeam = parseShowdown(raw); myTeam.raw = raw;
-  // Sync the paste textarea in the panel
-  const myta = document.getElementById('myta');
-  if(myta) myta.value = raw;
+  const storageKey = tbMode === 'enemy' ? 'vgc_enemyteam_raw' : 'vgc_myteam_raw';
+  try{ localStorage.setItem(storageKey, raw); }catch(e){}
+  const parsed = parseShowdown(raw);
+  if(tbMode === 'enemy'){ enemyTeam = parsed; enemyTeam.raw = raw; }
+  else { myTeam = parsed; myTeam.raw = raw; }
+  // Sync the paste textarea in the matching panel
+  const pasteEl = document.getElementById(tbMode === 'enemy' ? 'enemyta' : 'myta');
+  if(pasteEl) pasteEl.value = raw;
   closeBuilder();
   renderDmg();
-  try{ tcount && tcount('builder/save','builder: save'); }catch(e){}
+  try{ tcount && tcount('builder/save','builder: save ' + tbMode); }catch(e){}
 }
 function tbSave(){
   const gaps = _tbAudit();

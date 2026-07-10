@@ -365,6 +365,14 @@ def fetch_move_flags() -> dict:
              "{if(!v)continue;const e={};if(v.flags)e.flags=v.flags;"
              "if(v.multihit!==undefined)e.multihit=v.multihit;"
              "if(v.basePower!==undefined)e.basePower=v.basePower;"
+             "if(v.priority!==undefined)e.priority=v.priority;"
+             "if(v.accuracy!==undefined)e.accuracy=v.accuracy;"
+             "if(v.self)e.self=v.self;"
+             "if(v.boosts)e.boosts=v.boosts;"
+             "if(v.secondary)e.secondary=v.secondary;"
+             "if(v.secondaries)e.secondaries=v.secondaries;"
+             "if(v.target)e.target=v.target;"
+             "if(v.pp!==undefined)e.pp=v.pp;"
              "if(Object.keys(e).length)out[k]=e;}"
              "process.stdout.write(JSON.stringify(out));"],
             input=js, capture_output=True, text=True, timeout=30,
@@ -386,9 +394,23 @@ def fetch_move(name: str) -> dict:
     sd = _MOVE_FLAGS.get(_to_id(name), {})
     sd_flags = sd.get("flags", {}) if isinstance(sd, dict) else {}
     extra = {k: bool(sd_flags.get(k)) for k in FLAG_KEYS}
+    # Extra Showdown-sourced fields for the calc's "Use" button and tooltip.
+    detail: dict = {}
+    if isinstance(sd, dict):
+        if "priority" in sd: detail["priority"] = sd["priority"]
+        if "accuracy" in sd: detail["accuracy"] = sd["accuracy"]  # int or True (never misses)
+        if "pp" in sd: detail["pp"] = sd["pp"]
+        if sd.get("self"): detail["self"] = sd["self"]           # {boosts:{...}} for Close Combat / Draco Meteor / ...
+        if sd.get("boosts"): detail["boosts"] = sd["boosts"]     # status-move primary boosts; target is dictated by `mvTarget`
+        if sd.get("secondary"): detail["secondary"] = sd["secondary"]
+        if sd.get("secondaries"): detail["secondaries"] = sd["secondaries"]
+        # Showdown's target string ('self' / 'normal' / 'allAdjacentFoes' / ...).
+        # For status moves with top-level `boosts`, this decides whether the effect lands on user or opponent.
+        # Emitted as `mvTarget` to avoid colliding with PokéAPI's `target` (already reduced to bool `spread`).
+        if sd.get("target"): detail["mvTarget"] = sd["target"]
     if not d:
         return {"power": None, "type": "normal", "category": "status", "spread": False,
-                "minHits": 1, "maxHits": 1, **extra}
+                "minHits": 1, "maxHits": 1, **extra, **detail}
     meta = d.get("meta") or {}
     # Hits: prefer PokeAPI; fall back to Showdown's `multihit` (int for fixed, list for variable).
     min_hits = meta.get("min_hits")
@@ -399,6 +421,11 @@ def fetch_move(name: str) -> dict:
             min_hits = max_hits = mh
         elif isinstance(mh, list) and len(mh) == 2:
             min_hits, max_hits = mh[0], mh[1]
+    # PokéAPI fallback for priority/accuracy when Showdown is missing them.
+    if "priority" not in detail and d.get("priority") is not None:
+        detail["priority"] = d["priority"]
+    if "accuracy" not in detail and d.get("accuracy") is not None:
+        detail["accuracy"] = d["accuracy"]
     return {
         "power": d.get("power"),
         "type": d["type"]["name"],
@@ -407,6 +434,7 @@ def fetch_move(name: str) -> dict:
         "minHits": min_hits or 1,
         "maxHits": max_hits or 1,
         **extra,
+        **detail,
     }
 
 
