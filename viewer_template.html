@@ -135,7 +135,8 @@
   .bar .pct{height:6px;border-radius:3px;background:var(--accent);flex-shrink:0}
   .bar .n{color:var(--dim);width:32px;text-align:right;font-variant-numeric:tabular-nums;flex-shrink:0}
   .teammate{color:var(--good)}
-  .tcard{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin-bottom:11px}
+  .tcard{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin-bottom:11px;cursor:pointer;transition:border-color .12s, background .12s}
+  .tcard:hover{border-color:var(--atk-color);background:var(--panel2, var(--panel))}
   .tcard .th{display:flex;justify-content:space-between;gap:10px;align-items:baseline;flex-wrap:wrap}
   .tcard .desc{font-weight:600}
   .meta{color:var(--dim);font-size:12px}
@@ -1590,7 +1591,7 @@ function teamCard(t,focus,matchedSet){
     const it=m.item||'';return it && it!=='Eviolite' && /ite( [XY])?$/.test(it);
   }).length;
   const megaChip=megaCount>1?`<span class="chip" title="Multiple mega stones on this team — only one Mega can be active per battle">multi-Mega (${megaCount})</span>`:'';
-  return `<div class="tcard"><div class="th"><span class="desc"><button class="fightcardbtn" data-tour="fight-btn" data-tid="${esc(t.team_id)}">⚔ Fight</button>${esc(t.description||t.team_id)}<span class="regbadge ${reg==='M-B'?'mb':''}">${reg}</span>${megaChip}</span>
+  return `<div class="tcard" data-tid="${esc(t.team_id)}" title="Open team page"><div class="th"><span class="desc"><button class="fightcardbtn" data-tour="fight-btn" data-tid="${esc(t.team_id)}">⚔ Fight</button>${esc(t.description||t.team_id)}<span class="regbadge ${reg==='M-B'?'mb':''}">${reg}</span>${megaChip}</span>
     <span class="meta">${esc(t.creator||'')} ${t.event&&t.event!=='-'?'· '+esc(t.event):''}</span></div>
     <div>${t.rank&&t.rank!=='-'?`<span class="chip rank">${esc(t.rank)}</span>`:''}${t.date?`<span class="chip">${esc(t.date)}</span>`:''}
       ${t.pokepaste?`<span class="chip"><a href="${esc(t.pokepaste)}" target="_blank">pokepaste ↗</a></span>`:''}
@@ -2143,46 +2144,52 @@ const TERRAIN_SETTER={
 // Tracker remembers what THIS slot auto-set so loading a different mon
 // cleanly clears the previous auto-set (only what we set; user manual
 // changes are preserved).
-let _autoWiredA={flags:[], fieldFlags:[], weather:null, terrain:null};
-let _autoWiredB={flags:[], fieldFlags:[], weather:null, terrain:null};
+let _autoWiredA={flags:[], fieldFlags:[], weather:null, terrain:null, monKey:null};
+let _autoWiredB={flags:[], fieldFlags:[], weather:null, terrain:null, monKey:null};
 function applySlotAutoWire(p, m){
   const side=p==='a'?sideA:sideB;
   const tracker=p==='a'?_autoWiredA:_autoWiredB;
-  // Clear previously-set side flags (only those we set; user-toggled flags stay)
+  // Fire the weather / terrain / field-flag auto-set ONLY when the mon or its
+  // ability just changed. Re-invocations from unrelated events (weather-button
+  // click, Fairy Aura toggle, re-render) skip the auto-set so a user picking
+  // "no weather" while Torkoal is on the field doesn't get Sun slammed back.
+  const monKey = m ? `${m.forme||''}|${m.ability||''}` : '';
+  const monChanged = tracker.monKey !== monKey;
+  tracker.monKey = monKey;
+
+  // Side flags always refresh — Flower Gift is weather-conditional, so it must
+  // re-evaluate on every call (that's why the weather-button handler triggers
+  // us in the first place).
   tracker.flags.forEach(k=>{side[k]=0;});
   tracker.flags=[];
-  // Clear previously-set field flags (Fairy Aura etc.) — only if THIS slot set
-  // it AND user hasn't manually flipped it since.
   tracker.fieldFlags.forEach(k=>{field[k]=0;});
   tracker.fieldFlags=[];
-  // Clear previously-set weather/terrain if it's still the value we set
-  // (don't override the user's manual change).
+  if(m && m.ability){
+    const sk=SIDE_BUFF_ABILITY[m.ability];
+    if(sk){
+      if(!(sk==='flowerGift' && weather!=='sun' && weather!=='harshsun')){
+        if(!side[sk]){side[sk]=1;tracker.flags.push(sk);}
+      }
+    }
+    const fk=FIELD_BUFF_ABILITY[m.ability];
+    if(fk){
+      if(!field[fk]){field[fk]=1;tracker.fieldFlags.push(fk);}
+    }
+  }
+
+  if(!monChanged) return;   // ← the actual fix — no auto-weather stomp on re-invoke
+
+  // Mon actually changed. Clear whatever WE previously auto-set for this slot
+  // (user-manual weather changes are preserved because they don't match our
+  // tracker), then apply the new mon's setter if the field is free.
   if(tracker.weather && weather===tracker.weather){weather='none';}
   tracker.weather=null;
   if(tracker.terrain && field.terrain===tracker.terrain){field.terrain='none';}
   tracker.terrain=null;
+
   if(!m||!m.ability)return;
-  // Side-buff abilities (Power Spot, Battery, etc.)
-  const sk=SIDE_BUFF_ABILITY[m.ability];
-  if(sk){
-    if(!(sk==='flowerGift' && weather!=='sun' && weather!=='harshsun')){
-      if(!side[sk]){side[sk]=1;tracker.flags.push(sk);}
-    }
-  }
-  // Field-buff abilities (Fairy Aura) — apply once to the whole field. Same
-  // idempotency rule as weather: don't clobber if the field flag is already on.
-  const fk=FIELD_BUFF_ABILITY[m.ability];
-  if(fk){
-    if(!field[fk]){field[fk]=1;tracker.fieldFlags.push(fk);}
-  }
-  // Weather-setter abilities — apply ONLY when the field is neutral, or when
-  // the target weather is already in place (idempotent). If someone else has
-  // an override up (opponent's Drizzle, user-manual pick), respect it. Prior
-  // behavior slammed Torkoal's Sun back on every re-render, wiping the Rain
-  // the user had set to simulate the enemy Politoed still being active.
   const wk=WEATHER_SETTER[m.ability];
   if(wk && (weather==='none' || weather===wk)){weather=wk;tracker.weather=wk;}
-  // Terrain-setter abilities — same rule.
   const tk=TERRAIN_SETTER[m.ability];
   if(tk && (field.terrain==='none' || field.terrain===tk)){field.terrain=tk;tracker.terrain=tk;}
 }
@@ -2750,11 +2757,13 @@ function syncMegaPill(p,m){
     m.megaOff = !m.megaOff;
     const base = baseOf(m.forme);
     if(m.megaOff){
-      // Turning off — restore the base mon's slot-0 ability. (User can retype.)
-      const baseAb = DEX.formes[base]?.abilities?.[0]?.name;
-      if(baseAb) m.ability = baseAb;
+      // Turning off — restore the ability the user actually had before mega
+      // auto-applied its ability (captured in correctMegaAbility). Fall back
+      // to the base forme's slot-0 only if we have nothing better.
+      m.ability = m.preMegaAbility || DEX.formes[base]?.abilities?.[0]?.name || '';
     } else {
-      // Turning back on — re-apply the mega ability.
+      // Turning back on — re-apply the mega ability. correctMegaAbility will
+      // re-capture the current ability into preMegaAbility on the way through.
       correctMegaAbility(m);
     }
     populateSlot(p, m);
@@ -3354,7 +3363,13 @@ function correctMegaAbility(m){
   if(!m.forme || !isMega(m.forme))return;
   if(m.megaOff)return;  // user opted out of the mega — keep the pre-mega ability
   const apiAb=DEX.formes[m.forme]?.abilities?.[0]?.name;
-  if(apiAb)m.ability=apiAb;
+  if(!apiAb)return;
+  // Preserve the pre-mega ability (Rain Dish, Torrent, etc.) BEFORE we
+  // overwrite it with the mega ability. This lets a later megaOff toggle
+  // restore the user's actual pick instead of falling back to the base
+  // forme's slot-0 default (Blastoise → Torrent even when user chose Rain Dish).
+  if(m.ability && m.ability !== apiAb) m.preMegaAbility = m.ability;
+  m.ability = apiAb;
 }
 // Single helper that runs after a slot's mon (or ability) changes. Keeps
 // all the side-effects in one place so every load path (loadIntoSlot,
@@ -4272,6 +4287,21 @@ document.body.addEventListener('click', e => {
     _shareCopyFallback(url, flip);
   }
   try{ tcount && tcount('share/team-card', 'share: team card ' + tid); }catch(_){}
+});
+// Global delegation: clicking anywhere else on a team card opens the full-page
+// team view. Interactive children (Fight button, Share chip, external links)
+// short-circuit via their own handlers' preventDefault + stopPropagation, so
+// this only fires for clicks on inert card real estate (title text, mon rows,
+// meta chips without an anchor).
+document.body.addEventListener('click', e => {
+  const card = e.target.closest('.tcard'); if(!card) return;
+  // Ignore clicks that landed on an interactive descendant — those elements
+  // own their own behavior. `closest` from e.target walks up to the card and
+  // any interactive ancestor of e.target before it.
+  if(e.target.closest('button, a, input, textarea, select, .chip a')) return;
+  const tid = card.dataset.tid; if(!tid) return;
+  location.hash = '#/team/' + tid;
+  try{ tcount && tcount('team-card/open', 'team card: open ' + tid); }catch(_){}
 });
 document.querySelectorAll('.regbtn').forEach(el=>el.onclick=()=>{
   regFilter=el.dataset.reg;

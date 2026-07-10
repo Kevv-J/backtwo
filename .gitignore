@@ -16,6 +16,9 @@ data/dex.json
 data/teams.json
 data/og_fonts/
 
+# Claude Code local docs — session context, not for the repo
+CLAUDE.md
+
 # OS junk
 .DS_Store
 *~
