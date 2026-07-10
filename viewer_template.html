@@ -488,8 +488,11 @@
   .smartpicker-option .sp-bp{flex-shrink:0;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;color:var(--muted-foreground);min-width:32px;text-align:right}
   /* Priority + accuracy chips in the move-picker dropdown. Accuracy lives
      ONLY here (not in the calc results row) since some moves bypass accuracy
-     checks entirely, so surfacing "90%" on the results panel would mislead. */
+     checks entirely, so surfacing "90%" on the results panel would mislead.
+     Colours: amber = sub-100 (can miss), green = bypass move (never misses),
+     no chip = standard 100% (still subject to evasion). */
   .smartpicker-option .sp-acc{flex-shrink:0;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;color:var(--warning);min-width:36px;text-align:right}
+  .smartpicker-option .sp-acc.nomiss{color:var(--good)}
   .smartpicker-option .sp-prio{flex-shrink:0;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;min-width:44px;text-align:right}
   .smartpicker-option .sp-prio.pos{color:var(--good)}
   .smartpicker-option .sp-prio.neg{color:var(--bad)}
@@ -4056,14 +4059,19 @@ function spRenderMove(name){
   const cat=info.category||'status';
   const bp=info.power?`<span class="sp-bp">${info.power} BP</span>`:'';
   const chip=info.type?`<span class="mv typeonly t-${info.type}" style="font-size:9px;padding:1px 5px">${info.type.slice(0,3).toUpperCase()}</span>`:'';
-  // Priority + accuracy pills — only shown when non-default, so 100%-accurate,
-  // priority-0 moves stay tidy. Bypass moves (Kowtow Cleave, Feint, ...) still
-  // list an accuracy number in the dex; that's fine here because the picker is
-  // an informational surface, not the results panel.
+  // Priority + accuracy pills. Accuracy comes in three flavors in Showdown data:
+  //   number <100   → amber "N%"          (can miss on the check itself)
+  //   true          → green "—%"          (bypass move, ignores acc/eva entirely)
+  //   100 (or null) → no chip             (standard 100%; still can miss to evasion)
+  // Priority ≠ 0    → green/red "N prio"  (Sucker Punch, Extreme Speed, Trick Room's own priority etc.)
   const prio=(typeof info.priority==='number' && info.priority!==0)
     ? `<span class="sp-prio ${info.priority>0?'pos':'neg'}">${info.priority>0?'+':''}${info.priority} prio</span>` : '';
-  const acc=(typeof info.accuracy==='number' && info.accuracy<100)
-    ? `<span class="sp-acc">${info.accuracy}%</span>` : '';
+  let acc='';
+  if(typeof info.accuracy==='number' && info.accuracy<100){
+    acc = `<span class="sp-acc">${info.accuracy}%</span>`;
+  } else if(info.accuracy===true){
+    acc = `<span class="sp-acc nomiss" title="Never misses — ignores accuracy checks">—%</span>`;
+  }
   return `${chip}<span class="sp-name">${esc(name)}</span><span class="sp-cat ${cat}">${catLab}</span>${bp}${prio}${acc}`;
 }
 
