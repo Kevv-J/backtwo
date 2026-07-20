@@ -1,19 +1,19 @@
 {
-  "generated_at_utc": "2026-07-17T12:56:16Z",
-  "build_sha": "b52d12c",
-  "build_date": "2026-07-17",
+  "generated_at_utc": "2026-07-20T02:36:59Z",
+  "build_sha": "aba2bc7",
+  "build_date": "2026-07-20",
   "scrape": {
-    "team_total": 1640,
+    "team_total": 1660,
     "by_reg": {
       "M-A": 1104,
-      "M-B": 536
+      "M-B": 556
     },
-    "resolved_pastes": 1640,
+    "resolved_pastes": 1660,
     "resolve_rate": 1.0
   },
   "dex": {
     "forme_count": 314,
-    "move_count": 371,
+    "move_count": 372,
     "type_count": 18
   },
   "sources": {
