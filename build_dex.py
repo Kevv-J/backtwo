@@ -148,6 +148,23 @@ MOVE_OVERRIDES: dict[str, dict] = {
     # Make It Rain: accuracy 100 → 95, SpA drop -1 → -2 (drop is secondary
     # effect, not modeled in single-turn calc — surface via tooltip only).
     "Make It Rain": {"accuracy": 95},
+    # ── Scripted-boost + HP-cost backfills ──
+    # Showdown's onHit-scripted stat moves carry no `boosts` object, so our
+    # Use button ignored them. Synthesize the boosts + optional hpCost so
+    # applyMoveEffects can apply them. hpCost is a % of max HP (Belly Drum
+    # halves HP; Clangorous Soul takes a third; Fillet Away halves).
+    "Belly Drum":       {"boosts": {"atk": 6}, "mvTarget": "self", "hpCost": 50},
+    "Fillet Away":      {"boosts": {"atk": 2, "spa": 2, "spe": 2}, "mvTarget": "self", "hpCost": 50},
+    "Clangorous Soul":  {"hpCost": 33},   # boosts already in the dex; only add the tax
+    # Curse (non-Ghost): +1 Atk / +1 Def / -1 Spe on self. Ghost-Curse's
+    # HP-halving self-hit variant isn't modeled — user shouldn't press Use
+    # on a Ghost caster's Curse expecting -50% HP.
+    "Curse":            {"boosts": {"atk": 1, "def": 1, "spe": -1}, "mvTarget": "self"},
+    # Rock Polish / Autotomize / Shift Gear are onHit-scripted; add explicitly
+    # (dex will only carry these if they land on a scraped team).
+    "Rock Polish":      {"boosts": {"spe": 2}, "mvTarget": "self"},
+    "Autotomize":       {"boosts": {"spe": 2}, "mvTarget": "self"},
+    "Shift Gear":       {"boosts": {"atk": 1, "spe": 2}, "mvTarget": "self"},
 }
 
 
@@ -373,6 +390,7 @@ def fetch_move_flags() -> dict:
              "if(v.secondaries)e.secondaries=v.secondaries;"
              "if(v.target)e.target=v.target;"
              "if(v.pp!==undefined)e.pp=v.pp;"
+             "if(v.shortDesc)e.shortDesc=v.shortDesc;"
              "if(Object.keys(e).length)out[k]=e;}"
              "process.stdout.write(JSON.stringify(out));"],
             input=js, capture_output=True, text=True, timeout=30,
@@ -404,6 +422,10 @@ def fetch_move(name: str) -> dict:
         if sd.get("boosts"): detail["boosts"] = sd["boosts"]     # status-move primary boosts; target is dictated by `mvTarget`
         if sd.get("secondary"): detail["secondary"] = sd["secondary"]
         if sd.get("secondaries"): detail["secondaries"] = sd["secondaries"]
+        # Showdown's ~40-char one-liner used in the calc's move picker + tooltip.
+        # Skip the longer `desc` (150+ chars, ~4× cost) — the shortDesc + our
+        # existing structured tooltip already convey the essentials.
+        if sd.get("shortDesc"): detail["shortDesc"] = sd["shortDesc"]
         # Showdown's target string ('self' / 'normal' / 'allAdjacentFoes' / ...).
         # For status moves with top-level `boosts`, this decides whether the effect lands on user or opponent.
         # Emitted as `mvTarget` to avoid colliding with PokéAPI's `target` (already reduced to bool `spread`).

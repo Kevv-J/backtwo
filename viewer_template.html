@@ -468,6 +468,13 @@
   .smartpicker-option{display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .08s;font-size:12px;color:var(--foreground)}
   .smartpicker-option:last-child{border-bottom:none}
   .smartpicker-option.highlighted,.smartpicker-option:hover{background:var(--atk-bg)}
+  /* Move-picker options with a shortDesc render as two rows: line 1 = name +
+     chips, line 2 = italic description. Options without a desc still use the
+     flat layout — the presence of .sp-line1 inside triggers column-flex. */
+  .smartpicker-option:has(.sp-line1){flex-direction:column;align-items:stretch;gap:2px}
+  .smartpicker-option .sp-line1{display:flex;align-items:center;gap:8px;min-width:0}
+  .smartpicker-option .sp-line2{font-size:10px;color:var(--muted-foreground);line-height:1.35;white-space:normal}
+  .smartpicker-option .sp-desc{font-style:italic}
   /* Name takes NATURAL width and never shrinks below its own content — meta
      (description) gets whatever's left and ellipsis-clips. Previous rule had
      the opposite: name was flex:1 (basis:0) and meta was flex-shrink:0, so a
@@ -1337,7 +1344,17 @@ function applyBoost(stat,s){return s>=0?Math.floor(stat*(2+s)/2):Math.floor(stat
 // ---------- forme helpers ----------
 const isMega=l=>/-Mega(-[XY])?$/.test(l);
 const baseOf=l=>l.replace(/-Mega(-[XY])?$/,'');
-function normSpec(n){n=n.replace(/-Mega(-[XY])?$/,'');if(n==='Floette')n='Floette-Eternal';return n;}
+// Canonical-case map, populated once ALL_FORMES exists. Lets us fold user pastes
+// that mis-case a forme (Kommo-O → Kommo-o, meowstic-f → Meowstic-F) into the
+// spelling DEX.formes actually uses, so the paste path doesn't silently break.
+let FORME_CANON = null;
+function normSpec(n){
+  if(!n) return n;
+  n = n.replace(/-Mega(-[XY])?$/i, '');
+  if(/^floette$/i.test(n)) n = 'Floette-Eternal';
+  if(FORME_CANON) return FORME_CANON.get(n.toLowerCase()) || n;
+  return n;
+}
 const isStone=it=>!!it&&it!=='Eviolite'&&/ite( [XY])?$/.test(it);
 function jsForme(name,item){name=normSpec(name);if(!isStone(item))return name;
   const xy=/ ([XY])$/.exec(item);
@@ -1667,6 +1684,7 @@ const ITEM_TYPE_BOOST={Charcoal:'fire','Mystic Water':'water',Magnet:'electric',
 'Twisted Spoon':'psychic','Silver Powder':'bug','Hard Stone':'rock','Spell Tag':'ghost','Dragon Fang':'dragon',
 'Black Glasses':'dark','Metal Coat':'steel','Fairy Feather':'fairy','Silk Scarf':'normal'};
 const ALL_FORMES=Object.keys(DEX.formes).sort();
+FORME_CANON = new Map(ALL_FORMES.map(f => [f.toLowerCase(), f]));
 const ALL_ITEMS=[...new Set(TEAMS.flatMap(t=>t.mons.map(m=>m.item)).filter(i=>i&&i!=='-'))].sort();
 const ALL_MOVES=Object.keys(DEX.moves).sort();
 const ALL_NATURES=['Adamant','Bold','Brave','Calm','Careful','Gentle','Hardy','Hasty','Impish','Jolly','Lax','Lonely','Mild','Modest','Naive','Naughty','Quiet','Rash','Relaxed','Sassy','Serious','Timid'];
@@ -2087,6 +2105,9 @@ function effectiveBP(move, atk, def){
   return bp;
 }
 const INTIMIDATE_IMMUNE=new Set(['Clear Body','Full Metal Body','White Smoke','Hyper Cutter','Inner Focus','Scrappy','Own Tempo','Oblivious']);
+// Special-category moves that hit the target's Def stat instead of SpD.
+// The attacker side is unchanged (still reads user's SpA).
+const PSYSHOCK_MOVES = new Set(['Psyshock','Psystrike','Secret Sword']);
 // hits resolution: escalating -> exact len; fixed (min==max) -> exact;
 // Skill Link -> max; otherwise 3 (Showdown default for 2-5 hit moves).
 function hitsOf(moveName, ability){
@@ -2377,16 +2398,22 @@ function calcDmg(atk,move,def,atkSide,defSide){
   // that "turns the target's power against it"). Intimidate on the user doesn't
   // affect Foul Play because the user's Atk isn't the one being read.
   const isFoulPlay = phys && move==='Foul Play';
+  // Psyshock / Psystrike / Secret Sword are Special-category moves that hit
+  // the target's Def stat (not SpD). Attacker-side is unchanged (still SpA).
+  // Downstream defender-side item/ability gates need to treat "def-reading"
+  // as physical for those checks — see the `defReadsPhys` alias below.
+  const isPsyshock = !phys && PSYSHOCK_MOVES.has(move);
+  const defReadsPhys = phys || isPsyshock;   // does D come from the target's Def slot?
   // Wonder Room swaps Def and SpD
   let Aa;
   if(isFoulPlay) Aa=ds.atk;
   else Aa=phys?as.atk:as.spa;
   let D;
-  if(field.wonderRoom) D=phys?ds.spd:ds.def;
-  else D=phys?ds.def:ds.spd;
+  if(field.wonderRoom) D=defReadsPhys?ds.spd:ds.def;
+  else D=defReadsPhys?ds.def:ds.spd;
   // stat boosts (with crit-ignore rules). Wonder Room swaps the base stat
   // value used, but boosts stay tied to slot name (Showdown rule).
-  const aBoostKey=phys?'atk':'spa', dBoostKey=phys?'def':'spd';
+  const aBoostKey=phys?'atk':'spa', dBoostKey=defReadsPhys?'def':'spd';
   let aB = isFoulPlay ? (def.boost?.atk||0) : (atk.boost?.[aBoostKey]||0);
   let dB = def.boost?.[dBoostKey]||0;
   // Intimidate auto-apply: defender's ability drops attacker's Atk -1 (phys).
@@ -2419,16 +2446,16 @@ function calcDmg(atk,move,def,atkSide,defSide){
   // items on stats (skipped under Magic Room)
   if(aItemSrc==='Choice Band'&&phys)Aa=Math.floor(Aa*1.5);
   if(aItemSrc==='Choice Specs'&&!phys)Aa=Math.floor(Aa*1.5);
-  if(dItem==='Assault Vest'&&!phys)D=Math.floor(D*1.5);
+  // Defender-side item/ability gates: use `defReadsPhys` so Psyshock's Def-read
+  // path skips SpD-boosters (Assault Vest, Ice Scales, sun-SpD Flower Gift,
+  // sand-SpD-boost for Rock types) and picks up Def-boosters (Fur Coat, snow-Def).
+  if(dItem==='Assault Vest'&&!defReadsPhys)D=Math.floor(D*1.5);
   if(dItem==='Eviolite')D=Math.floor(D*1.5);
-  // defender stat-modifying abilities
-  if(phys && def.ability==='Fur Coat') D=Math.floor(D*2);
-  if(!phys && def.ability==='Ice Scales') D=Math.floor(D*2);
-  // Flower Gift on defender's side in Sun: +50% SpD
-  if(!phys && defSide.flowerGift && (weather==='sun'||weather==='harshsun')) D=Math.floor(D*1.5);
-  // weather-defensive
-  if(!phys && weather==='sand' && dT.includes('rock')) D=Math.floor(D*1.5);
-  if(phys && weather==='snow' && dT.includes('ice')) D=Math.floor(D*1.5);
+  if(defReadsPhys && def.ability==='Fur Coat') D=Math.floor(D*2);
+  if(!defReadsPhys && def.ability==='Ice Scales') D=Math.floor(D*2);
+  if(!defReadsPhys && defSide.flowerGift && (weather==='sun'||weather==='harshsun')) D=Math.floor(D*1.5);
+  if(!defReadsPhys && weather==='sand' && dT.includes('rock')) D=Math.floor(D*1.5);
+  if(defReadsPhys && weather==='snow' && dT.includes('ice')) D=Math.floor(D*1.5);
   const baseFor=p=>Math.floor(Math.floor(Math.floor(22*p*Aa/D)/50))+2;
   const base=baseFor(bp);
   // multi-hit: how many hits to compute (1 if not multi-hit)
@@ -3192,6 +3219,18 @@ function applyMoveEffects(atkSideKey,defSideKey,mv){
     if(s.boosts)Object.entries(s.boosts).forEach(([k,v])=>toDef(k,v));
     if(s.self&&s.self.boosts)Object.entries(s.self.boosts).forEach(([k,v])=>toAtk(k,v));
   });
+  // 4) HP cost (Belly Drum 50%, Fillet Away 50%, Clangorous Soul 33%). Only
+  // makes sense for self-targeting moves — we don't model target-self-costs.
+  if(info.hpCost && info.mvTarget==='self'){
+    const cost = info.hpCost|0;
+    const before = atk.hpPct ?? 100;
+    atk.hpPct = Math.max(0, before - cost);
+    if(atk.hpPct !== before){
+      atkTouched = true;
+      syncHPUI(atkSideKey, atk);
+      applied.push(`Self -${cost}% HP`);
+    }
+  }
   if(atkTouched)renderFinals(atkSideKey,atk);
   if(defTouched)renderFinals(defSideKey,def);
   if(applied.length)updateResults();
@@ -3202,6 +3241,10 @@ function _attrEsc(s){return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;')
 function moveTooltipText(mv){
   const info=DEX.moves[mv];if(!info)return '';
   const lines=[];
+  // Showdown's own ~40-char one-liner sits on top so hovering conveys "what
+  // does this move do" before the structured stats. Belly Drum / Psyshock /
+  // Foul Play / Trick Room etc. all carry useful shortDescs.
+  if(info.shortDesc) lines.push(info.shortDesc);
   const bp=info.power?`${info.power} BP · `:'';
   const cat=info.category==='physical'?'Physical':info.category==='special'?'Special':'Status';
   const typ=info.type?info.type.replace(/^./,c=>c.toUpperCase()):'—';
@@ -3228,6 +3271,7 @@ function moveTooltipText(mv){
     if(s.self&&s.self.boosts)Object.entries(s.self.boosts).forEach(([k,v])=>parts.push(`Self ${_STAT_LABEL[k]||k.toUpperCase()} ${v>0?'+':''}${v}`));
     if(parts.length)lines.push(`${s.chance}% chance: ${parts.join(', ')}`);
   });
+  if(info.hpCost) lines.push(`Cost: -${info.hpCost}% max HP`);
   if(typeof info.pp==='number')lines.push(`PP: ${info.pp}`);
   return lines.join('\n');
 }
@@ -3262,7 +3306,18 @@ function moveListHTML(side,atk,def){
     // listed "90%" would mislead the user reading the results panel.
     const prioBadge = (info && typeof info.priority === 'number' && info.priority !== 0)
       ? `<span class="mvbp mvprio ${info.priority>0?'pos':'neg'}">· ${info.priority>0?'+':''}${info.priority} prio</span>` : '';
-    const moveMeta=info?`<span class="mvmeta"><span class="mvcat ${info.category}">${info.category==='physical'?'Phys':info.category==='special'?'Spec':'Stat'}</span>${info.power?`<span class="mvbp">${info.power} BP</span>`:''}${info.spread?'<span class="mvbp">· spread</span>':''}${prioBadge}</span>`:'';
+    // BP chip: for HP-scaling moves (Water Spout / Eruption / Dragon Energy)
+    // the calc actually uses a scaled bp; show that number here, not the raw
+    // 150. Hover title reveals the base. Non-scaling moves fall back to info.power.
+    let bpText = '';
+    if(info && info.power){
+      if(r && typeof r.bp === 'number' && r.bp !== r.bpRaw){
+        bpText = `<span class="mvbp" title="${r.bpRaw} base, scaled by user's HP%">${r.bp} BP</span>`;
+      } else {
+        bpText = `<span class="mvbp">${info.power} BP</span>`;
+      }
+    }
+    const moveMeta=info?`<span class="mvmeta"><span class="mvcat ${info.category}">${info.category==='physical'?'Phys':info.category==='special'?'Spec':'Stat'}</span>${bpText}${info.spread?'<span class="mvbp">· spread</span>':''}${prioBadge}</span>`:'';
     // The detail block follows the row inline when this row is selected.
     const detailBlock = sel ? moveDetailHTML(side, atk, def, i) : '';
     // Rich hover tooltip: BP · category · type, accuracy, priority, effects, PP.
@@ -3307,37 +3362,98 @@ const DEF_ITEM_INLINE=new Set(['Assault Vest','Eviolite']);
 // so the copy line reads Showdown-shaped: "… Life Orb Adaptability Basculegion Wave Crash …".
 // Utility abilities (Sturdy without a crit, Chlorophyll, Static, etc.) are omitted
 // because they don't change the printed range.
-const DMG_ABILITY_INLINE=new Set([
-  // Attacker offense: type/STAB/BP/crit/multi-hit boosters
-  'Adaptability','Sniper','Technician','Tinted Lens','Sheer Force',
-  'Iron Fist','Strong Jaw','Mega Launcher','Sharpness','Tough Claws',
-  'Punk Rock','Solar Power','Sand Force','Rocky Payload','Neuroforce',
-  'Water Bubble','Steelworker','Transistor','Dragons Maw',
-  'Huge Power','Pure Power','Guts',
-  'Parental Bond','Skill Link','Supreme Overlord',
-  'Steely Spirit','Analytic',
-  'Protosynthesis','Quark Drive',
-  // Type-shift abilities that grant STAB on the shifted type
-  'Pixilate','Refrigerate','Aerilate','Galvanize','Normalize','Liquid Voice',
-  // Champions-invented
-  'Fire Mane','Dragonize','Eelevate','Mega Sol','Piercing Drill',
-  // Defender: damage reducers / immunities
-  'Multiscale','Shadow Shield','Filter','Solid Rock','Prism Armor',
-  'Ice Scales','Fur Coat','Thick Fat','Heatproof','Purifying Salt',
-  'Fluffy','Bulletproof','Soundproof','Levitate',
-  'Volt Absorb','Water Absorb','Flash Fire','Dry Skin','Sap Sipper',
-  'Motor Drive','Storm Drain','Lightning Rod','Well-Baked Body',
-  'Overcoat','Battle Armor','Shell Armor','Disguise',
-]);
+// Condition-gated predicates for inline attacker/defender abilities in the calc
+// summary. Previously a plain Set meant Mega Launcher would inline on a Water
+// Spout (non-pulse) line — the ability didn't actually mod the roll but the
+// name was still printed. Each predicate returns true only when the ability
+// really contributed. Utility abilities (Chlorophyll, Static) stay omitted
+// because they don't change the printed range. See workflow findings for the
+// gate rationale per entry.
+const _abilCtx = (atk, def, mv, info, r) => ({
+  mv: info, moveName: mv, moveType: r.moveType,
+  eff: r.eff, bpRaw: r.bpRaw, isCrit: r.isCrit, hits: r.hits,
+  phys: info.category==='physical',
+  aTypes: (DEX.formes[effectiveForme(atk)]?.types)||[],
+  atk, def,
+});
+const ATK_ABIL_ACTIVE = {
+  'Adaptability':     c => c.aTypes.includes(c.moveType),
+  'Technician':       c => (c.bpRaw||0) <= 60,
+  'Tinted Lens':      c => c.eff > 0 && c.eff < 1,
+  'Sniper':           c => !!c.isCrit,
+  'Sheer Force':      c => typeof SHEER_FORCE_MOVES!=='undefined' && SHEER_FORCE_MOVES.has(c.moveName),
+  'Iron Fist':        c => !!c.mv.punch,
+  'Strong Jaw':       c => !!c.mv.bite,
+  'Mega Launcher':    c => !!c.mv.pulse,
+  'Sharpness':        c => !!c.mv.slicing,
+  'Tough Claws':      c => !!c.mv.contact,
+  'Punk Rock':        c => !!c.mv.sound,
+  'Solar Power':      c => !c.phys && (weather==='sun'||weather==='harshsun'),
+  'Sand Force':       c => weather==='sand' && ['rock','ground','steel'].includes(c.moveType),
+  'Rocky Payload':    c => c.moveType==='rock',
+  'Neuroforce':       c => c.eff > 1,
+  'Water Bubble':     c => c.moveType==='water',
+  'Steelworker':      c => c.moveType==='steel',
+  'Transistor':       c => c.moveType==='electric',
+  'Dragons Maw':      c => c.moveType==='dragon',
+  'Huge Power':       c => c.phys,
+  'Pure Power':       c => c.phys,
+  'Guts':             c => c.phys && c.atk.status==='brn',
+  'Parental Bond':    c => (c.hits||1)===1 && !c.mv.spread && !!c.mv.power,
+  'Skill Link':       c => (c.mv.minHits||1) < (c.mv.maxHits||1),
+  'Supreme Overlord': c => (c.atk.faintedAllies||0) > 0,
+  'Protosynthesis':   c => weather==='sun'||weather==='harshsun'||c.atk.item==='Booster Energy',
+  'Quark Drive':      c => field.terrain==='electric'||c.atk.item==='Booster Energy',
+  'Pixilate':         c => c.mv.type==='normal',
+  'Refrigerate':      c => c.mv.type==='normal',
+  'Aerilate':         c => c.mv.type==='normal',
+  'Galvanize':        c => c.mv.type==='normal',
+  'Dragonize':        c => c.mv.type==='normal',
+  'Liquid Voice':     c => !!c.mv.sound,
+  'Fire Mane':        c => c.moveType==='fire',
+  'Mega Sol':         c => (c.moveType==='fire'||c.moveType==='water') && weather!=='sun' && weather!=='harshsun',
+};
+const DEF_ABIL_ACTIVE = {
+  'Multiscale':       c => (c.def.hpPct??100) >= 100,
+  'Shadow Shield':    c => (c.def.hpPct??100) >= 100,
+  'Filter':           c => c.eff > 1,
+  'Solid Rock':       c => c.eff > 1,
+  'Prism Armor':      c => c.eff > 1,
+  'Ice Scales':       c => !c.phys && !PSYSHOCK_MOVES.has(c.moveName),   // SpD-boost, bypassed by Psyshock
+  'Fur Coat':         c => c.phys || PSYSHOCK_MOVES.has(c.moveName),      // Def-boost, applies to Psyshock
+  'Thick Fat':        c => c.moveType==='fire' || c.moveType==='ice',
+  'Heatproof':        c => c.moveType==='fire',
+  'Purifying Salt':   c => c.moveType==='ghost',
+  'Fluffy':           c => !!c.mv.contact || c.moveType==='fire',
+  'Punk Rock':        c => !!c.mv.sound,
+  'Water Bubble':     c => c.moveType==='fire',
+  'Levitate':         c => c.moveType==='ground' && !field.gravity,
+  'Eelevate':         c => c.moveType==='ground' && !field.gravity,
+  'Flash Fire':       c => c.moveType==='fire',
+  'Water Absorb':     c => c.moveType==='water',
+  'Dry Skin':         c => c.moveType==='water',
+  'Storm Drain':      c => c.moveType==='water',
+  'Volt Absorb':      c => c.moveType==='electric',
+  'Lightning Rod':    c => c.moveType==='electric',
+  'Motor Drive':      c => c.moveType==='electric',
+  'Sap Sipper':       c => c.moveType==='grass',
+  'Well-Baked Body':  c => c.moveType==='fire',
+  'Bulletproof':      c => !!c.mv.bullet,
+  'Soundproof':       c => !!c.mv.sound,
+  'Battle Armor':     c => !!c.isCrit,
+  'Shell Armor':      c => !!c.isCrit,
+};
 // Build a Showdown-style single-line damage summary. Mirrors calcDmg's logic —
 // changes to modifiers there need reflection here (or the string drifts from reality).
 function calcSummary(atk, def, mv, info, r, aS, dS){
   const phys=info.category==='physical';
   const isFoulPlay=phys && mv==='Foul Play';
+  const isPsyshock=!phys && PSYSHOCK_MOVES.has(mv);
+  const defReadsPhys=phys || isPsyshock;   // Psyshock reads target's Def, so label + EV/nature/boost read from the Def slot
   const aStatKey=phys?'atk':'spa';
-  const dStatKey=phys?'def':'spd';
+  const dStatKey=defReadsPhys?'def':'spd';
   const aStatLbl=phys?'Atk':'SpA';
-  const dStatLbl=phys?'Def':'SpD';
+  const dStatLbl=defReadsPhys?'Def':'SpD';
   // Attacking stat is target's Atk for Foul Play (reads defender's EV + nature + boost)
   const aSrc=isFoulPlay?def:atk;
   const aStatForNat=isFoulPlay?'atk':aStatKey;
@@ -3367,8 +3483,13 @@ function calcSummary(atk, def, mv, info, r, aS, dS){
   // the item, before the mon name. Solves the ambiguity where two calc lines
   // read identically but produce very different damage because one side has
   // Adaptability or Multiscale in play.
-  const aAbilStr=(atk.ability && DMG_ABILITY_INLINE.has(atk.ability))?` ${atk.ability}`:'';
-  const dAbilStr=(def.ability && DMG_ABILITY_INLINE.has(def.ability))?` ${def.ability}`:'';
+  // Condition-gated inline abilities: only print when the ability actually
+  // moved the roll. Foul Play swaps the offense side to the defender, so its
+  // attacker-slot ability comes from def.ability.
+  const _c = _abilCtx(atk, def, mv, info, r);
+  const _atkAbilSrc = isFoulPlay ? def.ability : atk.ability;
+  const aAbilStr = (_atkAbilSrc && ATK_ABIL_ACTIVE[_atkAbilSrc]?.(_c)) ? ` ${_atkAbilSrc}` : '';
+  const dAbilStr = (def.ability && DEF_ABIL_ACTIVE[def.ability]?.(_c)) ? ` ${def.ability}` : '';
   const spread=(r.isSpread && doubles)?' (spread)':'';
   // Trailing modifiers (Showdown reads left→right: field then side then hit-time)
   const mods=[];
@@ -3423,7 +3544,8 @@ function moveDetailHTML(side,atk,def,i){const mv=atk.moves[i];const info=DEX.mov
   const r=calcDmg(atk,mv,def,aS,dS);if(!r)return '<div class="detail small">No stat data for this matchup.</div>';
   const phys=info.category==='physical';
   const aBoost=boostLabel(phys?atk.boost?.atk||0:atk.boost?.spa||0);
-  const dBoost=boostLabel(phys?def.boost?.def||0:def.boost?.spd||0);
+  const defReadsPhysDetail = phys || (!phys && PSYSHOCK_MOVES.has(mv));
+  const dBoost=boostLabel(defReadsPhysDetail?def.boost?.def||0:def.boost?.spd||0);
   // Doubles is hard-pinned. For spread moves, the headline IS the 0.75× spread range;
   // show the single-target range as a secondary line in case the move lands solo.
   const sp=r.isSpread?` · <span class="small">if single-target ${r.single.pctLo.toFixed(1)}–${r.single.pctHi.toFixed(1)}%</span>`:'';
@@ -3433,6 +3555,11 @@ function moveDetailHTML(side,atk,def,i){const mv=atk.moves[i];const info=DEX.mov
   // Piercing Drill (Mega Excadrill): 25% of a Protect-blocked hit still lands.
   // Protect isn't modeled in the calc, so surface this as a visual note only.
   const pdNote=atk.ability==='Piercing Drill' ? ' · <span class="small" style="color:var(--accent2)">Piercing Drill: 25% still lands through Protect</span>' : '';
+  // shortDesc line — Showdown's one-line effect summary, muted italic. Only
+  // shown when the move has one; grounds "what does this actually do".
+  const descLine = info.shortDesc
+    ? `<div class="small" style="margin-top:2px;font-style:italic;color:var(--muted-foreground)">${esc(info.shortDesc)}</div>`
+    : '';
   const ctx=[];if(atk.ability)ctx.push(esc(atk.ability));if(def.ability)ctx.push(esc(def.ability));
   if(weather!=='none')ctx.push(esc(weather));if(field.terrain!=='none')ctx.push(esc(field.terrain+' terrain'));
   if(r.isCrit)ctx.push('<span style="color:var(--bad)">crit</span>');
@@ -3468,6 +3595,7 @@ function moveDetailHTML(side,atk,def,i){const mv=atk.moves[i];const info=DEX.mov
   return `<div class="detail"><div class="calcline"><span class="calcline-txt">${esc(summary)}</span><button class="calcline-copy" type="button" data-copy="${esc(summary)}" title="Copy Showdown-style summary">Copy</button></div>
     <div style="margin-top:6px">${esc(effectiveForme(atk))}${aBoost} <b>${r.isCrit?'(crit) ':''}${esc(mv)}</b> (${bpLab}${r.eff!==1?', '+r.eff+'×':''}${r.moveType!==info.type?' · type→'+esc(r.moveType):''}${hitLab}) vs ${esc(effectiveForme(def))}${dBoost}:
     <b>${r.lo}–${r.hi}</b> (<b style="color:${dmgColor(r.pctHi)}">${r.pctLo.toFixed(1)}–${r.pctHi.toFixed(1)}%</b> of ${r.hp} HP) — ${koNote(r)}${sp}${berry}${pdNote}</div>
+    ${descLine}
     ${ctx.length?`<div class="small" style="margin-top:2px">${ctx.join(' · ')}</div>`:''}
     ${recoilLine}
     <div class="small" style="margin-top:5px">${r.rolls?'rolls: '+r.rolls.join(', '):r.hits>1?'multi-hit · '+r.hits+' hits':''}</div></div>`;}
@@ -4124,7 +4252,12 @@ function spRenderMove(name){
   } else if(info.accuracy===true){
     acc = `<span class="sp-acc nomiss" title="Never misses — ignores accuracy checks">—%</span>`;
   }
-  return `${chip}<span class="sp-name">${esc(name)}</span><span class="sp-cat ${cat}">${catLab}</span>${bp}${prio}${acc}`;
+  // shortDesc: Showdown's one-line effect summary. Rendered on a second row
+  // via `.sp-line1`/`.sp-line2` wrapping — the parent .smartpicker-option flexes
+  // to column so line 1 (name + chips) sits above line 2 (desc).
+  const desc = info.shortDesc ? `<div class="sp-line2 sp-desc">${esc(info.shortDesc)}</div>` : '';
+  const line1 = `<div class="sp-line1">${chip}<span class="sp-name">${esc(name)}</span><span class="sp-cat ${cat}">${catLab}</span>${bp}${prio}${acc}</div>`;
+  return `${line1}${desc}`;
 }
 
 function updateFindDropdown(i){
