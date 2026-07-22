@@ -81,6 +81,17 @@ jobs:
             echo "::error::sprites total (${SPRITES_MB} MB) exceeds budget (10 MB)"
             exit 1
           fi
+          # Pre-rendered per-Pokemon SEO pages. ~180 pages at ~12 KB each; a
+          # blowout here means the generator started embedding the full dataset
+          # into every page, which is exactly what these pages exist to avoid.
+          PAGES_BYTES=$(du -sb pokemon 2>/dev/null | cut -f1)
+          PAGES_MB=$(( PAGES_BYTES / 1048576 ))
+          PAGE_COUNT=$(find pokemon -name index.html | wc -l)
+          echo "pokemon/: ${PAGES_MB} MB across ${PAGE_COUNT} pages"
+          if (( PAGES_MB > 15 )); then
+            echo "::error::pre-rendered pages (${PAGES_MB} MB) exceed budget (15 MB)"
+            exit 1
+          fi
 
       - name: Commit + push if anything changed
         run: |

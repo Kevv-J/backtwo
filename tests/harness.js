@@ -19,7 +19,11 @@ const ROOT = resolve(HERE, '..');
 const html = readFileSync(resolve(ROOT, 'viewer_template.html'), 'utf8');
 // Extract every inline <script> body (skip src= scripts — GoatCounter loader).
 // The main app script is the largest; a couple of tiny pre-scripts also inline.
-const scripts = [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m => m[1]);
+// Also skip data blocks (type="application/ld+json" — the SEO structured data),
+// which are JSON, not JavaScript, and throw if handed to the VM.
+const scripts = [...html.matchAll(
+  /<script(?![^>]*\bsrc=)(?![^>]*\btype\s*=\s*["']application\/)[^>]*>([\s\S]*?)<\/script>/g,
+)].map(m => m[1]);
 
 // Inject the built dex.json as a string so the calc's `DEX = /*__DEX__*/null`
 // placeholder resolves to real data. The build pipeline does this substitution

@@ -3,20 +3,38 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>backtwo — VGC doubles companion</title>
-<meta name="description" content="A VGC doubles companion for Pokémon Champions — damage calc, team finder over 1,400+ tournament teams, and meta browser. Built for your climb through every regulation.">
+<title>Pokémon Champions VGC Teams, Team Finder &amp; Damage Calc — backtwo</title>
+<meta name="description" content="Search {{TEAM_COUNT}}+ Pokémon Champions VGC tournament teams by the mons you already run. Free, open-source team finder, Reg M-A/M-B team database, and doubles damage calculator in one tool.">
 <meta name="author" content="Kevin John">
 <meta name="google-site-verification" content="VCRbpOqt6hDuCSlJ2bhzWAMr7_tSNX5VLJ6dS582PZA">
 <meta name="build" content="{{BUILD_SHA}} · {{BUILD_DATE}}">
 <meta name="theme-color" content="#08090d">
+<link rel="canonical" href="https://kevv-j.github.io/backtwo/">
 <meta property="og:type" content="website">
-<meta property="og:title" content="backtwo — VGC doubles companion">
-<meta property="og:description" content="Read the back two. Team finder, damage calc, and meta browser for VGC doubles in Pokémon Champions.">
-<meta property="og:image" content="og.png">
+<meta property="og:site_name" content="backtwo">
+<meta property="og:url" content="https://kevv-j.github.io/backtwo/">
+<meta property="og:title" content="Pokémon Champions VGC Teams, Team Finder &amp; Damage Calc — backtwo">
+<meta property="og:description" content="Search {{TEAM_COUNT}}+ Pokémon Champions VGC tournament teams by the mons you already run. Free and open source.">
+<meta property="og:image" content="https://kevv-j.github.io/backtwo/og.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="backtwo — VGC doubles companion">
-<meta name="twitter:description" content="Read the back two. A VGC doubles companion for your climb.">
-<meta name="twitter:image" content="og.png">
+<meta name="twitter:title" content="Pokémon Champions VGC Teams, Team Finder &amp; Damage Calc — backtwo">
+<meta name="twitter:description" content="Search {{TEAM_COUNT}}+ Pokémon Champions VGC tournament teams by the mons you already run. Free and open source.">
+<meta name="twitter:image" content="https://kevv-j.github.io/backtwo/og.png">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebApplication",
+"name":"backtwo",
+"alternateName":"backtwo — Pokémon Champions VGC companion",
+"url":"https://kevv-j.github.io/backtwo/",
+"description":"Free, open-source Pokémon Champions VGC doubles companion: a searchable database of tournament teams, a reverse team finder, and a damage calculator.",
+"applicationCategory":"GameApplication",
+"operatingSystem":"Any (web browser)",
+"browserRequirements":"Requires JavaScript",
+"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},
+"isAccessibleForFree":true,
+"license":"https://github.com/Kevv-J/backtwo/blob/main/LICENSE",
+"author":{"@type":"Person","name":"Kevin John","url":"https://github.com/Kevv-J"},
+"featureList":["Search {{TEAM_COUNT}}+ Pokémon Champions VGC tournament teams by partial team match","Regulation M-A and M-B team archive","Doubles damage calculator with Mega Evolution and Stat Points","Pokémon usage and meta browser","Guided interactive tour"]}
+</script>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='50%25' stop-color='%2322d3ee'/%3E%3Cstop offset='50%25' stop-color='%23a78bfa'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='32' cy='32' r='30' fill='url(%23g)'/%3E%3Ctext x='32' y='44' text-anchor='middle' font-family='Rajdhani,Inter,sans-serif' font-weight='700' font-size='38' fill='%23ffffff'%3E2%3C/text%3E%3C/svg%3E">
 <!-- Telemetry: GoatCounter — free, cookieless, GDPR-safe. The data-goatcounter
      URL is the user's own site (set up at https://www.goatcounter.com/signup).
@@ -1144,6 +1162,32 @@
   <button class="bn" data-view="team" aria-label="Teams"><span class="bn-ic" aria-hidden="true">≡</span><span class="bn-lb">Teams</span></button>
 </nav>
 <main>
+  <!-- Crawlable fallback. Googlebot executes JS and will replace this with the
+       real app, but non-JS crawlers (Bing fallbacks, AI answer engines, social
+       scrapers) index this instead of an empty shell. The <a href> links below
+       are also the entry point into the pre-rendered /pokemon/ pages, which is
+       how the static pages get discovered at all. -->
+  <noscript>
+    <div class="nojs-intro">
+      <h2>backtwo — a Pokémon Champions VGC doubles companion</h2>
+      <p>backtwo is a free, open-source tool for competitive Pokémon Champions
+      doubles (VGC). It bundles three things that normally live on three
+      different sites:</p>
+      <ul>
+        <li><strong>A tournament team database</strong> — {{TEAM_COUNT}} real
+        Pokémon Champions teams from Regulation M-A and M-B events, with full
+        Showdown pastes, spreads, items and moves.</li>
+        <li><strong>A reverse team finder</strong> — type in the Pokémon you
+        already run and it finds the tournament teams built around that core,
+        ranked by how many of your picks they match.</li>
+        <li><strong>A doubles damage calculator</strong> — Champions-accurate,
+        with Mega Evolution, Stat Points (66 SP / 32 per stat), weather,
+        terrain, spread reduction, Intimidate and the rest of the field.</li>
+      </ul>
+      <p>Browse per-Pokémon usage, common items, spreads and teammates:</p>
+      {{STATIC_LINKS}}
+    </div>
+  </noscript>
   <div class="view active" id="view-poke">
     <div id="list"></div>
     <div id="detail"></div>
@@ -1162,6 +1206,10 @@
   <a href="https://github.com/Kevv-J/backtwo" target="_blank" rel="noopener" title="Source on GitHub">github.com/Kevv-J/backtwo</a>
   <span class="sep">·</span>
   <a href="#" id="aboutlink">about / credits</a>
+  <span class="sep">·</span>
+  <!-- Real <a href>, visible with JS on. This is how Googlebot crawls into the
+       pre-rendered per-Pokemon pages — it ignores <noscript> once JS runs. -->
+  <a href="pokemon/" title="Per-Pokémon usage, items, spreads and teams">pokédex index</a>
   <span class="sep">·</span>
   <span>data: <a href="https://docs.google.com/spreadsheets/d/1axlwmzPA49rYkqXh7zHvAtSP-TKbM0ijGYBPRflLSWw" target="_blank" rel="noopener">VGCPastes</a>, <a href="https://pokeapi.co" target="_blank" rel="noopener">PokéAPI</a>, <a href="https://pokemonshowdown.com" target="_blank" rel="noopener">Showdown</a></span>
   <span class="sep">·</span>
