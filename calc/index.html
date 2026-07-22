@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pokémon Champions VGC Damage Calculator — Doubles, Megas, Stat Points | backtwo</title>
+<meta name="description" content="A doubles damage calculator built for Pokémon Champions: Stat Points instead of EVs, Mega Evolution, weather, terrain, spread reduction and Intimidate. Free and open source.">
+<link rel="canonical" href="https://kevv-j.github.io/backtwo/calc/">
+<meta name="theme-color" content="#08090d">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="backtwo">
+<meta property="og:url" content="https://kevv-j.github.io/backtwo/calc/">
+<meta property="og:title" content="Pokémon Champions VGC Damage Calculator — Doubles, Megas, Stat Points | backtwo">
+<meta property="og:description" content="A doubles damage calculator built for Pokémon Champions: Stat Points instead of EVs, Mega Evolution, weather, terrain, spread reduction and Intimidate. Free and open source.">
+<meta property="og:image" content="https://kevv-j.github.io/backtwo/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+:root{--bg:#08090d;--pan:#12141c;--ln:#232735;--fg:#e8ecf5;--dim:#8b93a7;--ac:#22d3ee;--ac2:#a78bfa}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+a{color:var(--ac);text-decoration:none}a:hover{text-decoration:underline}
+.wrap{max-width:900px;margin:0 auto;padding:20px 18px 60px}
+header.sh{display:flex;align-items:center;gap:10px;padding:14px 0;border-bottom:1px solid var(--ln);margin-bottom:22px;flex-wrap:wrap}
+.brand{font-weight:800;font-size:19px;letter-spacing:-.5px}.brand .b{color:var(--ac)}.brand .t{color:var(--ac2)}
+.crumb{color:var(--dim);font-size:13px}
+h1{font-size:27px;margin:0 0 6px;letter-spacing:-.5px}
+h2{font-size:16px;margin:26px 0 10px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim)}
+.hero{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
+.hero img{width:84px;height:84px;image-rendering:pixelated}
+.lede{color:var(--dim);margin:10px 0 0;max-width:68ch}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.chip{padding:2px 9px;border-radius:99px;font-size:12px;font-weight:700;background:#1b1f2b;border:1px solid var(--ln);text-transform:capitalize}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.card{background:var(--pan);border:1px solid var(--ln);border-radius:10px;padding:13px 15px}
+.card h3{margin:0 0 9px;font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim)}
+.row{display:flex;justify-content:space-between;gap:10px;padding:3px 0;font-size:14px}
+.row .n{color:var(--dim);font-variant-numeric:tabular-nums;white-space:nowrap}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--ln);vertical-align:top}
+th{color:var(--dim);font-size:12px;text-transform:uppercase;letter-spacing:.5px}
+.tw{overflow-x:auto}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:8px;margin-top:12px}
+.st{background:var(--pan);border:1px solid var(--ln);border-radius:8px;padding:7px 9px;text-align:center}
+.st b{display:block;font-size:19px;font-variant-numeric:tabular-nums}
+.st span{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px}
+.idx{display:grid;grid-template-columns:repeat(auto-fill,minmax(178px,1fr));gap:8px}
+.idx a{display:flex;align-items:center;gap:8px;background:var(--pan);border:1px solid var(--ln);border-radius:8px;padding:7px 10px;color:var(--fg)}
+.idx a:hover{border-color:var(--ac);text-decoration:none}
+.idx img{width:32px;height:32px;image-rendering:pixelated}
+.idx .n{margin-left:auto;color:var(--dim);font-size:12px;font-variant-numeric:tabular-nums}
+.cta{display:inline-block;margin-top:16px;background:var(--ac);color:#06232a;font-weight:700;padding:9px 16px;border-radius:8px}
+.cta:hover{text-decoration:none;filter:brightness(1.08)}
+footer.sf{margin-top:40px;padding-top:16px;border-top:1px solid var(--ln);color:var(--dim);font-size:13px}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+<header class="sh">
+  <a class="brand" href="../"><span class="b">back</span><span class="t">two</span></a>
+  <span class="crumb">· <a href="../pokemon/">Pokédex index</a> · Pokémon Champions VGC</span>
+</header>
+
+<h1>Pokémon Champions VGC damage calculator</h1>
+<p class="lede">A doubles-first damage calculator built specifically for Pokémon
+Champions, not retrofitted from Scarlet &amp; Violet. It models the things that
+actually differ in this format.</p>
+<a class="cta" href="../#/dmg">Open the damage calculator →</a>
+
+<h2>What Champions changes</h2>
+<div class="grid">
+  <div class="card"><h3>Stat Points, not EVs</h3>
+    <p>Champions replaces EVs with Stat Points: <strong>66 total</strong>, at most
+    <strong>32 in any one stat</strong>. 32 SP is a fully invested stat, equivalent
+    to the old 252 EVs. Every Pokémon is Level 50 with maximum IVs, so a spread is
+    purely how you divide those 66 points.</p></div>
+  <div class="card"><h3>Mega Evolution is back</h3>
+    <p>Megas are legal, and only one can be active per battle even if you bring
+    several stones. The calculator applies the Mega's ability and stats, and lets
+    you toggle back to the base form without losing the ability from your paste.</p></div>
+  <div class="card"><h3>No Terastallization</h3>
+    <p>There is no Tera mechanic in Champions, so defensive typing is fixed and
+    a resist stays a resist. Status is limited to burn, freeze, paralysis, sleep,
+    poison and toxic.</p></div>
+  <div class="card"><h3>Doubles by default</h3>
+    <p>Spread moves take the 0.75× reduction, and Intimidate, Friend Guard,
+    weather, terrain, Trick Room, Gravity and Fairy Aura are all modelled as
+    field state you can toggle.</p></div>
+</div>
+
+<h2>Champions-exclusive Mega abilities</h2>
+<p class="lede">Several Megas in Champions carry abilities that do not exist
+elsewhere. These are implemented in the calculator.</p>
+<div class="card"><div class="row"><span><a href="../pokemon/chimecho-mega/">Chimecho-Mega</a></span><span class="n">Levitate</span></div><div class="row"><span><a href="../pokemon/floette-eternal-mega/">Floette-Eternal-Mega</a></span><span class="n">Fairy Aura</span></div><div class="row"><span>Meowstic-Mega</span><span class="n">Trace</span></div><div class="row"><span>Meowstic-Mega-F</span><span class="n">Trace</span></div><div class="row"><span><a href="../pokemon/pyroar-mega/">Pyroar-Mega</a></span><span class="n">Fire Mane</span></div></div>
+
+<h2>Calc against what people actually run</h2>
+<p class="lede">Spreads are only useful against real sets. Pull an opposing
+Pokémon's common item, ability and moves from its
+<a href="../pokemon/">usage page</a>, or find a whole team to test against with
+the <a href="../find/">team finder</a>.</p>
+
+<footer class="sf">
+  <a href="../">backtwo</a> — a free, open-source Pokémon Champions VGC doubles companion by
+  <a href="https://github.com/Kevv-J" rel="noopener">Kevin John</a>.
+  Source on <a href="https://github.com/Kevv-J/backtwo" rel="noopener">GitHub</a>.
+  Team data from <a href="https://docs.google.com/spreadsheets/d/1axlwmzPA49rYkqXh7zHvAtSP-TKbM0ijGYBPRflLSWw" rel="noopener">VGCPastes</a>,
+  dex data from <a href="https://pokeapi.co" rel="noopener">PokéAPI</a>.
+  Fan project — not affiliated with Nintendo, The Pokémon Company or Game Freak.
+</footer>
+</div>
+</body>
+</html>

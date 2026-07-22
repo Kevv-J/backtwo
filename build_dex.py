@@ -833,6 +833,196 @@ teams it appears on.</p>
                        f'<script type="application/ld+json">{ld}</script>', depth=1)
 
 
+def _mon_link(label: str, linkable: set[str], depth_prefix: str = "../pokemon/") -> str:
+    esc = html.escape(label)
+    return (f'<a href="{depth_prefix}{page_slug(label)}/">{esc}</a>'
+            if label in linkable else esc)
+
+
+def _render_teams_page(teams: list[dict], linkable: set[str]) -> str:
+    """Landing page for the team archive. Targets 'pokemon champions vgc teams'."""
+    from collections import Counter
+    canonical = f"{SITE_BASE}/teams/"
+    by_reg = Counter(t.get("reg") or "?" for t in teams)
+    events = Counter(t.get("event") for t in teams if t.get("event") and t["event"] != "-")
+
+    # Ranked teams first -- a placement is the strongest signal a team is worth
+    # showing, and it keeps this page from being an arbitrary slice.
+    ranked = [t for t in teams if t.get("rank") and t["rank"] != "-"]
+    ranked.sort(key=lambda t: (t.get("date") or ""), reverse=True)
+
+    rows = []
+    for t in ranked[:60]:
+        labels = [lbl for m in (t.get("mons") or [])
+                  if (lbl := (m.get("forme") or m.get("name")))]
+        mons = " · ".join(_mon_link(lbl, linkable) for lbl in labels)
+        paste = t.get("pokepaste") or ""
+        name = html.escape(t.get("description") or t.get("team_id") or "Team")
+        name = (f'<a href="{html.escape(paste, quote=True)}" rel="noopener nofollow">{name}</a>'
+                if paste else name)
+        rows.append(
+            f"<tr><td>{name}<div class=\"crumb\">{mons}</div></td>"
+            f"<td>{html.escape(t.get('creator') or '—')}</td>"
+            f"<td>{html.escape(t.get('event') or '—')}</td>"
+            f"<td>{html.escape(str(t.get('rank') or '—'))}</td>"
+            f"<td>{html.escape(t.get('reg') or '—')}</td></tr>"
+        )
+
+    regline = " · ".join(f"Reg {html.escape(r)}: <strong>{c}</strong>"
+                         for r, c in sorted(by_reg.items()) if r != "?")
+    toplist = ", ".join(html.escape(str(e)) for e, _ in events.most_common(8))
+
+    title = ("Pokémon Champions VGC Teams — Reg M-A &amp; M-B Tournament Archive | backtwo")
+    desc = html.escape(
+        f"An archive of {len(teams)} Pokémon Champions VGC tournament teams across "
+        f"Regulation M-A and M-B, with full Showdown pastes, spreads, items and moves. "
+        f"Free and open source.", quote=True)
+
+    body = f"""
+<h1>Pokémon Champions VGC team archive</h1>
+<p class="lede"><strong>{len(teams)}</strong> Pokémon Champions VGC doubles teams
+scraped from tournament results and ladder reports, each with the full Showdown
+paste — items, abilities, natures, Stat Point spreads and moves. {regline}.</p>
+<p class="lede">Sources include {toplist}.</p>
+<a class="cta" href="../#/team">Browse the full archive in the app →</a>
+
+<h2>Recent teams with a placement</h2>
+<p class="lede">The {min(60, len(ranked))} most recent teams that finished with a
+recorded result. Every Pokémon links to its usage page.</p>
+<div class="tw"><table>
+<thead><tr><th>Team</th><th>Player</th><th>Event</th><th>Result</th><th>Reg</th></tr></thead>
+<tbody>{''.join(rows) or '<tr><td colspan="5">—</td></tr>'}</tbody>
+</table></div>
+
+<h2>Find the team behind a core</h2>
+<p class="lede">If you already know two or three Pokémon you want to run, the
+<a href="../find/">team finder</a> takes your picks and ranks every team in this
+archive by how many of them it matches — so you can see how real players filled
+the remaining slots. Or browse
+<a href="../pokemon/">per-Pokémon usage</a> to see what each mon actually runs.</p>
+"""
+    return _page_shell(title, desc, canonical, body, depth=1)
+
+
+def _render_find_page(teams: list[dict], linkable: set[str]) -> str:
+    """Landing page for the reverse team finder -- the genuinely differentiated
+    feature, so it gets real computed content (the most common cores)."""
+    from collections import Counter
+    from itertools import combinations
+    canonical = f"{SITE_BASE}/find/"
+
+    pairs: Counter = Counter()
+    for t in teams:
+        labels = sorted({(m.get("forme") or m.get("name"))
+                         for m in (t.get("mons") or [])
+                         if (m.get("forme") or m.get("name"))})
+        for a, b in combinations(labels, 2):
+            pairs[(a, b)] += 1
+
+    rows = "".join(
+        f'<div class="row"><span>{_mon_link(a, linkable)} + {_mon_link(b, linkable)}</span>'
+        f'<span class="n">{c} teams</span></div>'
+        for (a, b), c in pairs.most_common(20)
+    )
+
+    title = "Pokémon Champions VGC Team Finder — Build Around Your Core | backtwo"
+    desc = html.escape(
+        f"Enter the Pokémon you already run and find the Pokémon Champions VGC "
+        f"tournament teams built around that core, ranked by how many of your picks "
+        f"they match. Searches {len(teams)} real teams. Free and open source.", quote=True)
+
+    body = f"""
+<h1>Pokémon Champions VGC team finder</h1>
+<p class="lede">Most tools ask what Pokémon are strong. This one works backwards:
+type in the Pokémon you already want to run, and it searches <strong>{len(teams)}</strong>
+Pokémon Champions tournament teams for the ones built around that core — ranked by
+how many of your picks each team matches, with the missing slots shown so you can
+see how real players finished the six.</p>
+<a class="cta" href="../#/find">Open the team finder →</a>
+
+<h2>How it works</h2>
+<p class="lede">Give it anywhere from one Pokémon to five. Exact matches come
+first, then partial matches grouped by how many of your picks they contain, each
+listing which of your Pokémon that team is missing. Every team shows the full
+paste, so you can lift a spread directly or import it into Showdown.</p>
+
+<h2>The most common cores in Champions VGC</h2>
+<p class="lede">The Pokémon pairs that appear together most often across the
+archive — a reasonable place to start if you are looking for a core.</p>
+<div class="card">{rows or '<div class="row"><span>—</span></div>'}</div>
+
+<h2>Then run the numbers</h2>
+<p class="lede">Once you have six, the <a href="../calc/">damage calculator</a>
+checks whether your spreads actually survive what the meta throws at them, and
+<a href="../pokemon/">per-Pokémon usage</a> shows what items and moves each pick
+tends to run.</p>
+"""
+    return _page_shell(title, desc, canonical, body, depth=1)
+
+
+def _render_calc_page(dex_formes: dict, linkable: set[str]) -> str:
+    """Landing page for the damage calc. Competitive query, so the content leans
+    on what is Champions-specific rather than competing on 'damage calculator'."""
+    canonical = f"{SITE_BASE}/calc/"
+    megas = sorted(
+        (label, str(patch["ability"]))
+        for label, patch in MEGA_OVERRIDES.items()
+        if patch.get("ability") and label in dex_formes
+    )
+    mrows = "".join(
+        f'<div class="row"><span>{_mon_link(l, linkable)}</span>'
+        f'<span class="n">{html.escape(ab)}</span></div>'
+        for l, ab in megas
+    )
+
+    title = "Pokémon Champions VGC Damage Calculator — Doubles, Megas, Stat Points | backtwo"
+    desc = html.escape(
+        "A doubles damage calculator built for Pokémon Champions: Stat Points instead "
+        "of EVs, Mega Evolution, weather, terrain, spread reduction and Intimidate. "
+        "Free and open source.", quote=True)
+
+    body = f"""
+<h1>Pokémon Champions VGC damage calculator</h1>
+<p class="lede">A doubles-first damage calculator built specifically for Pokémon
+Champions, not retrofitted from Scarlet &amp; Violet. It models the things that
+actually differ in this format.</p>
+<a class="cta" href="../#/dmg">Open the damage calculator →</a>
+
+<h2>What Champions changes</h2>
+<div class="grid">
+  <div class="card"><h3>Stat Points, not EVs</h3>
+    <p>Champions replaces EVs with Stat Points: <strong>66 total</strong>, at most
+    <strong>32 in any one stat</strong>. 32 SP is a fully invested stat, equivalent
+    to the old 252 EVs. Every Pokémon is Level 50 with maximum IVs, so a spread is
+    purely how you divide those 66 points.</p></div>
+  <div class="card"><h3>Mega Evolution is back</h3>
+    <p>Megas are legal, and only one can be active per battle even if you bring
+    several stones. The calculator applies the Mega's ability and stats, and lets
+    you toggle back to the base form without losing the ability from your paste.</p></div>
+  <div class="card"><h3>No Terastallization</h3>
+    <p>There is no Tera mechanic in Champions, so defensive typing is fixed and
+    a resist stays a resist. Status is limited to burn, freeze, paralysis, sleep,
+    poison and toxic.</p></div>
+  <div class="card"><h3>Doubles by default</h3>
+    <p>Spread moves take the 0.75× reduction, and Intimidate, Friend Guard,
+    weather, terrain, Trick Room, Gravity and Fairy Aura are all modelled as
+    field state you can toggle.</p></div>
+</div>
+
+<h2>Champions-exclusive Mega abilities</h2>
+<p class="lede">Several Megas in Champions carry abilities that do not exist
+elsewhere. These are implemented in the calculator.</p>
+<div class="card">{mrows or '<div class="row"><span>—</span></div>'}</div>
+
+<h2>Calc against what people actually run</h2>
+<p class="lede">Spreads are only useful against real sets. Pull an opposing
+Pokémon's common item, ability and moves from its
+<a href="../pokemon/">usage page</a>, or find a whole team to test against with
+the <a href="../find/">team finder</a>.</p>
+"""
+    return _page_shell(title, desc, canonical, body, depth=1)
+
+
 def write_static_pages(teams: list[dict], dex_formes: dict) -> int:
     """Emit pokemon/<slug>/index.html, the hub, sitemap.xml and .nojekyll."""
     total = len(teams)
@@ -855,9 +1045,23 @@ def write_static_pages(teams: list[dict], dex_formes: dict) -> int:
     (PAGES_DIR / "index.html").write_text(
         _render_hub_page(pages, dex_formes, total), encoding="utf-8")
 
+    # One landing page per surface. Each carries content that only this dataset
+    # can produce (placements, co-occurrence cores, the Champions mega table) --
+    # a page that only restates the feature would be a doorway page.
+    surfaces = {
+        "teams": _render_teams_page(teams, linkable),
+        "find": _render_find_page(teams, linkable),
+        "calc": _render_calc_page(dex_formes, linkable),
+    }
+    for name, page_html in surfaces.items():
+        d = ROOT / name
+        d.mkdir(parents=True, exist_ok=True)
+        (d / "index.html").write_text(page_html, encoding="utf-8")
+
     # Sitemap. Fragment URLs are deliberately absent -- Google does not index
     # them, so listing #/dmg etc. would just be noise.
     urls = [(f"{SITE_BASE}/", "1.0"), (f"{SITE_BASE}/pokemon/", "0.9")]
+    urls += [(f"{SITE_BASE}/{s}/", "0.9") for s in surfaces]
     urls += [(f"{SITE_BASE}/pokemon/{page_slug(l)}/", "0.7") for l, _ in pages]
     today = _dt.date.today().isoformat()
     entries = "\n".join(
@@ -894,7 +1098,10 @@ def _static_links_block(teams: list[dict], dex_formes: dict, top: int = 24) -> s
         f'<a href="pokemon/{page_slug(k)}/">{html.escape(k)}</a>' for k, _ in ranked
     )
     return (f'<p class="nojs-links">{links}</p>'
-            f'<p><a href="pokemon/"><strong>See all Pokémon →</strong></a></p>')
+            f'<p><a href="pokemon/"><strong>See all Pokémon →</strong></a></p>'
+            f'<p><a href="teams/">Tournament team archive</a> · '
+            f'<a href="find/">Team finder</a> · '
+            f'<a href="calc/">Damage calculator</a></p>')
 
 
 def main() -> None:

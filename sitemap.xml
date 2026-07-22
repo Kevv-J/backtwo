@@ -2,6 +2,9 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://kevv-j.github.io/backtwo/</loc><lastmod>2026-07-23</lastmod><changefreq>weekly</changefreq><priority>1.0</priority></url>
   <url><loc>https://kevv-j.github.io/backtwo/pokemon/</loc><lastmod>2026-07-23</lastmod><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://kevv-j.github.io/backtwo/teams/</loc><lastmod>2026-07-23</lastmod><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://kevv-j.github.io/backtwo/find/</loc><lastmod>2026-07-23</lastmod><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://kevv-j.github.io/backtwo/calc/</loc><lastmod>2026-07-23</lastmod><changefreq>weekly</changefreq><priority>0.9</priority></url>
   <url><loc>https://kevv-j.github.io/backtwo/pokemon/garchomp/</loc><lastmod>2026-07-23</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>
   <url><loc>https://kevv-j.github.io/backtwo/pokemon/basculegion/</loc><lastmod>2026-07-23</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>
   <url><loc>https://kevv-j.github.io/backtwo/pokemon/kingambit/</loc><lastmod>2026-07-23</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>
