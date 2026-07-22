@@ -154,7 +154,13 @@
   .bar .pct{height:6px;border-radius:3px;background:var(--accent);flex-shrink:0}
   .bar .n{color:var(--dim);width:32px;text-align:right;font-variant-numeric:tabular-nums;flex-shrink:0}
   .teammate{color:var(--good)}
-  .tcard{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin-bottom:11px;cursor:pointer;transition:border-color .12s, background .12s}
+  /* Perf: skip layout + paint for team cards scrolled out of view. A popular
+     mon's detail view lists hundreds of teams (Garchomp: 677 = ~4,000 mon
+     cards), and this was previously mobile-only, so desktop paid full layout
+     and paint for all of them on every click. contain-intrinsic-size gives the
+     browser a height estimate so the scroll height stays sane before real
+     layout runs. Purely a rendering hint -- it does not change scrolling. */
+  .tcard{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin-bottom:11px;cursor:pointer;transition:border-color .12s, background .12s;content-visibility:auto;contain-intrinsic-size:auto 220px}
   .tcard:hover{border-color:var(--atk-color);background:var(--panel2, var(--panel))}
   .tcard .th{display:flex;justify-content:space-between;gap:10px;align-items:baseline;flex-wrap:wrap}
   .tcard .desc{font-weight:600}
