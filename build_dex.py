@@ -1023,6 +1023,208 @@ the <a href="../find/">team finder</a>.</p>
     return _page_shell(title, desc, canonical, body, depth=1)
 
 
+# ---------------------------------------------------------------------------
+# Blog. Long-form posts (tournament reports etc.) authored in Markdown under
+# blog/<slug>/post.md, rendered to a static, crawlable HTML page with the same
+# site chrome. Heavy GIFs are pre-transcoded to muted looping <video> offline
+# and committed under blog/<slug>/media/, so a .mp4/.webm reference emits a
+# <video> and everything else an <img>. No Markdown library dependency -- the
+# renderer only handles the constructs these posts actually use.
+# ---------------------------------------------------------------------------
+
+BLOG_DIR = ROOT / "blog"
+
+BLOG_CSS = """
+.wrap:has(.post){max-width:820px}
+/* The post sits on a contained reading card, like the rest of the site. */
+.post{max-width:760px;margin:0 auto;background:var(--pan);border:1px solid var(--ln);
+  border-radius:16px;padding:40px 46px 46px;box-shadow:0 1px 3px rgba(0,0,0,.4);
+  font-size:16.5px;line-height:1.75;color:#d8ddec}
+@media(max-width:640px){.post{padding:24px 18px 30px;border-radius:12px;font-size:15.5px}}
+.post-meta{color:var(--ac);font-size:12px;letter-spacing:.12em;text-transform:uppercase;
+  font-weight:700;margin:0 0 14px}
+.post h1{font-family:'Rajdhani','Inter',system-ui,sans-serif;font-weight:700;
+  font-size:clamp(29px,5.2vw,42px);line-height:1.08;letter-spacing:-.5px;margin:0;color:var(--fg)}
+@supports((-webkit-background-clip:text) or (background-clip:text)){
+  .post h1{background:linear-gradient(115deg,var(--ac) 15%,var(--ac2));-webkit-background-clip:text;
+    background-clip:text;-webkit-text-fill-color:transparent}}
+/* Deck / subtitle — the italic line right under the title. */
+.post h1 + p{font-size:19px;line-height:1.55;color:var(--dim);margin:16px 0 4px}
+.post h2{font-family:'Rajdhani','Inter',system-ui,sans-serif;font-weight:700;font-size:26px;
+  letter-spacing:-.2px;color:var(--fg);margin:42px 0 14px;text-transform:none;display:flex;
+  align-items:center;gap:11px}
+.post h2::before{content:'';flex:0 0 auto;width:22px;height:3px;border-radius:2px;
+  background:linear-gradient(90deg,var(--ac),var(--ac2))}
+.post p{margin:0 0 18px}
+.post a{color:var(--ac);text-decoration:none;border-bottom:1px solid rgba(34,211,238,.35)}
+.post a:hover{border-bottom-color:var(--ac)}
+.post strong{color:var(--fg);font-weight:700}
+.post ul{margin:0 0 18px;padding:0;list-style:none}
+.post li{position:relative;padding-left:22px;margin:9px 0}
+.post li::before{content:'▸';position:absolute;left:2px;color:var(--ac)}
+.post hr{border:none;height:1px;margin:36px 0;
+  background:linear-gradient(90deg,transparent,var(--ln) 20%,var(--ln) 80%,transparent)}
+.post figure{margin:30px 0;text-align:center}
+.post figure img,.post figure video{width:100%;height:auto;border:1px solid var(--ln);
+  border-radius:12px;box-shadow:0 4px 18px rgba(0,0,0,.4);background:#000}
+.post figcaption{color:var(--dim);font-size:13.5px;line-height:1.55;margin:11px auto 0;
+  max-width:56ch;font-style:italic}
+/* Callout boxes — the teachable tech sidebars. Recessed against the card. */
+.post blockquote{margin:26px 0;padding:16px 20px;background:var(--bg);border:1px solid var(--ln);
+  border-left:4px solid var(--ac);border-radius:0 12px 12px 0}
+.post blockquote p{margin:0 0 10px}
+.post blockquote p:last-child{margin:0}
+.post blockquote strong:first-child{color:var(--ac);font-size:16px;letter-spacing:.2px}
+"""
+
+
+def _md_inline(s: str) -> str:
+    """Inline Markdown: links, **bold**, *italic*. Links are pulled out before
+    escaping so their generated tags survive, then restored last."""
+    links: list[str] = []
+
+    def _stash(m):
+        txt = html.escape(m.group(1))
+        url = html.escape(m.group(2).strip(), quote=True)
+        rel = ' rel="noopener"' if url.startswith("http") else ""
+        links.append(f'<a href="{url}"{rel}>{txt}</a>')
+        return f"\x00L{len(links) - 1}\x00"
+
+    s = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", _stash, s)
+    s = html.escape(s)
+    s = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", s)
+    s = re.sub(r"\*([^*]+)\*", r"<em>\1</em>", s)
+    s = re.sub(r"\x00L(\d+)\x00", lambda m: links[int(m.group(1))], s)
+    return s
+
+
+def _md_figure(alt: str, url: str, caption: str) -> str:
+    a = html.escape(alt, quote=True)
+    u = html.escape(url.strip(), quote=True)
+    cap = f"<figcaption>{_md_inline(caption)}</figcaption>" if caption else ""
+    if url.lower().endswith((".mp4", ".webm")):
+        return (f'<figure><video src="{u}" autoplay loop muted playsinline '
+                f'preload="metadata" aria-label="{a}"></video>{cap}</figure>')
+    return f'<figure><img src="{u}" alt="{a}" loading="lazy">{cap}</figure>'
+
+
+def _render_markdown_post(md: str) -> str:
+    lines = md.split("\n")
+    out: list[str] = []
+    para: list[str] = []
+    n = len(lines)
+
+    def flush():
+        if para:
+            txt = " ".join(para).strip()
+            if txt:
+                out.append(f"<p>{_md_inline(txt)}</p>")
+            para.clear()
+
+    i = 0
+    while i < n:
+        raw = lines[i]
+        line = raw.strip()
+        if not line:
+            flush(); i += 1; continue
+
+        m = re.match(r"!\[([^\]]*)\]\(([^)]+)\)$", line)
+        if m:
+            flush()
+            # an image may be followed (after blanks) by a *caption* line
+            cap, j = "", i + 1
+            while j < n and not lines[j].strip():
+                j += 1
+            if j < n:
+                cl = lines[j].strip()
+                if (cl.startswith("*") and cl.endswith("*") and not cl.startswith("**")
+                        and len(cl) > 2):
+                    cap = cl[1:-1]
+                    i = j
+            out.append(_md_figure(m.group(1), m.group(2), cap))
+            i += 1; continue
+
+        if line.startswith("# "):
+            flush(); out.append(f"<h1>{_md_inline(line[2:].strip())}</h1>"); i += 1; continue
+        if line.startswith("## "):
+            flush(); out.append(f"<h2>{_md_inline(line[3:].strip())}</h2>"); i += 1; continue
+        if line in ("---", "***"):
+            flush(); out.append("<hr>"); i += 1; continue
+
+        if line.startswith(">"):
+            flush()
+            buf = []
+            while i < n and lines[i].strip().startswith(">"):
+                buf.append(re.sub(r"^\s*>\s?", "", lines[i]))
+                i += 1
+            inner, pbuf = [], []
+            for bl in buf:
+                if bl.strip():
+                    pbuf.append(bl.strip())
+                elif pbuf:
+                    inner.append(f"<p>{_md_inline(' '.join(pbuf))}</p>"); pbuf = []
+            if pbuf:
+                inner.append(f"<p>{_md_inline(' '.join(pbuf))}</p>")
+            out.append("<blockquote>" + "".join(inner) + "</blockquote>")
+            continue
+
+        if line.startswith("- "):
+            flush()
+            items = []
+            while i < n and lines[i].strip().startswith("- "):
+                items.append(f"<li>{_md_inline(lines[i].strip()[2:].strip())}</li>")
+                i += 1
+            out.append("<ul>" + "".join(items) + "</ul>")
+            continue
+
+        para.append(line)
+        i += 1
+
+    flush()
+    return "\n".join(out)
+
+
+def write_blog() -> list[tuple[str, str]]:
+    """Render every blog/<slug>/post.md to blog/<slug>/index.html. Returns
+    (url, priority) tuples for the sitemap."""
+    if not BLOG_DIR.exists():
+        return []
+    entries: list[tuple[str, str]] = []
+    for src in sorted(BLOG_DIR.glob("*/post.md")):
+        slug = src.parent.name
+        md = src.read_text(encoding="utf-8")
+        mt = re.search(r"^#\s+(.+)$", md, flags=re.M)
+        title = re.sub(r"[*_`]", "", mt.group(1).strip()) if mt else slug
+        canonical = f"{SITE_BASE}/blog/{slug}/"
+        desc = html.escape(
+            "How I entered my first Pokémon Champions VGC tournament — Rising Stars S1 — "
+            "and won it: the team, the losses, the 2am tech that locked down an undefeated "
+            "Last Resort Kangaskhan, and a grand final against my best friend.", quote=True)
+        ld = json.dumps({
+            "@context": "https://schema.org", "@type": "Article",
+            "headline": title,
+            "description": ("A first-timer's run through the Rising Stars S1 Pokémon "
+                            "Champions VGC tournament — team, losses, tech, and a grand final."),
+            "url": canonical,
+            "image": f"{SITE_BASE}/blog/{slug}/media/standings.png",
+            "datePublished": "2026-07-24",
+            "author": {"@type": "Person", "name": "Kevin John", "url": "https://github.com/Kevv-J"},
+            "publisher": {"@type": "Person", "name": "Kevin John"},
+            "mainEntityOfPage": canonical,
+            "isPartOf": {"@type": "WebSite", "name": "backtwo", "url": f"{SITE_BASE}/"},
+        }, ensure_ascii=False)
+        extra = (f"<style>{BLOG_CSS}</style>"
+                 f'<script type="application/ld+json">{ld}</script>')
+        body = (f'<article class="post">'
+                f'<p class="post-meta">Kevin John · Pokémon Champions VGC · Rising Stars S1</p>'
+                f'{_render_markdown_post(md)}</article>')
+        page = _page_shell(f"{html.escape(title)} | backtwo", desc, canonical, body,
+                           extra, depth=2)
+        (src.parent / "index.html").write_text(page, encoding="utf-8")
+        entries.append((canonical, "0.6"))
+    return entries
+
+
 def write_static_pages(teams: list[dict], dex_formes: dict) -> int:
     """Emit pokemon/<slug>/index.html, the hub, sitemap.xml and .nojekyll."""
     total = len(teams)
@@ -1062,6 +1264,7 @@ def write_static_pages(teams: list[dict], dex_formes: dict) -> int:
     # them, so listing #/dmg etc. would just be noise.
     urls = [(f"{SITE_BASE}/", "1.0"), (f"{SITE_BASE}/pokemon/", "0.9")]
     urls += [(f"{SITE_BASE}/{s}/", "0.9") for s in surfaces]
+    urls += write_blog()
     urls += [(f"{SITE_BASE}/pokemon/{page_slug(l)}/", "0.7") for l, _ in pages]
     today = _dt.date.today().isoformat()
     entries = "\n".join(
@@ -1101,7 +1304,8 @@ def _static_links_block(teams: list[dict], dex_formes: dict, top: int = 24) -> s
             f'<p><a href="pokemon/"><strong>See all Pokémon →</strong></a></p>'
             f'<p><a href="teams/">Tournament team archive</a> · '
             f'<a href="find/">Team finder</a> · '
-            f'<a href="calc/">Damage calculator</a></p>')
+            f'<a href="calc/">Damage calculator</a> · '
+            f'<a href="blog/rising-stars-s1/">Tournament report</a></p>')
 
 
 def main() -> None:

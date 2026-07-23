@@ -92,6 +92,17 @@ jobs:
             echo "::error::pre-rendered pages (${PAGES_MB} MB) exceed budget (15 MB)"
             exit 1
           fi
+          # Blog posts + their media (GIFs are pre-transcoded to small video, so
+          # a blowout here means someone committed raw video/GIF instead).
+          if [ -d blog ]; then
+            BLOG_BYTES=$(du -sb blog 2>/dev/null | cut -f1)
+            BLOG_MB=$(( BLOG_BYTES / 1048576 ))
+            echo "blog/: ${BLOG_MB} MB"
+            if (( BLOG_MB > 25 )); then
+              echo "::error::blog/ (${BLOG_MB} MB) exceeds budget (25 MB)"
+              exit 1
+            fi
+          fi
 
       - name: Commit + push if anything changed
         run: |

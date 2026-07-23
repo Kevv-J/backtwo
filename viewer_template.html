@@ -657,6 +657,17 @@
   .landing-card .lc-desc{color:var(--muted-foreground);font-size:11.5px;line-height:1.45}
   .landing-card .lc-hint{margin-top:4px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;color:var(--muted-foreground);opacity:.7}
   .landing-card .lc-hint kbd{font-family:inherit;background:var(--secondary);border:1px solid var(--border);border-radius:3px;padding:0 4px;color:var(--accent-c)}
+  /* Featured blog banner on the landing — a real <a> so it's crawlable and
+     leaves the SPA to the static /blog/ page. */
+  .landing-blog{display:flex;align-items:center;gap:11px;margin:2px auto 20px;padding:10px 15px;border:1px solid var(--border);border-radius:10px;background:var(--card);color:var(--foreground);text-decoration:none;max-width:540px;transition:all .15s;text-align:left}
+  .landing-blog:hover{border-color:var(--border-strong);background:var(--card-elev);transform:translateY(-1px)}
+  .landing-blog .lb-badge{font-family:'Rajdhani','Inter',sans-serif;font-weight:700;font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--good);border:1px solid var(--good);border-radius:4px;padding:2px 7px;flex-shrink:0}
+  .landing-blog .lb-text{font-size:12.5px;line-height:1.45;flex:1;min-width:0}
+  .landing-blog .lb-text b{color:var(--foreground)}
+  .landing-blog .lb-arrow{color:var(--muted-foreground);font-size:16px;flex-shrink:0}
+  .landing-blog:hover .lb-arrow{color:var(--good)}
+  .mhero-blog{display:inline-flex;align-items:center;gap:7px;margin-top:12px;padding:7px 12px;border:1px solid var(--good);border-radius:8px;background:var(--card);color:var(--foreground);text-decoration:none;font-size:12px;line-height:1.3}
+  .mhero-blog b{color:var(--good)}
   .landing-tip{margin-top:24px;color:var(--muted-foreground);font-size:11px;font-family:'JetBrains Mono',ui-monospace,monospace}
   /* Re-launch the tour from the desktop landing card (footer) or the mobile
      hero (below the four nav chips). Discoverable but not loud. */
@@ -1224,6 +1235,8 @@
   <span class="sep">·</span>
   <a href="calc/" title="Champions doubles damage calculator">damage calc</a>
   <span class="sep">·</span>
+  <a href="blog/rising-stars-s1/" title="How I won my first Pokémon Champions VGC tournament">tournament report</a>
+  <span class="sep">·</span>
   <span>data: <a href="https://docs.google.com/spreadsheets/d/1axlwmzPA49rYkqXh7zHvAtSP-TKbM0ijGYBPRflLSWw" target="_blank" rel="noopener">VGCPastes</a>, <a href="https://pokeapi.co" target="_blank" rel="noopener">PokéAPI</a>, <a href="https://pokemonshowdown.com" target="_blank" rel="noopener">Showdown</a></span>
   <span class="sep">·</span>
   <span title="Fan project — not affiliated with Nintendo / The Pokémon Company / Game Freak">fan project</span>
@@ -1605,6 +1618,11 @@ function renderLanding(){
         </div>
       `).join('')}
     </div>
+    <a class="landing-blog" href="blog/rising-stars-s1/">
+      <span class="lb-badge">New</span>
+      <span class="lb-text"><b>I won my first Pokémon Champions tournament</b> — the team, the losses, and the 2am tech that broke an undefeated Kangaskhan. Read the report.</span>
+      <span class="lb-arrow">→</span>
+    </a>
     <div class="landing-tip">tip — anywhere on the page, press <kbd style="font-family:inherit;background:var(--secondary);border:1px solid var(--border);border-radius:3px;padding:0 4px;color:var(--atk-color)">?</kbd> for the full hotkey list · <button class="landing-tour-btn" data-tour="landing-take-tour" onclick="startTour(0, this)" aria-haspopup="dialog">↦ Take the guided tour</button></div>
   </div>`;
   // Wire feature-card clicks
@@ -1629,6 +1647,7 @@ function renderLanding(){
       <div class="mhero-mantra">Read the back two.</div>
       <div class="mhero-stats"><b>${nTeams}</b> teams · <b>${nMons}</b> mons · Reg <b>${esc(reg)}</b></div>
       <div class="mhero-chips">${chipHTML}</div>
+      <a class="mhero-blog" href="blog/rising-stars-s1/"><b>New:</b> I won my first Champions tournament →</a>
       <button class="mhero-tour-btn" data-tour="landing-take-tour" onclick="startTour(0, this)" aria-haspopup="dialog">↦ Take the guided tour</button>
     </div>`);
     listEl.querySelectorAll('.mhero-chip').forEach(c=>c.addEventListener('click',()=>{
