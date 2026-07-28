@@ -2179,6 +2179,11 @@ function effectiveBP(move, atk, def){
   if(move==='Wake-Up Slap' && dStatus==='slp') bp*=2;
   if(move==='Smelling Salts' && dStatus==='par') bp*=2;
   if(move==='Assurance' && def.hpPct!=null && def.hpPct<100) bp*=2; // approximation: target already damaged this turn
+  // Facade: 2× when the USER is burned / poisoned / paralysed (checks the
+  // attacker's status, not the target's). Also ignores burn's Atk cut — see
+  // the `move!=='Facade'` guard on burnedAtk in calcDmg.
+  const aStatus=atk.status||'ok';
+  if(move==='Facade' && (aStatus==='brn'||aStatus==='psn'||aStatus==='tox'||aStatus==='par')) bp*=2;
   if(move==='Avalanche' || move==='Revenge') {/* would need turn order; skip */}
   // Item-conditional moves
   if(move==='Acrobatics' && !atk.item) bp*=2;
@@ -2186,6 +2191,19 @@ function effectiveBP(move, atk, def){
   return bp;
 }
 const INTIMIDATE_IMMUNE=new Set(['Clear Body','Full Metal Body','White Smoke','Hyper Cutter','Inner Focus','Scrappy','Own Tempo','Oblivious']);
+// Phantom stat stage contributed by the OPPOSING mon's Intimidate. Applied by the
+// calc engine but NOT stored on m.boost — the stats panel + stage chips render it
+// as a virtual stage so what you see matches what the calc uses.
+//   Atk : -1 (Intimidate), or +1 net for Defiant (-1 +2).
+//   SpA : +2 for Competitive (Intimidate still drops that mon's Atk -1).
+// Single source of truth for calcDmg, calcSummary, renderFinals and the stage-chip
+// handler — keep all four routed through here so they never drift.
+function virtIntimStage(m, other, k){
+  if(!m || other?.ability!=='Intimidate' || INTIMIDATE_IMMUNE.has(m.ability||''))return 0;
+  if(k==='atk')return m.ability==='Defiant'?1:-1;
+  if(k==='spa'&&m.ability==='Competitive')return 2;
+  return 0;
+}
 // Special-category moves that hit the target's Def stat instead of SpD.
 // The attacker side is unchanged (still reads user's SpA).
 const PSYSHOCK_MOVES = new Set(['Psyshock','Psystrike','Secret Sword']);
@@ -2479,6 +2497,12 @@ function calcDmg(atk,move,def,atkSide,defSide){
   // that "turns the target's power against it"). Intimidate on the user doesn't
   // affect Foul Play because the user's Atk isn't the one being read.
   const isFoulPlay = phys && move==='Foul Play';
+  // Body Press uses the user's OWN Defense stat (and Def stat stages) as the
+  // attacking stat, but keeps every other Attack-side modifier — Choice Band,
+  // Huge Power, burn, Guts all still apply (they're Atk modifiers, not stat
+  // stages); only Intimidate (an Atk stage) and other Atk stage changes are
+  // ignored. Verified: Bulbapedia.
+  const isBodyPress = phys && move==='Body Press';
   // Psyshock / Psystrike / Secret Sword are Special-category moves that hit
   // the target's Def stat (not SpD). Attacker-side is unchanged (still SpA).
   // Downstream defender-side item/ability gates need to treat "def-reading"
@@ -2488,23 +2512,27 @@ function calcDmg(atk,move,def,atkSide,defSide){
   // Wonder Room swaps Def and SpD
   let Aa;
   if(isFoulPlay) Aa=ds.atk;
+  else if(isBodyPress) Aa=as.def;
   else Aa=phys?as.atk:as.spa;
   let D;
   if(field.wonderRoom) D=defReadsPhys?ds.spd:ds.def;
   else D=defReadsPhys?ds.def:ds.spd;
   // stat boosts (with crit-ignore rules). Wonder Room swaps the base stat
-  // value used, but boosts stay tied to slot name (Showdown rule).
-  const aBoostKey=phys?'atk':'spa', dBoostKey=defReadsPhys?'def':'spd';
+  // value used, but boosts stay tied to slot name (Showdown rule). Body Press
+  // reads the user's DEF stage — so virtIntimStage(...,'def') returns 0 below,
+  // correctly making Body Press immune to the Intimidate auto-apply.
+  const aBoostKey=isBodyPress?'def':(phys?'atk':'spa'), dBoostKey=defReadsPhys?'def':'spd';
   let aB = isFoulPlay ? (def.boost?.atk||0) : (atk.boost?.[aBoostKey]||0);
   let dB = def.boost?.[dBoostKey]||0;
   // Intimidate auto-apply: defender's ability drops attacker's Atk -1 (phys).
   // Defiant counters with +2 (net +1); Competitive boosts SpA +2 instead (special).
-  // Skip for Foul Play — target's Atk is the one being used, not the user's.
+  // Skip for Foul Play (target's Atk is used) and Body Press (uses Def stage).
   let intimidate=false;
-  if(!isFoulPlay && def.ability==='Intimidate' && !INTIMIDATE_IMMUNE.has(atk.ability)){
+  if(!isFoulPlay && !isBodyPress && def.ability==='Intimidate' && !INTIMIDATE_IMMUNE.has(atk.ability)){
     intimidate=true;
-    if(phys){ aB-=1; if(atk.ability==='Defiant') aB+=2; }
-    else if(atk.ability==='Competitive') aB+=2;
+    // -1 Atk (or +1 net Defiant); +2 SpA Competitive. The move's attacking stat
+    // (phys→atk, special→spa) is the one that shifts. See virtIntimStage.
+    aB += virtIntimStage(atk, def, aBoostKey);
   }
   if(isCrit){if(aB<0)aB=0;if(dB>0)dB=0;}
   Aa=applyBoost(Aa,aB); D=applyBoost(D,dB);
@@ -2519,8 +2547,9 @@ function calcDmg(atk,move,def,atkSide,defSide){
   const aSideSrc = isFoulPlay ? defSide  : atkSide;
   if(phys && (aSrc.ability==='Huge Power'||aSrc.ability==='Pure Power')) Aa*=2;
   if(!phys && aSrc.ability==='Solar Power' && (weather==='sun'||weather==='harshsun')) Aa=Math.floor(Aa*1.5);
-  // Guts: +50% Atk if burned (and ignores burn's halving)
-  const burnedAtk=(aSrc.status==='brn'&&phys&&aSrc.ability!=='Guts');
+  // Guts: +50% Atk if burned (and ignores burn's halving). Facade also ignores
+  // the burn Atk-cut (its 2× BP is handled in effectiveBP).
+  const burnedAtk=(aSrc.status==='brn'&&phys&&aSrc.ability!=='Guts'&&move!=='Facade');
   if(aSrc.status==='brn'&&phys&&aSrc.ability==='Guts') Aa=Math.floor(Aa*1.5);
   // Flower Gift on the Atk-owner's side in Sun: +50% Atk
   if(phys && aSideSrc.flowerGift && (weather==='sun'||weather==='harshsun')) Aa=Math.floor(Aa*1.5);
@@ -2848,27 +2877,24 @@ function renderFinals(p,m){const s=statsOf(m);
     lbl.classList.toggle('natup',nm>1);
     lbl.classList.toggle('natdown',nm<1);
   });
-  // Intimidate from the OTHER slot's mon adds a virtual -1 Atk that's only
-  // applied in the calc engine (not stored on m.boost). The visual stage row
-  // and stat-value tooltip both reflect the EFFECTIVE stage so the user sees
-  // the actual current Atk without an extra "↓Intim" badge cluttering the row.
+  // The OTHER slot's Intimidate adds a virtual stage that's only applied in the
+  // calc engine (not stored on m.boost): -1 Atk normally, +1 net for Defiant, or
+  // +2 SpA for Competitive. The stage row + stat-value tooltip reflect the
+  // EFFECTIVE stage so the user sees the actual current stat, and can click a
+  // chip to override it (the click handler backs the phantom stage out).
   const other = p==='a' ? B : A;
-  const intimidated = other?.ability==='Intimidate' && !INTIMIDATE_IMMUNE.has(m.ability||'') && m.forme;
   STAT_KEYS.forEach(([k])=>{const cell=g(p+'_fin_'+k);if(!cell)return;
     if(!s){cell.textContent='';return;}
     let v=s[k];
     let b=k==='hp'?0:(m.boost?.[k]||0);
-    // Virtual Intimidate stage (visual only — calc engine computes it itself)
-    let virtIntim=0;
-    if(k==='atk' && intimidated){
-      virtIntim=-1;
-      if(m.ability==='Defiant')virtIntim=+1;  // -1 + 2 = +1 net
-    }
+    // Virtual Intimidate/Competitive/Defiant stage (visual only — calc engine
+    // computes it itself). Atk: -1 (or +1 net Defiant); SpA: +2 Competitive.
+    const virtIntim = m.forme ? virtIntimStage(m, other, k) : 0;
     const effB=b+virtIntim;
     if(effB){
       const boosted=applyBoost(v,effB);
       const sign=effB>0?'up':'down';
-      const intimHint=virtIntim?` title="Includes Intimidate from opposing ${esc(other.forme)}"`:'';
+      const intimHint=virtIntim?` title="Auto-applied from opposing ${esc(other.forme)}'s Intimidate — click a stage chip to override (e.g. if this mon switched in later)"`:'';
       cell.innerHTML=`<b class="${sign}"${intimHint}>${boosted}</b> <span class="finbase">(${v})</span> <span class="bsign ${sign}">${effB>0?'+'+effB:effB}</span>`;
     } else cell.innerHTML=`<b>${v}</b>`;
     // Sync stage chip active state — show EFFECTIVE stage (b + virtIntim) so
@@ -3136,9 +3162,10 @@ function wireSlot(p,m){
     const k=chip.parentElement.dataset.k, s=+chip.dataset.s;
     if(!m.boost)m.boost=zeroBoost();
     const other=p==='a'?B:A;
-    const intimActive = k==='atk' && other?.ability==='Intimidate' && !INTIMIDATE_IMMUNE.has(m.ability||'');
-    let virtIntim=0;
-    if(intimActive) virtIntim = m.ability==='Defiant' ? +1 : -1;
+    // Back out the phantom Intimidate/Competitive stage so the chip the user
+    // clicks lands on that EFFECTIVE stage (e.g. clicking SpA "0" on a Competitive
+    // mon facing Intimidate stores -2, so it nets to 0 — "switched in later").
+    const virtIntim = virtIntimStage(m, other, k);
     m.boost[k]=Math.max(-6,Math.min(6, s - virtIntim));
     renderFinals(p,m);updateResults();});
   // Status buttons (single-click)
@@ -3529,11 +3556,12 @@ const DEF_ABIL_ACTIVE = {
 function calcSummary(atk, def, mv, info, r, aS, dS){
   const phys=info.category==='physical';
   const isFoulPlay=phys && mv==='Foul Play';
+  const isBodyPress=phys && mv==='Body Press';   // attacks off the user's own Def stat/stage
   const isPsyshock=!phys && PSYSHOCK_MOVES.has(mv);
   const defReadsPhys=phys || isPsyshock;   // Psyshock reads target's Def, so label + EV/nature/boost read from the Def slot
-  const aStatKey=phys?'atk':'spa';
+  const aStatKey=isBodyPress?'def':(phys?'atk':'spa');
   const dStatKey=defReadsPhys?'def':'spd';
-  const aStatLbl=phys?'Atk':'SpA';
+  const aStatLbl=isBodyPress?'Def':(phys?'Atk':'SpA');
   const dStatLbl=defReadsPhys?'Def':'SpD';
   // Attacking stat is target's Atk for Foul Play (reads defender's EV + nature + boost)
   const aSrc=isFoulPlay?def:atk;
@@ -3541,11 +3569,8 @@ function calcSummary(atk, def, mv, info, r, aS, dS){
   const aEV=aSrc.ev[aStatForNat]||0;
   const aNat=natSfx(aSrc.nature, aStatForNat);
   let aBoost=isFoulPlay?(def.boost?.atk||0):(atk.boost?.[aStatKey]||0);
-  // Intimidate mutations mirror calcDmg exactly
-  if(r.intimidate){
-    if(phys){aBoost-=1;if(atk.ability==='Defiant')aBoost+=2;}
-    else if(atk.ability==='Competitive')aBoost+=2;
-  }
+  // Intimidate mutations mirror calcDmg exactly (shared via virtIntimStage)
+  if(r.intimidate) aBoost += virtIntimStage(atk, def, aStatKey);
   if(r.isCrit){if(aBoost<0)aBoost=0;}
   const aBstr=boostSfx(aBoost);
   const dEVhp=def.ev.hp||0;
@@ -3624,7 +3649,8 @@ function moveDetailHTML(side,atk,def,i){const mv=atk.moves[i];const info=DEX.mov
   const aS=side==='A'?sideA:sideB, dS=side==='A'?sideB:sideA;
   const r=calcDmg(atk,mv,def,aS,dS);if(!r)return '<div class="detail small">No stat data for this matchup.</div>';
   const phys=info.category==='physical';
-  const aBoost=boostLabel(phys?atk.boost?.atk||0:atk.boost?.spa||0);
+  const isBodyPressDetail = phys && mv==='Body Press';   // reads user's Def stage
+  const aBoost=boostLabel(isBodyPressDetail?atk.boost?.def||0:(phys?atk.boost?.atk||0:atk.boost?.spa||0));
   const defReadsPhysDetail = phys || (!phys && PSYSHOCK_MOVES.has(mv));
   const dBoost=boostLabel(defReadsPhysDetail?def.boost?.def||0:def.boost?.spd||0);
   // Doubles is hard-pinned. For spread moves, the headline IS the 0.75× spread range;
@@ -3647,7 +3673,13 @@ function moveDetailHTML(side,atk,def,i){const mv=atk.moves[i];const info=DEX.mov
   if(atk.status!=='ok')ctx.push(esc('atk: '+atk.status));if(def.status!=='ok')ctx.push(esc('def: '+def.status));
   Object.entries(aS).forEach(([k,v])=>{if(v&&k!=='tailwind'&&k!=='crit')ctx.push('atk '+k);});
   Object.entries(dS).forEach(([k,v])=>{if(v&&k!=='tailwind'&&k!=='crit')ctx.push('def '+k);});
-  if(r.intimidate&&!ctx.includes('Intimidate (-1 Atk)'))ctx.push('<span style="color:var(--accent2)">Intimidate −1 Atk</span>');
+  if(r.intimidate){
+    // Name the stat the auto-applied Intimidate interaction actually shifts.
+    const note = (!phys && atk.ability==='Competitive') ? 'Competitive +2 SpA'
+               : (phys && atk.ability==='Defiant')      ? 'Defiant +1 Atk (net)'
+               : 'Intimidate −1 Atk';
+    ctx.push(`<span style="color:var(--accent2)">${note}</span>`);
+  }
   const hitLab=r.hits>1?` · <b style="color:var(--accent2)">${r.hits} hits</b>${r.perHit?` (${r.perHit.map(h=>h.l+'–'+h.h).join(' + ')})`:''}`:'';
   let bpLab=(r.bp!==r.bpRaw)?`${r.bp} BP <span class="small">(${r.bpRaw} base, scaled)</span>`:`${r.bp} BP`;
   // Foul Play — replace the fixed 95 with the defender's Atk stat since that's
@@ -3868,7 +3900,7 @@ function renderDmg(){
       </div>
     </div>
     <div id="dmgresults"></div>
-    <div class="small calcfoot"><b>VGC doubles only.</b> Champions ruleset (lv50, IVs max, 1 SP = 8 EV — 32 SP/stat ≡ old 252 EV cap, 66 SP total). <b>Modeled:</b> STAB · type chart · spread · stat boosts · status (burn/Guts) · current HP (Multiscale) · weather (incl. extremes Harsh Sun/Heavy Rain/Strong Winds) · terrains (Electric/Grassy/Misty/Psychic, grounded only; Grassy halves EQ) · screens (×0.5 singles / ×2/3 doubles, Aurora Veil snow-only; crit bypasses) · Helping Hand · Friend Guard (doubles) · Power Spot · Battery · Steely Spirit · Flower Gift · Crit (ignores +def/-atk boosts; Sniper ×2.25) · Trick/Magic/Wonder Room · Gravity (ground hits Flying, suppresses Levitate) · <b>multi-hit moves</b> (Triple Axel/Triple Kick escalating BP; Population Bomb/Bullet Seed; Skill Link → max hits) · <b>Intimidate auto-apply</b> (with Clear Body / Hyper Cutter / Inner Focus / Scrappy / Own Tempo / Oblivious immunity; Defiant counters; Competitive on special) · <b>contact/flag abilities</b>: Tough Claws ×1.3 (contact) · Iron Fist ×1.2 (punch) · Mega Launcher ×1.5 (pulse) · Strong Jaw ×1.5 (bite) · Sharpness ×1.5 (slicing) · Punk Rock ×1.3 atk / ×0.5 def (sound) · Soundproof immune (sound) · Bulletproof immune (bullet) · Fluffy ×0.5 contact + ×2 fire · -ate abilities (Pixilate/Aerilate/Refrigerate/Galvanize: Normal→type ×1.2 STAB) · Adaptability · Technician · Tinted Lens · Huge/Pure Power · Solar Power · Sand Force · Sniper · Neuroforce · Levitate / type-absorb immunities · Multiscale / Shadow Shield · Filter / Solid Rock / Prism Armor · Thick Fat · Heatproof · Purifying Salt · Fur Coat · Ice Scales · Choice/Specs/Life Orb/AV/Eviolite/type-boost items · Muscle Band ×1.1 phys · Wise Glasses ×1.1 spec · Expert Belt ×1.2 SE · Iron Ball grounding. · <b>Champions specifics:</b> Fire Mane (Mega Pyroar) · Fairy Aura toggle (Mega Floette-Eternal) · Eelevate ground-immunity (Mega Eelektross) · Mega Sol personal-sun (Mega Meganium) · Dragonize (Mega Feraligatr, Normal→Dragon ×1.2 STAB) · Piercing Drill (Mega Excadrill, note only — Protect not modeled) · Weather Ball type shift · Reg-B patches (Make It Rain acc 100→95, move BP shifts).</div>`;
+    <div class="small calcfoot"><b>VGC doubles only.</b> Champions ruleset (lv50, IVs max, 1 SP = 8 EV — 32 SP/stat ≡ old 252 EV cap, 66 SP total). <b>Modeled:</b> STAB · type chart · spread · stat boosts · status (burn/Guts) · current HP (Multiscale) · weather (incl. extremes Harsh Sun/Heavy Rain/Strong Winds) · terrains (Electric/Grassy/Misty/Psychic, grounded only; Grassy halves EQ) · screens (×0.5 singles / ×2/3 doubles, Aurora Veil snow-only; crit bypasses) · Helping Hand · Friend Guard (doubles) · Power Spot · Battery · Steely Spirit · Flower Gift · Crit (ignores +def/-atk boosts; Sniper ×2.25) · Trick/Magic/Wonder Room · Gravity (ground hits Flying, suppresses Levitate) · <b>multi-hit moves</b> (Triple Axel/Triple Kick escalating BP; Population Bomb/Bullet Seed; Skill Link → max hits) · <b>move quirks</b>: Foul Play (defender Atk) · Body Press (user Def) · Psyshock/Psystrike/Secret Sword (target Def) · Facade (2× + ignores burn when statused) · Hex/Venoshock/Brine/Acrobatics/Knock Off · Low Kick/Grass Knot/Heavy Slam (weight) · Water Spout/Eruption (HP%) · <b>Intimidate auto-apply</b> (with Clear Body / Hyper Cutter / Inner Focus / Scrappy / Own Tempo / Oblivious immunity; Defiant counters; Competitive on special) · <b>contact/flag abilities</b>: Tough Claws ×1.3 (contact) · Iron Fist ×1.2 (punch) · Mega Launcher ×1.5 (pulse) · Strong Jaw ×1.5 (bite) · Sharpness ×1.5 (slicing) · Punk Rock ×1.3 atk / ×0.5 def (sound) · Soundproof immune (sound) · Bulletproof immune (bullet) · Fluffy ×0.5 contact + ×2 fire · -ate abilities (Pixilate/Aerilate/Refrigerate/Galvanize: Normal→type ×1.2 STAB) · Adaptability · Technician · Tinted Lens · Huge/Pure Power · Solar Power · Sand Force · Sniper · Neuroforce · Levitate / type-absorb immunities · Multiscale / Shadow Shield · Filter / Solid Rock / Prism Armor · Thick Fat · Heatproof · Purifying Salt · Fur Coat · Ice Scales · Choice/Specs/Life Orb/AV/Eviolite/type-boost items · Muscle Band ×1.1 phys · Wise Glasses ×1.1 spec · Expert Belt ×1.2 SE · Iron Ball grounding. · <b>Champions specifics:</b> Fire Mane (Mega Pyroar) · Fairy Aura toggle (Mega Floette-Eternal) · Eelevate ground-immunity (Mega Eelektross) · Mega Sol personal-sun (Mega Meganium) · Dragonize (Mega Feraligatr, Normal→Dragon ×1.2 STAB) · Piercing Drill (Mega Excadrill, note only — Protect not modeled) · Weather Ball type shift · Reg-B patches (Make It Rain acc 100→95, move BP shifts).</div>`;
   wireSlot('a',A);wireSlot('b',B);
   // Field button handlers (single-click). Doubles is hard-pinned (see line ~838) — no Singles toggle in UI.
   document.querySelectorAll('[data-grp="weat"]').forEach(b=>b.onclick=()=>{

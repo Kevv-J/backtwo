@@ -95,3 +95,81 @@ test('Intimidate + Defiant: net +1 Atk (not -1)', () => {
   // Net +1 Atk boost = ×1.5 damage
   assertRatio(withIntim.hi / withoutIntim.hi, 1.5, 'Defiant nets +1 vs Intimidate');
 });
+
+test('Body Press: damage scales with user Def (and Def stage), not Atk', () => {
+  const base = mkMon({ forme: 'Avalugg', nature: 'Impish', ev: { def: 32 }, moves: ['Body Press'] });
+  const def = mkMon({ forme: 'Milotic', ev: { hp: 32 } });
+  const plain    = calc({ atk: base, def, sA: mkSide(), sB: mkSide(), w: 'none', f: mkField(), move: 'Body Press' });
+  const plusDef  = calc({ atk: mkMon({ ...base, boost: { def: 2 } }), def, sA: mkSide(), sB: mkSide(), w: 'none', f: mkField(), move: 'Body Press' });
+  const plusAtk  = calc({ atk: mkMon({ ...base, boost: { atk: 2 } }), def, sA: mkSide(), sB: mkSide(), w: 'none', f: mkField(), move: 'Body Press' });
+  assertRatio(plusDef.hi / plain.hi, 2.0, '+2 Def stage doubles Body Press');
+  assertRatio(plusAtk.hi / plain.hi, 1.0, '+2 Atk stage does NOT affect Body Press');
+});
+
+test('Body Press: Intimidate is ignored (uses Def, not Atk)', () => {
+  const base = mkMon({ forme: 'Avalugg', nature: 'Impish', ev: { def: 32 }, moves: ['Body Press'] });
+  const def = mkMon({ forme: 'Incineroar', ev: { hp: 32 } });   // same defender, toggle only the ability
+  const noIntim = calc({ atk: base, def: mkMon({ ...def, ability: '' }),          sA: mkSide(), sB: mkSide(), w: 'none', f: mkField(), move: 'Body Press' });
+  const vsIntim = calc({ atk: base, def: mkMon({ ...def, ability: 'Intimidate' }), sA: mkSide(), sB: mkSide(), w: 'none', f: mkField(), move: 'Body Press' });
+  // Intimidate lowers Atk; Body Press reads Def, so damage must be identical.
+  assertRatio(vsIntim.hi / noIntim.hi, 1.0, 'Intimidate does not weaken Body Press');
+});
+
+test('Body Press: Choice Band still boosts it (Atk modifier, not a stage)', () => {
+  const bare = mkMon({ forme: 'Avalugg', nature: 'Impish', ev: { def: 32 }, moves: ['Body Press'] });
+  const band = mkMon({ ...bare, item: 'Choice Band' });
+  const def = mkMon({ forme: 'Milotic', ev: { hp: 32 } });
+  const rBare = calc({ atk: bare, def, sA: mkSide(), sB: mkSide(), w: 'none', f: mkField(), move: 'Body Press' });
+  const rBand = calc({ atk: band, def, sA: mkSide(), sB: mkSide(), w: 'none', f: mkField(), move: 'Body Press' });
+  assertRatio(rBand.hi / rBare.hi, 1.5, 'Choice Band ×1.5 applies to Body Press');
+});
+
+test('Facade: burned nets 2× (BP doubled AND burn Atk-cut ignored)', () => {
+  const atk = mkMon({ forme: 'Kingambit', nature: 'Adamant', ev: { atk: 32 }, moves: ['Facade'] });
+  const def = mkMon({ forme: 'Milotic', ev: { hp: 32 } });   // Water → neutral vs Normal
+  const healthy = calc({ atk, def, sA: mkSide(), sB: mkSide(), w: 'none', f: mkField(), move: 'Facade' });
+  const burned  = calc({ atk: mkMon({ ...atk, status: 'brn' }), def, sA: mkSide(), sB: mkSide(), w: 'none', f: mkField(), move: 'Facade' });
+  // Without the fix this was 0.5× (no BP doubling + burn halving). Correct = 2×.
+  assertRatio(burned.hi / healthy.hi, 2.0, 'Facade burned = 2×, not 0.5×');
+});
+
+test('Facade: paralysis doubles BP (no Atk cut) = 2×', () => {
+  const atk = mkMon({ forme: 'Kingambit', nature: 'Adamant', ev: { atk: 32 }, moves: ['Facade'] });
+  const def = mkMon({ forme: 'Milotic', ev: { hp: 32 } });
+  const healthy = calc({ atk, def, sA: mkSide(), sB: mkSide(), w: 'none', f: mkField(), move: 'Facade' });
+  const para    = calc({ atk: mkMon({ ...atk, status: 'par' }), def, sA: mkSide(), sB: mkSide(), w: 'none', f: mkField(), move: 'Facade' });
+  assertRatio(para.hi / healthy.hi, 2.0, 'Facade paralysed = 2× BP');
+});
+
+test('Competitive vs Intimidate: +2 SpA on a special move', () => {
+  const withIntim = calc({
+    atk: mkMon({ forme: 'Milotic', ability: 'Competitive', nature: 'Modest', ev: { spa: 32 }, moves: ['Scald'] }),
+    def: mkMon({ forme: 'Incineroar', ability: 'Intimidate', nature: 'Careful', ev: { hp: 32, spd: 20 } }),
+    sA: mkSide(), sB: mkSide(), w: 'none', f: mkField(), move: 'Scald',
+  });
+  const withoutIntim = calc({
+    atk: mkMon({ forme: 'Milotic', ability: '', nature: 'Modest', ev: { spa: 32 }, moves: ['Scald'] }),
+    def: mkMon({ forme: 'Incineroar', ability: '', nature: 'Careful', ev: { hp: 32, spd: 20 } }),
+    sA: mkSide(), sB: mkSide(), w: 'none', f: mkField(), move: 'Scald',
+  });
+  // +2 SpA = ×(2+2)/2 = ×2.0 on the special stat -> ~2× damage
+  assertRatio(withIntim.hi / withoutIntim.hi, 2.0, 'Competitive +2 SpA vs Intimidate');
+});
+
+test('Competitive override: SpA boost -2 nets to +0 (Milotic brought in later)', () => {
+  // The UI stores boost.spa = -2 when the user clicks the SpA "0" chip on a
+  // Competitive mon facing Intimidate; that must net to the same damage as a
+  // mon with no Competitive at all (Competitive never triggered — switched in
+  // after the Intimidate already resolved).
+  const netZero = calc({
+    atk: mkMon({ forme: 'Milotic', ability: 'Competitive', nature: 'Modest', ev: { spa: 32 }, boost: { spa: -2 }, moves: ['Scald'] }),
+    def: mkMon({ forme: 'Incineroar', ability: 'Intimidate', nature: 'Careful', ev: { hp: 32, spd: 20 } }),
+    sA: mkSide(), sB: mkSide(), w: 'none', f: mkField(), move: 'Scald',
+  });
+  const baseline = calc({
+    atk: mkMon({ forme: 'Milotic', ability: '', nature: 'Modest', ev: { spa: 32 }, moves: ['Scald'] }),
+    def: mkMon({ forme: 'Incineroar', ability: '', nature: 'Careful', ev: { hp: 32, spd: 20 } }),
+    sA: mkSide(), sB: mkSide(), w: 'none', f: mkField(), move: 'Scald',
+  });
+  assertRatio(netZero.hi / baseline.hi, 1.0, 'Competitive +2 backed out by -2 boost = no boost');
+});
