@@ -427,12 +427,150 @@ def _to_id(name: str) -> str:
     return re.sub(r"[^a-z0-9]", "", name.lower())
 
 
+# ---------------------------------------------------------------------------
+# Champions Reg M-B legality data — Showdown's `champions` mod (the current
+# regulation; `championsregma` is the older M-A snapshot). We pull:
+#   learnsets.ts -> per-species legal move ids (for the picker's legal/illegal tag)
+#   moves.ts     -> the handful of Champions BP/accuracy overrides
+# Files are TypeScript object literals with regular tab indentation, so a small
+# line-based parser is enough (no JS eval needed).
+# ---------------------------------------------------------------------------
+CHAMPIONS_MOD_BASE = "https://raw.githubusercontent.com/smogon/pokemon-showdown/master/data/mods/champions"
+
+
+def _fetch_champions_file(fname: str) -> str | None:
+    cf = CACHE / f"champions_{fname}"
+    if cf.exists():
+        try:
+            return cf.read_text()
+        except OSError:
+            pass
+    try:
+        r = SESSION.get(f"{CHAMPIONS_MOD_BASE}/{fname}", timeout=60)
+        if r.status_code != 200:
+            return None
+        cf.write_text(r.text)
+        time.sleep(0.03)
+        return r.text
+    except requests.RequestException:
+        return None
+
+
+def parse_champions_learnsets(text: str) -> dict[str, list[str]]:
+    """champions learnsets.ts -> {speciesid: [moveid, ...]}. Reads only the
+    `learnset` block of each species entry."""
+    out: dict[str, list[str]] = {}
+    cur = None
+    in_ls = False
+    for line in text.split("\n"):
+        m = re.match(r"^\t(\w+): \{", line)
+        if m:
+            cur = m.group(1)
+            out[cur] = []
+            in_ls = False
+            continue
+        if cur is None:
+            continue
+        if re.match(r"^\t\tlearnset: \{", line):
+            in_ls = True
+            continue
+        if in_ls:
+            if re.match(r"^\t\t\},?\s*$", line):
+                in_ls = False
+                continue
+            mv = re.match(r"^\t\t\t(\w+): \[", line)
+            if mv:
+                out[cur].append(mv.group(1))
+    return {k: v for k, v in out.items() if v}
+
+
+def parse_champions_move_overrides(text: str) -> dict[str, dict]:
+    """champions moves.ts -> {moveid: {basePower?, accuracy?}} for entries that
+    actually override a value (plain inherit / isNonstandard rows are ignored)."""
+    out: dict[str, dict] = {}
+    cur = None
+    for line in text.split("\n"):
+        m = re.match(r"^\t(\w+): \{", line)
+        if m:
+            cur = m.group(1)
+            continue
+        if cur is None:
+            continue
+        bp = re.match(r"^\t\tbasePower: (\d+),", line)
+        if bp:
+            out.setdefault(cur, {})["basePower"] = int(bp.group(1))
+            continue
+        ac = re.match(r"^\t\taccuracy: (true|\d+),", line)
+        if ac:
+            out.setdefault(cur, {})["accuracy"] = True if ac.group(1) == "true" else int(ac.group(1))
+    return out
+
+
+def parse_champions_species(text: str) -> set[str]:
+    """champions formats-data.ts -> the set of top-level species ids (the M-B
+    roster). Skips entries explicitly flagged as not usable."""
+    out: set[str] = set()
+    cur = None
+    nonstd = False
+    for line in text.split("\n"):
+        m = re.match(r"^\t(\w+): \{", line)
+        if m:
+            if cur and not nonstd:
+                out.add(cur)
+            cur = m.group(1)
+            nonstd = False
+            continue
+        if cur and re.match(r'^\t\tisNonstandard: "(Past|Future|Unobtainable)"', line):
+            nonstd = True
+    if cur and not nonstd:
+        out.add(cur)
+    return out
+
+
+def _showdown_shortdescs(url: str, cache_key: str, battle_var: str) -> dict[str, str]:
+    """Fetch a Showdown MAIN data file (items.js / abilities.js) and node-eval it
+    to map id -> shortDesc (falls back to the longer desc). The champions mod only
+    carries legality flags, so effect text comes from the base data files."""
+    import subprocess
+    cf = CACHE / cache_key
+    if cf.exists():
+        try:
+            return json.loads(cf.read_text())
+        except json.JSONDecodeError:
+            pass
+    try:
+        r = SESSION.get(url, timeout=60)
+        r.raise_for_status()
+    except requests.RequestException as e:
+        print(f"  WARNING: could not fetch {url} ({e}); effect text unavailable.")
+        return {}
+    try:
+        p = subprocess.run(
+            ["node", "-e",
+             "let exports={};const code=require('fs').readFileSync('/dev/stdin','utf8');eval(code);"
+             f"const src=exports.{battle_var}||{{}};const out={{}};"
+             "for(const [k,v] of Object.entries(src)){if(!v)continue;"
+             "if(v.shortDesc)out[k]=v.shortDesc;else if(v.desc)out[k]=v.desc;}"
+             "process.stdout.write(JSON.stringify(out));"],
+            input=r.text, capture_output=True, text=True, timeout=30,
+        )
+        if p.returncode != 0:
+            print(f"  WARNING: node eval failed for {battle_var} ({p.stderr[:120]}).")
+            return {}
+        data = json.loads(p.stdout)
+    except (subprocess.TimeoutExpired, FileNotFoundError, json.JSONDecodeError) as e:
+        print(f"  WARNING: {battle_var} desc extraction failed ({e}).")
+        return {}
+    cf.write_text(json.dumps(data))
+    return data
+
+
 def fetch_move_flags() -> dict:
     """One-shot: pull Showdown's moves.js and extract per-move flag dicts.
     Uses node to eval the JS file (~450KB), then JSON-encodes the flags map.
     """
     import subprocess
-    cache_file = CACHE / "showdown_moves_flags.json"
+    cache_file = CACHE / "showdown_moves_flags_v2.json"   # v2: also captures `name`
     if cache_file.exists():
         try:
             return json.loads(cache_file.read_text())
@@ -463,6 +601,7 @@ def fetch_move_flags() -> dict:
              "if(v.target)e.target=v.target;"
              "if(v.pp!==undefined)e.pp=v.pp;"
              "if(v.shortDesc)e.shortDesc=v.shortDesc;"
+             "if(v.name)e.name=v.name;"
              "if(Object.keys(e).length)out[k]=e;}"
              "process.stdout.write(JSON.stringify(out));"],
             input=js, capture_output=True, text=True, timeout=30,
@@ -1472,6 +1611,23 @@ def main() -> None:
     global _MOVE_FLAGS
     _MOVE_FLAGS = fetch_move_flags()
 
+    # Champions Reg M-B learnsets, pulled EARLY so every legal move gets fetched
+    # into the dex (not just the ones teams happen to use) — that lets the move
+    # picker offer + tag the full legal pool per species.
+    print("Fetching Showdown champions mod (Reg M-B learnsets) ...", flush=True)
+    ls_text = _fetch_champions_file("learnsets.ts")
+    raw_ls = parse_champions_learnsets(ls_text) if ls_text else {}
+    if raw_ls:
+        id2name = {mid: sd["name"] for mid, sd in _MOVE_FLAGS.items()
+                   if isinstance(sd, dict) and sd.get("name")}
+        all_legal_ids: set[str] = set().union(*raw_ls.values())
+        have = {_to_id(mv) for mv in moves}
+        added = sum(1 for mid in all_legal_ids
+                    if mid not in have and mid in id2name and (moves.add(id2name[mid]) or True))
+        print(f"  ✓ {len(raw_ls)} species learnsets; +{added} legal moves added to the pool", flush=True)
+    else:
+        print("  WARNING: champions learnsets unavailable — legality tags disabled", flush=True)
+
     print(f"Resolving {len(formes)} formes and {len(moves)} moves from PokeAPI ...", flush=True)
 
     dex_formes: dict[str, dict] = {}
@@ -1529,6 +1685,52 @@ def main() -> None:
             dex_moves[name] = res
     apply_move_overrides(dex_moves)
 
+    # Champions move BP/accuracy tweaks (champions moves.ts).
+    mv_text = _fetch_champions_file("moves.ts")
+    if mv_text:
+        id2name = {_to_id(n): n for n in dex_moves}
+        applied = 0
+        for mid, fields in parse_champions_move_overrides(mv_text).items():
+            name = id2name.get(mid)
+            if not name:
+                continue
+            if "basePower" in fields and dex_moves[name].get("power") != fields["basePower"]:
+                dex_moves[name]["power"] = fields["basePower"]
+                applied += 1
+            if "accuracy" in fields and dex_moves[name].get("accuracy") != fields["accuracy"]:
+                dex_moves[name]["accuracy"] = fields["accuracy"]
+                applied += 1
+        print(f"  ✓ applied {applied} champions move BP/accuracy overrides", flush=True)
+
+    # Per-species legal move ids for the picker's legal/illegal tag (from the
+    # early-fetched raw_ls), kept to move ids we actually have data for.
+    our_ids = {_to_id(n) for n in dex_moves}
+    dex_learnsets = {sp: sorted(m for m in mvs if m in our_ids) for sp, mvs in raw_ls.items()}
+    dex_learnsets = {k: v for k, v in dex_learnsets.items() if v}
+
+    # Item + ability effect text — Showdown's MAIN data files (the champions mod
+    # only carries legality flags, not descriptions). Keyed by Showdown id.
+    print("Fetching Showdown item/ability effect text ...", flush=True)
+    dex_item_desc = _showdown_shortdescs("https://play.pokemonshowdown.com/data/items.js",
+                                         "showdown_items_desc.json", "BattleItems")
+    dex_ability_desc = _showdown_shortdescs("https://play.pokemonshowdown.com/data/abilities.js",
+                                            "showdown_abilities_desc.json", "BattleAbilities")
+    print(f"  ✓ {len(dex_item_desc)} item + {len(dex_ability_desc)} ability descriptions", flush=True)
+
+    # Reg M-B roster (legal species ids) from champions formats-data.ts. Exposed
+    # as DEX.legalSpecies; also a build-time coverage check vs our dex formes.
+    fd_text = _fetch_champions_file("formats-data.ts")
+    dex_legal_species = sorted(parse_champions_species(fd_text)) if fd_text else []
+    print(f"  ✓ {len(dex_legal_species)} species in the Reg M-B roster", flush=True)
+    if dex_legal_species:
+        roster = set(dex_legal_species)
+        missing = sorted(lbl for lbl in dex_formes
+                         if _to_id(lbl) not in roster
+                         and _to_id(re.sub(r"-Mega(-[XY])?$", "", lbl)) not in roster)
+        if missing:
+            print(f"  ℹ {len(missing)} dex formes not in the M-B roster (M-A-only etc.): "
+                  f"{', '.join(missing[:8])}{' …' if len(missing) > 8 else ''}", flush=True)
+
     print("Building type chart ...", flush=True)
     typechart = build_typechart()
 
@@ -1550,7 +1752,10 @@ def main() -> None:
                 dex_items[name] = {"sprite": slug}
     print(f"  ✓ {len(dex_items)}/{len(item_names)} item icons available", flush=True)
 
-    dex = {"formes": dex_formes, "moves": dex_moves, "typechart": typechart, "items": dex_items}
+    dex = {"formes": dex_formes, "moves": dex_moves, "typechart": typechart,
+           "items": dex_items, "learnsets": dex_learnsets,
+           "itemDesc": dex_item_desc, "abilityDesc": dex_ability_desc,
+           "legalSpecies": dex_legal_species}
     DEX_JSON.write_text(json.dumps(dex, ensure_ascii=False, indent=2))
     # re-save teams.json with the forme annotations
     TEAMS_JSON.write_text(json.dumps(teams, ensure_ascii=False, indent=2))
@@ -1600,6 +1805,8 @@ def main() -> None:
             "move_count": len(dex.get("moves", {})),
             "type_count": len(dex.get("typechart", {})),
             "item_icon_count": len(dex.get("items", {})),
+            "learnset_species": len(dex.get("learnsets", {})),
+            "legal_species": len(dex.get("legalSpecies", [])),
         },
         "sources": {
             "vgcpastes_sheet_id": "1axlwmzPA49rYkqXh7zHvAtSP-TKbM0ijGYBPRflLSWw",

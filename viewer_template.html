@@ -1504,6 +1504,24 @@ function isHiddenAbility(forme, name){
   const base = forme && isMega(forme) ? baseOf(forme) : forme;
   return !!DEX.formes[base]?.abilities?.find(a => a.name===name && a.hidden);
 }
+// Showdown-style id (lowercase alphanumerics only) — matches DEX.learnsets keys.
+function toId(s){return (s||'').toLowerCase().replace(/[^a-z0-9]/g,'');}
+// Champions Reg M-B legal move set (move ids) for a forme, from Showdown's
+// champions-mod learnsets (DEX.learnsets, keyed by species id). Megas inherit the
+// base species; regional/other formes key on their own id. Returns a Set, or null
+// when we have no learnset for the mon (→ picker shows moves untagged). Memoised.
+let _learnCache = Object.create(null);
+function legalMoveIds(forme){
+  if(!forme || !DEX.learnsets) return null;
+  if(forme in _learnCache) return _learnCache[forme];
+  let set = null;
+  for(const id of [toId(forme), toId(baseOf(forme))]){
+    const arr = DEX.learnsets[id];
+    if(arr){ set = new Set(arr); break; }
+  }
+  _learnCache[forme] = set;
+  return set;
+}
 // The "effective" forme for calc — if the user toggled the mega off (m.megaOff),
 // stats/types resolve to the base mon even though m.forme still holds the mega
 // label (so the picker input, mega pill, URL round-trip stay coherent).
@@ -2135,11 +2153,14 @@ const ITEM_DESC = {
 // Heuristic: any item ending in "ite" / "ite X" / "ite Y" is a mega stone.
 function descFor(kind, val){
   if(!val) return '';
-  if(kind==='ability') return ABILITY_DESC[val] || '';
+  // Prefer our hand-tuned, calc-aware text (it flags "(not modeled)" etc.); fall
+  // back to Showdown's authoritative effect text (DEX.itemDesc / DEX.abilityDesc)
+  // for anything we don't have an entry for.
+  if(kind==='ability') return ABILITY_DESC[val] || (DEX.abilityDesc && DEX.abilityDesc[toId(val)]) || '';
   if(kind==='item'){
     if(ITEM_DESC[val]) return ITEM_DESC[val];
     if(/ite( [XY])?$/.test(val) && val!=='Eviolite') return `Mega Stone — Pokémon transforms into its mega forme on send-out`;
-    return '';
+    return (DEX.itemDesc && DEX.itemDesc[toId(val)]) || '';
   }
   return '';
 }
@@ -3159,20 +3180,21 @@ function renderFinals(p,m){const s=statsOf(m);
     // computes it itself). Atk: -1 (or +1 net Defiant); SpA: +2 Competitive.
     const virtIntim = m.forme ? virtIntimStage(m, other, k) : 0;
     const effB=b+virtIntim;
-    // Choice Scarf ×1.5 chip on the Spe row. The displayed base stat stays raw;
-    // the chip shows the in-battle scarf value (floor of the stage-boosted stat
-    // ×1.5) — mirrors effSpeed's scarf step. Suppressed under Magic Room.
-    let scarfx='';
-    if(k==='spe' && m.item==='Choice Scarf' && !field.magicRoom){
-      const shown=effB?applyBoost(v,effB):v;
-      scarfx=` <span class="scarfx" title="Choice Scarf: Speed ×1.5 → ${Math.floor(shown*1.5)}">×1.5</span>`;
-    }
-    if(effB){
+    // Choice Scarf: the Spe cell shows the ACTUAL ×1.5 in-battle Speed as the
+    // value (bold), with the pre-scarf stat in parens + a ×1.5 chip. Mirrors
+    // effSpeed's scarf step; suppressed under Magic Room.
+    const scarf = (k==='spe' && m.item==='Choice Scarf' && !field.magicRoom);
+    if(scarf){
+      const pre=effB?applyBoost(v,effB):v;     // Speed after any stage boost, pre-scarf
+      const spd=Math.floor(pre*1.5);
+      const stageChip=effB?` <span class="bsign ${effB>0?'up':'down'}">${effB>0?'+'+effB:effB}</span>`:'';
+      cell.innerHTML=`<b class="up" title="Choice Scarf: ${pre} ×1.5 = ${spd}">${spd}</b> <span class="finbase">(${v})</span> <span class="scarfx">×1.5</span>${stageChip}`;
+    } else if(effB){
       const boosted=applyBoost(v,effB);
       const sign=effB>0?'up':'down';
       const intimHint=virtIntim?` title="Auto-applied from opposing ${esc(other.forme)}'s Intimidate — click a stage chip to override (e.g. if this mon switched in later)"`:'';
-      cell.innerHTML=`<b class="${sign}"${intimHint}>${boosted}</b> <span class="finbase">(${v})</span> <span class="bsign ${sign}">${effB>0?'+'+effB:effB}</span>`+scarfx;
-    } else cell.innerHTML=`<b>${v}</b>`+scarfx;
+      cell.innerHTML=`<b class="${sign}"${intimHint}>${boosted}</b> <span class="finbase">(${v})</span> <span class="bsign ${sign}">${effB>0?'+'+effB:effB}</span>`;
+    } else cell.innerHTML=`<b>${v}</b>`;
     // Sync stage chip active state — show EFFECTIVE stage (b + virtIntim) so
     // Intimidate visually shows as the -1 chip lit up, not just as text.
     if(k!=='hp'){const row=document.querySelector(`.stagerow[data-p="${p}"][data-k="${k}"]`);
@@ -3508,8 +3530,14 @@ function wireSlot(p,m){
   [0,1,2,3].forEach(i=>{
     attachSmartPicker(g(p+'_mv'+i),{
       source:()=>ALL_MOVES,
-      usage:(n)=>DEX.moves[n]?.power||0,  // prioritize damaging moves
-      renderOption:spRenderMove,
+      // Legal (Champions M-B learnset) moves sort to the top; within each group,
+      // damaging moves rank first. Illegal moves still appear (tagged), below.
+      usage:(n)=>{const L=legalMoveIds(m.forme);return (L&&L.has(toId(n))?1e7:0)+(DEX.moves[n]?.power||0);},
+      // On focus (empty), show the mon's legal moves (top by power) instead of the
+      // alphabetical head of the full list.
+      defaultEmpty:()=>{const L=legalMoveIds(m.forme);if(!L)return ALL_MOVES.slice(0,10);
+        return ALL_MOVES.filter(n=>L.has(toId(n))).sort((a,b)=>(DEX.moves[b]?.power||0)-(DEX.moves[a]?.power||0)).slice(0,12);},
+      renderOption:(v)=>spRenderMove(v, legalMoveIds(m.forme)),
       onPick:v=>{m.moves[i]=v;readSlot(p,m);updateResults();},
       onClear:()=>{m.moves[i]='';readSlot(p,m);updateResults();},
     });
@@ -4749,7 +4777,7 @@ function spRenderItem(name){
   return line1+line2;
 }
 function spRenderAbility(name, forme){
-  const desc=ABILITY_DESC[name]||'';
+  const desc=descFor('ability', name);   // hand-tuned text, else Showdown fallback
   const trimmed=desc.length>48?desc.slice(0,45)+'…':desc;
   // Tag rows so users can spot Hidden Abilities and non-legal (custom) entries.
   // When forme is missing we skip tagging — non-forme callers keep the old look.
@@ -4774,7 +4802,7 @@ function spRenderNature(name){
   }
   return `<span class="sp-name">${esc(name)}</span>${chip}`;
 }
-function spRenderMove(name){
+function spRenderMove(name, legalSet){
   const info=DEX.moves[name]||{};
   const catLab=info.category==='physical'?'Phys':info.category==='special'?'Spec':'Stat';
   const cat=info.category||'status';
@@ -4797,7 +4825,11 @@ function spRenderMove(name){
   // via `.sp-line1`/`.sp-line2` wrapping — the parent .smartpicker-option flexes
   // to column so line 1 (name + chips) sits above line 2 (desc).
   const desc = info.shortDesc ? `<div class="sp-line2 sp-desc">${esc(info.shortDesc)}</div>` : '';
-  const line1 = `<div class="sp-line1">${chip}<span class="sp-name">${esc(name)}</span><span class="sp-cat ${cat}">${catLab}</span>${bp}${prio}${acc}</div>`;
+  // Legality tag — when a learnset is known for the current mon, moves it can't
+  // learn in Champions M-B get an "illegal" tag (unknown-learnset mons: no tag).
+  const legTag = (legalSet && !legalSet.has(toId(name)))
+    ? `<span class="sp-tag sp-tag-warn" title="Not in this Pokémon's Champions Reg M-B learnset">illegal</span>` : '';
+  const line1 = `<div class="sp-line1">${chip}<span class="sp-name">${esc(name)}</span>${legTag}<span class="sp-cat ${cat}">${catLab}</span>${bp}${prio}${acc}</div>`;
   return `${line1}${desc}`;
 }
 
@@ -5547,13 +5579,17 @@ function _tbWireSlot(i){
     onPick: v => { s.nature = v; tbSyncPaste(); },
     onClear: () => { s.nature = 'Serious'; tbSyncPaste(); },
   });
-  // Moves — smart picker with BP-weighted usage sort
+  // Moves — smart picker; legal (Champions M-B learnset) moves sort to the top,
+  // illegal ones appear below with a tag. Same behaviour as the calc slots.
   el.querySelectorAll('[data-move]').forEach(inp => {
     const j = +inp.dataset.move;
+    const forme = () => s.forme || s.name || '';
     attachSmartPicker(inp, {
       source: () => ALL_MOVES,
-      usage: (n) => DEX.moves[n]?.power || 0,
-      renderOption: spRenderMove,
+      usage: (n) => { const L = legalMoveIds(forme()); return (L && L.has(toId(n)) ? 1e7 : 0) + (DEX.moves[n]?.power || 0); },
+      defaultEmpty: () => { const L = legalMoveIds(forme()); if(!L) return ALL_MOVES.slice(0,10);
+        return ALL_MOVES.filter(n => L.has(toId(n))).sort((a,b)=>(DEX.moves[b]?.power||0)-(DEX.moves[a]?.power||0)).slice(0,12); },
+      renderOption: (v) => spRenderMove(v, legalMoveIds(forme())),
       onPick: v => { s.moves = s.moves || ['','','','']; s.moves[j] = v; tbSyncPaste(); },
       onClear: () => { s.moves = s.moves || ['','','','']; s.moves[j] = ''; tbSyncPaste(); },
     });
