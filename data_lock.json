@@ -1,20 +1,21 @@
 {
-  "generated_at_utc": "2026-08-04T11:15:38Z",
-  "build_sha": "e72c3a9",
-  "build_date": "2026-08-04",
+  "generated_at_utc": "2026-08-05T10:18:03Z",
+  "build_sha": "7dd651c",
+  "build_date": "2026-08-05",
   "scrape": {
-    "team_total": 1711,
+    "team_total": 1729,
     "by_reg": {
       "M-A": 1104,
-      "M-B": 607
+      "M-B": 625
     },
-    "resolved_pastes": 1711,
+    "resolved_pastes": 1729,
     "resolve_rate": 1.0
   },
   "dex": {
     "forme_count": 314,
-    "move_count": 372,
-    "type_count": 18
+    "move_count": 373,
+    "type_count": 18,
+    "item_icon_count": 113
   },
   "sources": {
     "vgcpastes_sheet_id": "1axlwmzPA49rYkqXh7zHvAtSP-TKbM0ijGYBPRflLSWw",

@@ -104,7 +104,9 @@ globalThis.__setState = function(atk, def, sa, sb, w, f) {
 };
 globalThis.__exportCalc = { calcDmg, effectiveBP, statsOf, pokeRound,
   chainMod, applyMod, M, FP_ONE, newSide, newField, newMon, DEX, parseShowdown,
-  calcSummary, jsForme, normSpec, PSYSHOCK_MOVES };
+  calcSummary, jsForme, normSpec, PSYSHOCK_MOVES,
+  spreadMatchScore, monHasSpread, bestSpreadFor, matchingTeamsFor,
+  accuracyInfo, healInfo, recoilInfo };
 `;
 const combined = stubDoc
   + scripts.map((body, i) =>
@@ -131,6 +133,8 @@ export const {
   calcDmg, effectiveBP, statsOf, pokeRound, chainMod, applyMod, M, FP_ONE,
   newSide, newField, newMon, DEX, parseShowdown,
   calcSummary, jsForme, normSpec, PSYSHOCK_MOVES,
+  spreadMatchScore, monHasSpread, bestSpreadFor, matchingTeamsFor,
+  accuracyInfo, healInfo, recoilInfo,
 } = _exp;
 
 export function setState({ atk, def, sA, sB, w, f }) {

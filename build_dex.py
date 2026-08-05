@@ -342,6 +342,77 @@ def move_slug(name: str) -> str:
     return s
 
 
+# ---------------------------------------------------------------------------
+# Item icons. The viewer's item picker shows a small PokéAPI item sprite next to
+# each item name. We fetch them for the Champions Regulation M-B legal pool
+# (mirrors CHAMPIONS_ITEMS in viewer_template.html) plus any mega stone that
+# shows up in the team data. Champions-new mega stones have no upstream art and
+# just fall back to a generic dot in the UI.
+# ---------------------------------------------------------------------------
+ITEM_SPRITE_DIR = SPRITE_DIR / "items"
+ITEM_SPRITE_BASE = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items"
+
+# Champions Reg M-B legal items (official / RotomPicks). KEEP IN SYNC with
+# CHAMPIONS_ITEMS in viewer_template.html.
+CHAMPIONS_ITEM_NAMES = [
+    # Held items
+    "Big Root", "Black Belt", "Black Glasses", "Bright Powder", "Charcoal", "Choice Scarf",
+    "Damp Rock", "Dragon Fang", "Expert Belt", "Fairy Feather", "Focus Band", "Focus Sash",
+    "Hard Stone", "Heat Rock", "Icy Rock", "Iron Ball", "King's Rock", "Leftovers", "Life Orb",
+    "Light Ball", "Light Clay", "Magnet", "Mental Herb", "Metal Coat", "Metronome", "Miracle Seed",
+    "Muscle Band", "Mystic Water", "Never-Melt Ice", "Poison Barb", "Quick Claw", "Scope Lens",
+    "Sharp Beak", "Shed Shell", "Shell Bell", "Silk Scarf", "Silver Powder", "Smooth Rock",
+    "Soft Sand", "Spell Tag", "Twisted Spoon", "White Herb", "Wide Lens", "Wise Glasses", "Zoom Lens",
+    # Berries
+    "Aspear Berry", "Babiri Berry", "Charti Berry", "Cheri Berry", "Chesto Berry", "Chilan Berry",
+    "Chople Berry", "Coba Berry", "Colbur Berry", "Haban Berry", "Kasib Berry", "Kebia Berry",
+    "Leppa Berry", "Lum Berry", "Occa Berry", "Oran Berry", "Passho Berry", "Payapa Berry",
+    "Pecha Berry", "Persim Berry", "Rawst Berry", "Rindo Berry", "Roseli Berry", "Shuca Berry",
+    "Sitrus Berry", "Tanga Berry", "Wacan Berry", "Yache Berry",
+    # Mega stones
+    "Abomasite", "Absolite", "Aerodactylite", "Aggronite", "Alakazite", "Altarianite", "Ampharosite",
+    "Audinite", "Banettite", "Barbaracite", "Beedrillite", "Blastoisinite", "Blazikenite", "Cameruptite",
+    "Chandelurite", "Charizardite X", "Charizardite Y", "Chesnaughtite", "Chimechite", "Clefablite",
+    "Crabominite", "Delphoxite", "Dragalgite", "Dragoninite", "Drampanite", "Eelektrossite", "Emboarite",
+    "Excadrite", "Falinksite", "Feraligite", "Floettite", "Froslassite", "Galladite", "Garchompite",
+    "Gardevoirite", "Gengarite", "Glalitite", "Glimmoranite", "Golurkite", "Greninjite", "Gyaradosite",
+    "Hawluchanite", "Heracronite", "Houndoominite", "Kangaskhanite", "Lopunnite", "Lucarionite",
+    "Malamarite", "Manectite", "Mawilite", "Medichamite", "Meganiumite", "Meowsticite", "Metagrossite",
+    "Pidgeotite", "Pinsirite", "Pyroarite", "Raichunite X", "Raichunite Y", "Sablenite", "Sceptilite",
+    "Scizorite", "Scolipite", "Scovillainite", "Scraftinite", "Sharpedonite", "Skarmorite", "Slowbronite",
+    "Staraptite", "Starminite", "Steelixite", "Swampertite", "Tyranitarite", "Venusaurite", "Victreebelite",
+]
+
+
+def item_slug(name: str) -> str:
+    """PokeAPI item sprite filename slug. 'King's Rock' -> 'kings-rock',
+    'Charizardite X' -> 'charizardite-x', 'Never-Melt Ice' -> 'never-melt-ice'."""
+    s = name.lower()
+    s = re.sub(r"[.'’]", "", s)
+    s = s.replace(" ", "-")
+    return s
+
+
+def download_item_sprite(name: str) -> str | None:
+    """Save the PokéAPI item sprite -> data/sprites/items/{slug}.png. Returns the
+    slug if a usable file ended up on disk, else None (Champions-new items 404)."""
+    slug = item_slug(name)
+    ITEM_SPRITE_DIR.mkdir(parents=True, exist_ok=True)
+    out = ITEM_SPRITE_DIR / f"{slug}.png"
+    if out.exists() and out.stat().st_size > 0:
+        return slug
+    url = f"{ITEM_SPRITE_BASE}/{slug}.png"
+    try:
+        r = SESSION.get(url, timeout=30)
+        if r.status_code != 200 or not r.content:
+            return None
+        out.write_bytes(r.content)
+        time.sleep(0.02)
+        return slug
+    except requests.RequestException:
+        return None
+
+
 # move targets that hit more than one mon in doubles (-> 0.75x spread reduction)
 SPREAD_TARGETS = {"all-other-pokemon", "all-opponents", "all-pokemon"}
 
@@ -1461,7 +1532,25 @@ def main() -> None:
     print("Building type chart ...", flush=True)
     typechart = build_typechart()
 
-    dex = {"formes": dex_formes, "moves": dex_moves, "typechart": typechart}
+    # Item icons + registry. Champions M-B legal pool plus any mega stone that
+    # appears in the team data (all stones are legal). DEX.items maps a name to
+    # its sprite slug so the viewer can show an icon (falls back to a dot when
+    # absent — e.g. Champions-new stones PokéAPI has no art for).
+    item_names = set(CHAMPIONS_ITEM_NAMES)
+    for t in teams:
+        for m in t.get("mons", []):
+            it = (m.get("item") or "").strip()
+            if it and re.search(r"ite( [XY])?$", it) and it != "Eviolite":
+                item_names.add(it)
+    print(f"Downloading item icons for {len(item_names)} items ...", flush=True)
+    dex_items: dict[str, dict] = {}
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        for name, slug in pool.map(lambda n: (n, download_item_sprite(n)), sorted(item_names)):
+            if slug:
+                dex_items[name] = {"sprite": slug}
+    print(f"  ✓ {len(dex_items)}/{len(item_names)} item icons available", flush=True)
+
+    dex = {"formes": dex_formes, "moves": dex_moves, "typechart": typechart, "items": dex_items}
     DEX_JSON.write_text(json.dumps(dex, ensure_ascii=False, indent=2))
     # re-save teams.json with the forme annotations
     TEAMS_JSON.write_text(json.dumps(teams, ensure_ascii=False, indent=2))
@@ -1510,6 +1599,7 @@ def main() -> None:
             "forme_count": len(dex.get("formes", {})),
             "move_count": len(dex.get("moves", {})),
             "type_count": len(dex.get("typechart", {})),
+            "item_icon_count": len(dex.get("items", {})),
         },
         "sources": {
             "vgcpastes_sheet_id": "1axlwmzPA49rYkqXh7zHvAtSP-TKbM0ijGYBPRflLSWw",

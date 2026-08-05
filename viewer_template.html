@@ -362,6 +362,23 @@
   .counterstep button:hover{border-color:var(--atk-color);color:var(--atk-color)}
   .counterstep button:active{background:var(--atk-bg)}
   .counterval{min-width:24px;text-align:center;font-family:'JetBrains Mono',ui-monospace,monospace;font-weight:700;color:var(--atk-color);font-size:13px;font-variant-numeric:tabular-nums}
+  /* Metronome multiplier chip — sits just outside the − N + stepper */
+  .counterstep .counter-mult{margin-left:8px;min-width:34px;text-align:left;font-family:'JetBrains Mono',ui-monospace,monospace;font-weight:700;font-size:12px;color:var(--def-color);font-variant-numeric:tabular-nums}
+  /* Marvel Scale on/off toggle (counter-row variant — no +/- stepper) */
+  .countertoggle .mstoggle{padding:2px 12px;border-radius:11px;border:1px solid var(--border);background:var(--secondary);color:var(--muted-foreground);cursor:pointer;font-family:'JetBrains Mono',ui-monospace,monospace;font-weight:700;font-size:11px;line-height:1.5}
+  .countertoggle .mstoggle:hover{border-color:var(--def-color);color:var(--foreground)}
+  .countertoggle .mstoggle.on{background:var(--def-bg);border-color:var(--def-color);color:var(--def-color)}
+  /* Choice Scarf ×1.5 chip in the Spe finals stat cell */
+  .statedit .scarfx{display:inline-block;margin-left:4px;padding:0 5px;border-radius:9px;font-size:10px;font-weight:700;font-family:'JetBrains Mono',ui-monospace,monospace;background:var(--def-bg);color:var(--def-color);border:1px solid var(--def-border);cursor:help;vertical-align:middle}
+  /* Auto-borrowed spread note under an Enemy stat block (open-team-sheet) */
+  .spreadnote{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:10.5px;line-height:1.45;background:var(--muted);border:1px solid var(--border);border-left:3px solid var(--def-color);border-radius:6px;padding:5px 8px;margin:2px 0 6px;color:var(--muted-foreground)}
+  .spreadnote[hidden]{display:none}
+  .spreadnote .sm-ic{font-size:12px;flex:0 0 auto}
+  .spreadnote .sm-ok{color:var(--good);font-weight:700}
+  .spreadnote .sm-no{color:var(--bad);font-weight:700}
+  .spreadnote b{color:var(--foreground);font-weight:700}
+  .spreadnote .sm-x{margin-left:auto;background:transparent;border:none;color:var(--muted-foreground);cursor:pointer;font-size:12px;padding:0 2px;line-height:1;flex:0 0 auto}
+  .spreadnote .sm-x:hover{color:var(--foreground)}
   /* Field section — spans full width and centers its content so the shared
      weather/terrain/field toggles read as "the whole battlefield", not as
      belonging to either the Ally or Enemy column. */
@@ -514,6 +531,8 @@
   .smartpicker-option .sp-nat-up{color:var(--good);font-weight:600}
   .smartpicker-option .sp-nat-down{color:var(--bad);font-weight:600}
   .smartpicker-option .sp-itemicon{flex-shrink:0;width:22px;height:22px;border-radius:4px;background:var(--secondary);border:1px solid var(--border);display:inline-flex;align-items:center;justify-content:center;color:var(--warning);font-size:11px}
+  .smartpicker-option .sp-itemimg{flex-shrink:0;width:22px;height:22px;border-radius:4px;background:var(--secondary);border:1px solid var(--border);object-fit:contain;padding:1px}
+  .smartpicker-option .sp-itemimg.empty{display:none}
   .smartpicker-option .sp-cat{flex-shrink:0;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;text-transform:uppercase;letter-spacing:.04em}
   .smartpicker-option .sp-cat.physical{background:rgba(251,146,60,0.18);color:var(--cat-phys);border:1px solid rgba(251,146,60,0.35)}
   .smartpicker-option .sp-cat.special{background:rgba(96,165,250,0.18);color:var(--cat-spec);border:1px solid rgba(96,165,250,0.35)}
@@ -955,6 +974,31 @@
   #tbaudit .tba-tag{display:inline-block;background:var(--warning-bg);color:var(--warning);border:1px solid var(--warning-border);
     border-radius:11px;padding:0 8px;font-size:10.5px;font-family:'JetBrains Mono',ui-monospace,monospace;margin-right:3px}
   #tbaudit .tba-actions{display:flex;gap:10px;justify-content:flex-end}
+  /* ─── Enemy spread-match modal (borrow EV spreads for open-team-sheet) ─── */
+  #spreadmatch{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:175;
+    align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+  #spreadmatch.open{display:flex}
+  #spreadmatch .sm-box{background:var(--panel);border:1px solid var(--def-border);border-radius:14px;
+    padding:22px 24px;max-width:640px;width:100%;max-height:86vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.6)}
+  #spreadmatch .sm-title{font-family:'Rajdhani','Inter',sans-serif;font-size:19px;font-weight:700;margin-bottom:4px;color:var(--def-color)}
+  #spreadmatch .sm-sub{color:var(--muted-foreground);font-size:12px;margin-bottom:14px;line-height:1.5}
+  #spreadmatch .sm-list{margin:0 0 16px;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px;overflow-y:auto}
+  #spreadmatch .sm-team{background:var(--muted);border:1px solid var(--border);border-radius:9px;padding:11px 13px}
+  #spreadmatch .sm-team.best{border-color:var(--good);background:var(--good-bg)}
+  #spreadmatch .sm-team-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+  #spreadmatch .sm-team-head b{color:var(--foreground);font-weight:700;font-size:13px}
+  #spreadmatch .sm-score{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10.5px;color:var(--muted-foreground)}
+  #spreadmatch .sm-badge{font-size:9.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--good);border:1px solid var(--good-border);background:var(--good-bg);border-radius:9px;padding:1px 7px}
+  #spreadmatch .sm-use{margin-left:auto}
+  #spreadmatch .sm-team-mons{display:grid;grid-template-columns:1fr 1fr;gap:5px 12px}
+  @media (max-width:520px){#spreadmatch .sm-team-mons{grid-template-columns:1fr}}
+  #spreadmatch .sm-mon{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--muted-foreground);min-width:0}
+  #spreadmatch .sm-mon .sm-mon-nm{color:var(--foreground);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #spreadmatch .sm-mon .sm-mon-ev{font-family:'JetBrains Mono',ui-monospace,monospace;color:var(--def-color);white-space:nowrap}
+  #spreadmatch .sm-mon .sm-tk{margin-left:auto;font-size:10px;white-space:nowrap;letter-spacing:.5px}
+  #spreadmatch .sm-mon .sm-ok{color:var(--good);font-weight:700}
+  #spreadmatch .sm-mon .sm-no{color:var(--bad);font-weight:700}
+  #spreadmatch .sm-actions{display:flex;gap:10px;justify-content:flex-end}
   /* ─── Team Builder overlay ─────────────────────────────────────────── */
   .myteam-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
   .btn-alt{background:transparent;color:var(--muted-foreground);border-color:var(--border)}
@@ -1331,6 +1375,18 @@
     <div class="tba-actions">
       <button class="ts-btn ts-btn-primary" onclick="_tbCancelSave()">← Return to edit</button>
       <button class="ts-btn ts-btn-accent" onclick="_tbConfirmSave()">Save anyway</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Enemy spread-match modal (open-team-sheet: borrow EV spreads) ──── -->
+<div id="spreadmatch" onclick="if(event.target===this)closeSpreadMatch()">
+  <div class="sm-box">
+    <div class="sm-title">Borrow EV spreads for this enemy team?</div>
+    <div class="sm-sub">Your teamsheet has no spreads. These database teams use the same six Pokémon — pick one to copy its spreads. Your pasted items, abilities, and moves stay exactly as-is; only EVs &amp; natures get filled. Best matches first.</div>
+    <div id="spreadmatch-body" class="sm-list"></div>
+    <div class="sm-actions">
+      <button class="ts-btn ts-btn-primary" onclick="closeSpreadMatch()">Skip — leave spreads empty</button>
     </div>
   </div>
 </div>
@@ -1766,7 +1822,47 @@ const ITEM_TYPE_BOOST={Charcoal:'fire','Mystic Water':'water',Magnet:'electric',
 'Black Glasses':'dark','Metal Coat':'steel','Fairy Feather':'fairy','Silk Scarf':'normal'};
 const ALL_FORMES=Object.keys(DEX.formes).sort();
 FORME_CANON = new Map(ALL_FORMES.map(f => [f.toLowerCase(), f]));
-const ALL_ITEMS=[...new Set(TEAMS.flatMap(t=>t.mons.map(m=>m.item)).filter(i=>i&&i!=='-'))].sort();
+// Canonical Champions Regulation M-B legal item pool (official / RotomPicks
+// list). This — NOT the team data — is the source of truth for the item picker,
+// so mainline-only items (Choice Band/Specs, Assault Vest, Eviolite, Air Balloon,
+// …) are never SUGGESTED even if a pasted set uses them (the calc still handles
+// those if present). Keep in sync with CHAMPIONS_ITEM_NAMES in build_dex.py
+// (which fetches the icons). Mega-stone descriptions come from the descFor regex.
+const CHAMPIONS_ITEMS=[
+  // Held items
+  'Big Root','Black Belt','Black Glasses','Bright Powder','Charcoal','Choice Scarf',
+  'Damp Rock','Dragon Fang','Expert Belt','Fairy Feather','Focus Band','Focus Sash',
+  'Hard Stone','Heat Rock','Icy Rock','Iron Ball',"King's Rock",'Leftovers','Life Orb',
+  'Light Ball','Light Clay','Magnet','Mental Herb','Metal Coat','Metronome','Miracle Seed',
+  'Muscle Band','Mystic Water','Never-Melt Ice','Poison Barb','Quick Claw','Scope Lens',
+  'Sharp Beak','Shed Shell','Shell Bell','Silk Scarf','Silver Powder','Smooth Rock',
+  'Soft Sand','Spell Tag','Twisted Spoon','White Herb','Wide Lens','Wise Glasses','Zoom Lens',
+  // Berries
+  'Aspear Berry','Babiri Berry','Charti Berry','Cheri Berry','Chesto Berry','Chilan Berry',
+  'Chople Berry','Coba Berry','Colbur Berry','Haban Berry','Kasib Berry','Kebia Berry',
+  'Leppa Berry','Lum Berry','Occa Berry','Oran Berry','Passho Berry','Payapa Berry',
+  'Pecha Berry','Persim Berry','Rawst Berry','Rindo Berry','Roseli Berry','Shuca Berry',
+  'Sitrus Berry','Tanga Berry','Wacan Berry','Yache Berry',
+  // Mega stones
+  'Abomasite','Absolite','Aerodactylite','Aggronite','Alakazite','Altarianite','Ampharosite',
+  'Audinite','Banettite','Barbaracite','Beedrillite','Blastoisinite','Blazikenite','Cameruptite',
+  'Chandelurite','Charizardite X','Charizardite Y','Chesnaughtite','Chimechite','Clefablite',
+  'Crabominite','Delphoxite','Dragalgite','Dragoninite','Drampanite','Eelektrossite','Emboarite',
+  'Excadrite','Falinksite','Feraligite','Floettite','Froslassite','Galladite','Garchompite',
+  'Gardevoirite','Gengarite','Glalitite','Glimmoranite','Golurkite','Greninjite','Gyaradosite',
+  'Hawluchanite','Heracronite','Houndoominite','Kangaskhanite','Lopunnite','Lucarionite',
+  'Malamarite','Manectite','Mawilite','Medichamite','Meganiumite','Meowsticite','Metagrossite',
+  'Pidgeotite','Pinsirite','Pyroarite','Raichunite X','Raichunite Y','Sablenite','Sceptilite',
+  'Scizorite','Scolipite','Scovillainite','Scraftinite','Sharpedonite','Skarmorite','Slowbronite',
+  'Staraptite','Starminite','Steelixite','Swampertite','Tyranitarite','Venusaurite','Victreebelite',
+];
+const ALL_ITEMS=[...new Set([
+  ...CHAMPIONS_ITEMS,
+  // Safety net: any mega stone actually present in the team data (every stone is
+  // M-B legal). Excludes Eviolite, which matches the -ite pattern but is a
+  // mainline-only item deliberately kept out of the picker.
+  ...TEAMS.flatMap(t=>t.mons.map(m=>m.item)).filter(i=>i&&/ite( [XY])?$/.test(i)&&i!=='Eviolite'),
+])].sort();
 const ALL_MOVES=Object.keys(DEX.moves).sort();
 const ALL_NATURES=['Adamant','Bold','Brave','Calm','Careful','Gentle','Hardy','Hasty','Impish','Jolly','Lax','Lonely','Mild','Modest','Naive','Naughty','Quiet','Rash','Relaxed','Sassy','Serious','Timid'];
 const STAT_DISPLAY={atk:'Atk',def:'Def',spa:'SpA',spd:'SpD',spe:'Spe'};
@@ -1858,6 +1954,13 @@ const ABILITY_DESC = {
   'Sand Rush':'Speed ×2 in Sand',
   'Slush Rush':'Speed ×2 in Snow',
   'Unburden':'Speed ×2 when item is consumed (modeled as ×2 when no item)',
+  // Accuracy modifiers — surfaced on the result line's "Accuracy:" note
+  'Compound Eyes':'Move accuracy ×1.3',
+  'Victory Star':'Move accuracy ×1.1 (self + allies)',
+  'Hustle':'Atk ×1.5 but physical-move accuracy ×0.8',
+  'No Guard':'Every move hits, from and against this Pokémon',
+  'Sand Veil':'Accuracy of moves against it ×0.8 in Sand',
+  'Snow Cloak':'Accuracy of moves against it ×0.8 in Snow',
   'Rough Skin':'Contact attacker loses 1/8 HP (not modeled in damage calc)',
   'Iron Barbs':'Contact attacker loses 1/8 HP (not modeled)',
   'Static':'30% to paralyze contact attacker (not modeled)',
@@ -1979,10 +2082,10 @@ const ITEM_DESC = {
   'Muscle Band':'Physical moves ×1.1',
   'Wise Glasses':'Special moves ×1.1',
   'Expert Belt':'Super-effective moves ×1.2',
-  'Wide Lens':'Move accuracy ×1.1 (accuracy not modeled)',
+  'Wide Lens':'Move accuracy ×1.1 (shown on the result line)',
   'Zoom Lens':'Move accuracy ×1.2 if moving after target (not modeled)',
   'Metronome':'Consecutive same-move use ×1.2 → ×2.0 stack (not modeled)',
-  'Big Root':'Drain moves recover +30% (not modeled)',
+  'Big Root':'Drain moves recover +30%',
   'Shed Shell':'Guarantees switch-out through trap moves (not modeled)',
   'Light Clay':'Screens last 8 turns instead of 5 (not modeled)',
   'Heat Rock':'Sun lasts 8 turns instead of 5 (not modeled)',
@@ -2011,6 +2114,23 @@ const ITEM_DESC = {
   'Babiri Berry':'Halves incoming super-effective Steel hit (once)',
   'Roseli Berry':'Halves incoming super-effective Fairy hit (once)',
   'Chilan Berry':'Halves any incoming Normal hit (SE or not — once)',
+  // Champions M-B held items previously absent from the picker
+  'Light Ball':'Doubles Pikachu\'s Atk & SpA',
+  'Focus Band':'May hold on with 1 HP when hit by a KO move (each hit — not modeled)',
+  "King's Rock":'Attacks may make the target flinch (not modeled)',
+  'Quick Claw':'Small chance to move first regardless of Speed (not modeled)',
+  'Scope Lens':'Raises the holder\'s critical-hit ratio (toggle Crit to model)',
+  'Bright Powder':'Lowers opponents\' accuracy (accuracy not modeled)',
+  'Shell Bell':'Heals the holder for 1/8 of the damage it deals',
+  // Status / utility berries
+  'Cheri Berry':'Cures paralysis once (not modeled)',
+  'Chesto Berry':'Cures sleep once (not modeled)',
+  'Pecha Berry':'Cures poison once (not modeled)',
+  'Rawst Berry':'Cures a burn once (not modeled)',
+  'Aspear Berry':'Thaws out freeze once (not modeled)',
+  'Persim Berry':'Cures confusion once (not modeled)',
+  'Oran Berry':'Restores 10 HP when low (not modeled)',
+  'Leppa Berry':'Restores 10 PP to a move (not modeled)',
 };
 // Heuristic: any item ending in "ite" / "ite X" / "ite Y" is a mega stone.
 function descFor(kind, val){
@@ -2114,6 +2234,61 @@ function recoilInfo(move, atk, r){
     return {kind:'hp', dmg, pct:hpFrac*100, frac:hpFrac};
   }
   return null;
+}
+// Drain moves — heal a fraction of the damage dealt. Big Root boosts drain
+// healing by 30% (drain MOVES only, not Shell Bell). Draining Kiss / Oblivion
+// Wing heal 75%; the rest 50%.
+const DRAIN_FRAC={
+  'Absorb':0.5,'Mega Drain':0.5,'Giga Drain':0.5,'Leech Life':0.5,'Drain Punch':0.5,
+  'Horn Leech':0.5,'Parabolic Charge':0.5,'Dream Eater':0.5,'Bitter Blade':0.5,
+  'Bouncy Bubble':0.5,'Matcha Gotcha':0.5,'Draining Kiss':0.75,'Oblivion Wing':0.75,
+};
+// Heal-back from a damaging move: drain moves (fraction of damage, Big Root +30%)
+// and the Shell Bell item (1/8 of damage dealt). Returns an array of heal rows,
+// or null. Mirrors recoilInfo so the result panel can show a "↳ … heals X HP" line.
+function healInfo(move, atk, r){
+  if(!r) return null;
+  const atkMax=statsOf(atk)?.hp||0;
+  const rows=[];
+  let frac=DRAIN_FRAC[move];
+  if(frac){
+    const bigRoot=atk.item==='Big Root' && !field.magicRoom;
+    if(bigRoot) frac*=1.3;
+    const lo=Math.max(1,Math.floor(r.lo*frac)), hi=Math.max(1,Math.floor(r.hi*frac));
+    rows.push({label:bigRoot?'Drain (Big Root +30%)':'Drain', lo, hi,
+      pctLo:atkMax?lo/atkMax*100:0, pctHi:atkMax?hi/atkMax*100:0});
+  }
+  if(atk.item==='Shell Bell' && !field.magicRoom){
+    const lo=Math.max(1,Math.floor(r.lo/8)), hi=Math.max(1,Math.floor(r.hi/8));
+    rows.push({label:'Shell Bell', lo, hi,
+      pctLo:atkMax?lo/atkMax*100:0, pctHi:atkMax?hi/atkMax*100:0});
+  }
+  return rows.length?rows:null;
+}
+// Effective accuracy: the move's base accuracy adjusted by the attacker's and
+// defender's accuracy modifiers (item effects suppressed under Magic Room).
+// Returns null when there's nothing to surface — no numeric accuracy, or no
+// modifier changed the outcome. No Guard on either side => always hits.
+function accuracyInfo(move, atk, def){
+  const mv=DEX.moves[move]; if(!mv) return null;
+  if(atk.ability==='No Guard' || def.ability==='No Guard')
+    return {always:true, factors:['No Guard']};
+  const base=mv.accuracy;
+  if(typeof base!=='number') return null;   // bypass (true) / status moves: nothing to show
+  const noItems=field.magicRoom;
+  const phys=mv.category==='physical';
+  let mult=1; const factors=[];
+  if(atk.ability==='Compound Eyes'){mult*=1.3;factors.push('Compound Eyes ×1.3');}
+  if(atk.ability==='Victory Star'){mult*=1.1;factors.push('Victory Star ×1.1');}
+  if(atk.ability==='Hustle' && phys){mult*=0.8;factors.push('Hustle ×0.8');}
+  if(atk.item==='Wide Lens' && !noItems){mult*=1.1;factors.push('Wide Lens ×1.1');}
+  if((def.item==='Bright Powder'||def.item==='Lax Incense') && !noItems){mult*=0.9;factors.push(def.item+' ×0.9');}
+  if(def.ability==='Sand Veil' && weather==='sand'){mult*=0.8;factors.push('Sand Veil ×0.8');}
+  if(def.ability==='Snow Cloak' && weather==='snow'){mult*=0.8;factors.push('Snow Cloak ×0.8');}
+  if(!factors.length) return null;
+  const eff=Math.min(100, Math.round(base*mult));
+  if(eff===base) return null;   // e.g. 100%-acc move + a positive item — no visible change
+  return {always:false, base, eff, factors};
 }
 
 // Compute the effective BP for a move, accounting for HP%, status, and target-state doublers.
@@ -2421,6 +2596,77 @@ function defaultSet(forme){
   const s = bucket.sets.slice().sort((a,b)=>setTs(b.date)-setTs(a.date))[0];
   return {forme,item:s.item||'',ability:s.ability||'',nature:s.nature||'Serious',ev:parseEVs(s.evs),boost:zeroBoost(),moves:(s.moves||[]).slice(0,4),status:'ok',hpPct:100};
 }
+// ── ENEMY SPREAD MATCHING (open-team-sheet tournaments) ─────────────────────
+// In open-team-sheet play the opponent's species/items/abilities/moves are known
+// but their EV spreads are not. These helpers borrow a plausible spread from the
+// team database, prioritising ability + item matches (highest), then moves (last).
+function _norm(s){return (s||'').toString().toLowerCase().replace(/\s+/g,' ').trim();}
+function monHasSpread(m){const e=m.ev||parseEVs(m.evs||'');return STAT_KEYS.some(([k])=>(e[k]||0)>0);}
+// Score one DB set against a known teamsheet mon. ability+item weighted highest
+// (4 each), each shared move worth 0.5 (moves are the lowest-priority signal).
+function spreadMatchScore(sheetMon, set){
+  const itemMatch=!!sheetMon.item && _norm(sheetMon.item)===_norm(set.item);
+  const abMatch  =!!sheetMon.ability && _norm(sheetMon.ability)===_norm(set.ability);
+  const sheetMoves=(sheetMon.moves||[]).filter(Boolean).map(_norm);
+  const setMoves  =(set.moves||[]).filter(Boolean).map(_norm);
+  const movesMatched=sheetMoves.filter(mv=>setMoves.includes(mv)).length;
+  return {score:(abMatch?4:0)+(itemMatch?4:0)+movesMatched*0.5,
+    item:itemMatch, ability:abMatch, moves:movesMatched, totalMoves:sheetMoves.length};
+}
+// Best single spread (ev+nature) to borrow for one teamsheet mon. Returns
+// {ev, nature, note} or null when the dex has no usable spread for the forme.
+function bestSpreadFor(sheetMon){
+  const forme=sheetMon.forme||jsForme(sheetMon.name, sheetMon.item);
+  const sets=setsFor(forme).filter(s=>s.evs);   // deduped; need a real spread
+  if(!sets.length) return null;
+  let best=null;
+  sets.forEach(s=>{
+    const mt=spreadMatchScore(sheetMon, s);
+    if(!best || mt.score>best.match.score || (mt.score===best.match.score && (s.n||0)>(best.n||0)))
+      best={...s, match:mt};
+  });
+  // No ability/item/move overlap anywhere → fall back to the most common spread.
+  if(!best || best.match.score===0){
+    const d=defaultSet(forme);
+    if(!STAT_KEYS.some(([k])=>(d.ev[k]||0)>0)) return null;
+    return {ev:d.ev, nature:d.nature||'Serious',
+      note:{mostCommon:true, item:false, ability:false, moves:0,
+        totalMoves:(sheetMon.moves||[]).filter(Boolean).length}};
+  }
+  return {ev:parseEVs(best.evs), nature:best.nature||'Serious',
+    note:{mostCommon:false, item:best.match.item, ability:best.match.ability,
+      moves:best.match.moves, totalMoves:best.match.totalMoves,
+      team:best.team, date:best.date}};
+}
+// Base-forme signature of a team (sorted) — two teams "match" when their six
+// species line up regardless of item/mega state / slot order.
+function _teamSig(mons){return (mons||[]).map(m=>baseOf(m.forme||m.name||jsForme(m.name,m.item))).filter(Boolean).sort();}
+function _sigEq(a,b){return a.length===b.length && a.every((x,i)=>x===b[i]);}
+// Find DB teams whose six species match the given teamsheet, ranked by how well
+// each team's per-mon items/abilities/moves line up (best on top). Each result
+// carries aligned per-mon rows so the picker can preview + copy the spreads.
+function matchingTeamsFor(sheetMons){
+  const sig=_teamSig(sheetMons);
+  if(sig.length<2) return [];
+  const out=[];
+  scopeTeams.forEach(t=>{
+    if(!_sigEq(sig, _teamSig(t.mons))) return;
+    if(!t.mons.some(m=>monHasSpread({ev:m.ev, evs:m.evs}))) return;   // nothing to borrow
+    const pool=t.mons.slice();   // consume matches so duplicate species map 1:1
+    let score=0; const rows=[];
+    sheetMons.forEach(sm=>{
+      const base=baseOf(sm.forme||jsForme(sm.name,sm.item));
+      const j=pool.findIndex(x=>baseOf(x.forme||x.name)===base);
+      const dbm=j>=0?pool.splice(j,1)[0]:null;
+      if(!dbm){rows.push({sheet:sm, db:null, match:null});return;}
+      const mt=spreadMatchScore(sm, {item:dbm.item, ability:dbm.ability, moves:dbm.moves});
+      score+=mt.score;
+      rows.push({sheet:sm, db:dbm, match:mt});
+    });
+    out.push({team:t, score, rows});
+  });
+  return out.sort((a,b)=>b.score-a.score || setTs(b.team.date)-setTs(a.team.date));
+}
 // Resolve a typed search string to a real forme. Match priority: exact ->
 // case-insensitive exact -> prefix -> contains. Within each tier, prefer the
 // forme with the highest usage in the current dataset (so typing "char" finds
@@ -2546,6 +2792,10 @@ function calcDmg(atk,move,def,atkSide,defSide){
   const aItemSrc = isFoulPlay ? dItem    : aItem;
   const aSideSrc = isFoulPlay ? defSide  : atkSide;
   if(phys && (aSrc.ability==='Huge Power'||aSrc.ability==='Pure Power')) Aa*=2;
+  // Hustle: physical Attack ×1.5 (its −20% physical accuracy shows on the result line).
+  if(phys && aSrc.ability==='Hustle') Aa=Math.floor(Aa*1.5);
+  // Light Ball: doubles Pikachu's Attack and Sp. Atk (Aa is whichever the move reads).
+  if(aItemSrc==='Light Ball' && (aSrc.forme||'').startsWith('Pikachu')) Aa*=2;
   if(!phys && aSrc.ability==='Solar Power' && (weather==='sun'||weather==='harshsun')) Aa=Math.floor(Aa*1.5);
   // Guts: +50% Atk if burned (and ignores burn's halving). Facade also ignores
   // the burn Atk-cut (its 2× BP is handled in effectiveBP).
@@ -2562,6 +2812,11 @@ function calcDmg(atk,move,def,atkSide,defSide){
   if(dItem==='Assault Vest'&&!defReadsPhys)D=Math.floor(D*1.5);
   if(dItem==='Eviolite')D=Math.floor(D*1.5);
   if(defReadsPhys && def.ability==='Fur Coat') D=Math.floor(D*2);
+  // Marvel Scale: physical Def ×1.5 while the defender holds a major status.
+  // Gated solely by def.marvelScale — the on-screen toggle is the source of
+  // truth (auto-enabled when a status is set, but user-overridable, like the
+  // Rage Fist counter). Physical side only — never boosts SpD.
+  if(defReadsPhys && def.ability==='Marvel Scale' && def.marvelScale) D=Math.floor(D*1.5);
   if(!defReadsPhys && def.ability==='Ice Scales') D=Math.floor(D*2);
   if(!defReadsPhys && defSide.flowerGift && (weather==='sun'||weather==='harshsun')) D=Math.floor(D*1.5);
   if(!defReadsPhys && weather==='sand' && dT.includes('rock')) D=Math.floor(D*1.5);
@@ -2617,6 +2872,10 @@ function calcDmg(atk,move,def,atkSide,defSide){
   if(aItem==='Muscle Band' && phys) mod=chainMod(mod,M(1.1));
   if(aItem==='Wise Glasses' && !phys) mod=chainMod(mod,M(1.1));
   if(aItem==='Expert Belt' && eff>1) mod=chainMod(mod,M(1.2));
+  // Metronome (item): +20% per consecutive same-move use. atk.metronome is the
+  // USE number (1 = first use → ×1.0), so the boost is 0.2×(uses−1), capped at
+  // ×2.0 from use 6 on. See syncCounters for the counter UI.
+  if(aItem==='Metronome'){const n=Math.min(5, Math.max(0,(atk.metronome||1)-1)); if(n>0) mod=chainMod(mod, M(1 + 0.2*n));}
   // weather move boosts (regular)
   if(weather==='sun'){if(moveType==='fire')mod=chainMod(mod,M(1.5));if(moveType==='water')mod=chainMod(mod,M(0.5));}
   if(weather==='rain'){if(moveType==='water')mod=chainMod(mod,M(1.5));if(moveType==='fire')mod=chainMod(mod,M(0.5));}
@@ -2838,6 +3097,7 @@ function slotHTML(p,title){
     <input id="${p}_nature" title="Nature shapes which stat is +10%/-10%" autocomplete="off" onfocus="setTimeout(()=>this.select(),0)">
   </div>
   <div class="seclabel">Stat points <span class="sp-total" id="${p}_sptot">0 / 66</span></div>
+  <div class="spreadnote" id="${p}_spreadnote" hidden></div>
   <table class="statedit"><colgroup><col class="statcol"><col class="spcol"><col></colgroup><thead><tr><th></th><th>SP</th><th>Boost</th></tr></thead><tbody>
     ${STAT_KEYS.map(([k,lab])=>`<tr>
       <td class="sk"><span class="slbl" id="${p}_slbl_${k}">${lab}</span> <span id="${p}_fin_${k}" class="finv"></span></td>
@@ -2855,6 +3115,14 @@ function slotHTML(p,title){
     <div class="counterrow" data-counter="timesHit" hidden>
       <span class="counterlbl" title="Rage Fist: +50 BP per time this Pokémon has been hit (capped at 350 BP). Reg-B: counter RESETS on switch-out.">Times hit</span>
       <div class="counterstep"><button data-step="-1">−</button><span class="counterval" id="${p}_cnt_th">0</span><button data-step="+1">+</button></div>
+    </div>
+    <div class="counterrow" data-counter="marvelScale" hidden>
+      <span class="counterlbl" title="Marvel Scale: Defense ×1.5 while this Pokémon has a major status (BRN/PAR/SLP/PSN/TOX/FRZ). Auto-enabled when a status is set; toggle to override.">Marvel Scale</span>
+      <div class="countertoggle"><button class="mstoggle" id="${p}_ms_btn" type="button">Off</button></div>
+    </div>
+    <div class="counterrow" data-counter="metronome" hidden>
+      <span class="counterlbl" title="Metronome (item): +20% damage per consecutive use of the SAME move, capping at ×2.0 from the 6th use. Resets the moment you switch moves. Set which use this is — 1 = first use (×1.0), 2 = second (×1.2), …">Metronome uses</span>
+      <div class="counterstep"><button data-step="-1">−</button><span class="counterval" id="${p}_cnt_mt">1</span><button data-step="+1">+</button><span class="counter-mult" id="${p}_cnt_mtx">×1.0</span></div>
     </div>
   </div>
   <div class="seclabel">HP <span id="${p}_hplabel" class="hplabel">100% · — / —</span></div>
@@ -2891,12 +3159,20 @@ function renderFinals(p,m){const s=statsOf(m);
     // computes it itself). Atk: -1 (or +1 net Defiant); SpA: +2 Competitive.
     const virtIntim = m.forme ? virtIntimStage(m, other, k) : 0;
     const effB=b+virtIntim;
+    // Choice Scarf ×1.5 chip on the Spe row. The displayed base stat stays raw;
+    // the chip shows the in-battle scarf value (floor of the stage-boosted stat
+    // ×1.5) — mirrors effSpeed's scarf step. Suppressed under Magic Room.
+    let scarfx='';
+    if(k==='spe' && m.item==='Choice Scarf' && !field.magicRoom){
+      const shown=effB?applyBoost(v,effB):v;
+      scarfx=` <span class="scarfx" title="Choice Scarf: Speed ×1.5 → ${Math.floor(shown*1.5)}">×1.5</span>`;
+    }
     if(effB){
       const boosted=applyBoost(v,effB);
       const sign=effB>0?'up':'down';
       const intimHint=virtIntim?` title="Auto-applied from opposing ${esc(other.forme)}'s Intimidate — click a stage chip to override (e.g. if this mon switched in later)"`:'';
-      cell.innerHTML=`<b class="${sign}"${intimHint}>${boosted}</b> <span class="finbase">(${v})</span> <span class="bsign ${sign}">${effB>0?'+'+effB:effB}</span>`;
-    } else cell.innerHTML=`<b>${v}</b>`;
+      cell.innerHTML=`<b class="${sign}"${intimHint}>${boosted}</b> <span class="finbase">(${v})</span> <span class="bsign ${sign}">${effB>0?'+'+effB:effB}</span>`+scarfx;
+    } else cell.innerHTML=`<b>${v}</b>`+scarfx;
     // Sync stage chip active state — show EFFECTIVE stage (b + virtIntim) so
     // Intimidate visually shows as the -1 chip lit up, not just as text.
     if(k!=='hp'){const row=document.querySelector(`.stagerow[data-p="${p}"][data-k="${k}"]`);
@@ -2957,10 +3233,12 @@ function populateSlot(p,m){
   STAT_KEYS.forEach(([k])=>{const v=m.ev?.[k]??0;const sp=g(p+'_sp_'+k);if(sp)sp.value=v;const spv=g(p+'_spv_'+k);if(spv)spv.value=v;});
   [0,1,2,3].forEach(i=>g(p+'_mv'+i).value=m.moves[i]||'');
   syncHPUI(p,m);
+  syncMarvelDefault(m);
   syncCounters(p,m);
   syncStanceToggle(p,m);
   syncBtnGroup(p+'_st',m.status||'ok');
   syncFxRow(p,p==='a'?sideA:sideB);
+  syncSpreadNote(p,m);
   renderFinals(p,m);}
 function readSlot(p,m){m.item=g(p+'_item').value.trim();m.ability=g(p+'_ability').value.trim();m.nature=g(p+'_nature').value;
   if(!m.ev)m.ev=zeroEV();if(!m.boost)m.boost=zeroBoost();
@@ -3022,14 +3300,32 @@ function syncCounters(p,m){
   const moves=m.moves||[];
   const showFA=moves.includes('Last Respects');
   const showTH=moves.includes('Rage Fist');
-  wrap.hidden=!(showFA||showTH);
+  const showMS=m.ability==='Marvel Scale';
+  const showMT=m.item==='Metronome';
+  wrap.hidden=!(showFA||showTH||showMS||showMT);
   const faRow=wrap.querySelector('[data-counter="faintedAllies"]');
   const thRow=wrap.querySelector('[data-counter="timesHit"]');
+  const msRow=wrap.querySelector('[data-counter="marvelScale"]');
+  const mtRow=wrap.querySelector('[data-counter="metronome"]');
   if(faRow)faRow.hidden=!showFA;
   if(thRow)thRow.hidden=!showTH;
+  if(msRow)msRow.hidden=!showMS;
+  if(mtRow)mtRow.hidden=!showMT;
   const faVal=g(p+'_cnt_fa'), thVal=g(p+'_cnt_th');
   if(faVal)faVal.textContent=m.faintedAllies||0;
   if(thVal)thVal.textContent=m.timesHit||0;
+  const msBtn=g(p+'_ms_btn');
+  if(msBtn){msBtn.textContent=m.marvelScale?'On':'Off';msBtn.classList.toggle('on',!!m.marvelScale);}
+  // Metronome counter: use number inside the − N + stepper, multiplier beside it.
+  const mtVal=g(p+'_cnt_mt'), mtX=g(p+'_cnt_mtx');
+  if(mtVal||mtX){const uses=Math.max(1,m.metronome||1);if(mtVal)mtVal.textContent=uses;if(mtX)mtX.textContent='×'+(1+0.2*Math.min(5,uses-1)).toFixed(1);}
+}
+// Marvel Scale default: derive the toggle from status (its real trigger) unless
+// the user has manually overridden it this load. Cleared when the ability isn't
+// Marvel Scale. _msManual is reset on every fresh mon/spread load.
+function syncMarvelDefault(m){
+  if(m.ability!=='Marvel Scale'){m.marvelScale=false;m._msManual=false;return;}
+  if(!m._msManual) m.marvelScale = !!(m.status && m.status!=='ok');
 }
 // Set-picker labels — stable per side, rebuilt when the forme changes. The
 // smart-picker treats each label as a value; onPick maps label → index.
@@ -3050,6 +3346,7 @@ function wireSlot(p,m){
   function applyForme(v){
     Object.assign(m,defaultSet(v));
     m.megaOff=false;  // new mon pick resets the what-if toggle
+    _resetSlotTransients(m);
     correctMegaAbility(m);  // calc-side only
     rebuildSetOptions(p,m);
     g(p+'_search').value=v;populateSlot(p,m);
@@ -3081,6 +3378,7 @@ function wireSlot(p,m){
       const i=labels.indexOf(label)-1;  // 0-th entry is "Most recent / default"
       if(i<0||!ss[i])Object.assign(m,defaultSet(m.forme));
       else{const s=ss[i];m.item=s.item||'';m.ability=s.ability||'';m.nature=s.nature||'Serious';m.ev=parseEVs(s.evs);m.boost=zeroBoost();m.moves=(s.moves||[]).slice(0,4);while(m.moves.length<4)m.moves.push('');m.status='ok';m.hpPct=100;}
+      _resetSlotTransients(m);
       correctMegaAbility(m);
       populateSlot(p,m);if(p==='a')selA=null;else selB=null;
       afterSlotChange(p,m);
@@ -3152,8 +3450,10 @@ function wireSlot(p,m){
   STAT_KEYS.forEach(([k])=>{
     const sp=g(p+'_sp_'+k);
     const spv=g(p+'_spv_'+k);
-    if(sp) sp.addEventListener('input',()=>{if(spv)spv.value=sp.value;readSlot(p,m);updateResults();});
-    if(spv) spv.addEventListener('input',()=>{const v=Math.max(0,Math.min(32,+spv.value||0));if(sp)sp.value=v;readSlot(p,m);updateResults();});
+    // Hand-editing SP invalidates the borrowed-spread note (EVs no longer match).
+    const clearNote=()=>{if(m._spreadNote){m._spreadNote=null;syncSpreadNote(p,m);}};
+    if(sp) sp.addEventListener('input',()=>{if(spv)spv.value=sp.value;clearNote();readSlot(p,m);updateResults();});
+    if(spv) spv.addEventListener('input',()=>{const v=Math.max(0,Math.min(32,+spv.value||0));if(sp)sp.value=v;clearNote();readSlot(p,m);updateResults();});
   });
   // Stage chips: clicking sets the EFFECTIVE stage the user wants. If
   // Intimidate is currently in play (opposing mon has it), we back out the
@@ -3168,9 +3468,15 @@ function wireSlot(p,m){
     const virtIntim = virtIntimStage(m, other, k);
     m.boost[k]=Math.max(-6,Math.min(6, s - virtIntim));
     renderFinals(p,m);updateResults();});
-  // Status buttons (single-click)
+  // Status buttons (single-click). Re-derive Marvel Scale (its real trigger is
+  // a major status) unless the user manually overrode the toggle.
   document.querySelectorAll(`[data-grp="${p}_st"]`).forEach(btn=>btn.onclick=()=>{
-    m.status=btn.dataset.v;syncBtnGroup(p+'_st',m.status);updateResults();});
+    m.status=btn.dataset.v;syncBtnGroup(p+'_st',m.status);
+    syncMarvelDefault(m);syncCounters(p,m);updateResults();});
+  // Marvel Scale manual toggle — flips the Def ×1.5 gate and marks it manual so
+  // later status changes stop auto-overriding it (same idea as the Rage Fist counter).
+  const msBtn=g(p+'_ms_btn');
+  if(msBtn)msBtn.onclick=()=>{m.marvelScale=!m.marvelScale;m._msManual=true;syncCounters(p,m);updateResults();};
   // Side-effects buttons (toggle, single-click)
   const side=p==='a'?sideA:sideB;
   document.querySelectorAll(`[data-grp="${p}_fx"]`).forEach(btn=>btn.onclick=()=>{
@@ -3191,10 +3497,11 @@ function wireSlot(p,m){
   // Counter steppers — show/hide tracked via syncCounters; values clamp here
   document.querySelectorAll(`#${p}_counters .counterrow`).forEach(row=>{
     const key=row.dataset.counter;
-    const cap=key==='faintedAllies'?5:6;
+    const cap=key==='faintedAllies'?5:6;   // faintedAllies 5; timesHit & metronome (uses) 6
+    const floor=key==='metronome'?1:0;     // Metronome counts uses from 1 (first use)
     row.querySelectorAll('button[data-step]').forEach(btn=>btn.onclick=()=>{
       const delta=+btn.dataset.step;
-      m[key]=Math.max(0,Math.min(cap,(m[key]||0)+delta));
+      m[key]=Math.max(floor,Math.min(cap,(m[key]||floor)+delta));
       syncCounters(p,m);updateResults();
     });
   });
@@ -3463,7 +3770,7 @@ const WEATHER_LABEL={sun:'Sun',rain:'Rain',sand:'Sand',snow:'Snow',harshsun:'Har
 const TERRAIN_LABEL={electric:'Electric',grassy:'Grassy',psychic:'Psychic',misty:'Misty'};
 // Items called out inline (before the mon name) because they modify stats or damage
 // in a way a reader expects to see spelled out. Berries/resist-type items aren't modeled.
-const ATK_ITEM_INLINE=new Set(['Choice Band','Choice Specs','Life Orb','Expert Belt','Muscle Band','Wise Glasses','Metronome']);
+const ATK_ITEM_INLINE=new Set(['Choice Band','Choice Specs','Life Orb','Expert Belt','Muscle Band','Wise Glasses','Metronome','Light Ball']);
 const DEF_ITEM_INLINE=new Set(['Assault Vest','Eviolite']);
 // Abilities that materially affect the damage roll (mult, immunity, crit,
 // stat scaling, multi-hit, type-shift, -ate). Rendered inline after the item
@@ -3704,13 +4011,30 @@ function moveDetailHTML(side,atk,def,i){const mv=atk.moves[i];const info=DEX.mov
       recoilLine=`<div class="small" style="margin-top:4px;color:var(--bad)">↳ Recoil: <b>${rec.dmg}</b> HP (${rec.pct.toFixed(0)}% of attacker's max HP — fixed cost)</div>`;
     }
   }
+  // Heal-back — Shell Bell (1/8 of damage) and drain moves (Big Root +30%).
+  const heals=healInfo(mv, atk, r);
+  const healLine=heals?heals.map(h=>`<div class="small" style="margin-top:4px;color:var(--good)">↳ ${esc(h.label)}: heals <b>${h.lo}–${h.hi}</b> HP (${h.pctLo.toFixed(1)}–${h.pctHi.toFixed(1)}% of max)</div>`).join(''):'';
+  // Effective accuracy — only when a holder/field modifier changes it (Wide Lens,
+  // Compound Eyes, Hustle, No Guard, Bright Powder, Sand Veil/Snow Cloak, …).
+  const acc=accuracyInfo(mv, atk, def);
+  let accLine='';
+  if(acc){
+    if(acc.always){
+      accLine=`<div class="small" style="margin-top:4px;color:var(--good)">↳ Accuracy: <b>always hits</b> (No Guard)</div>`;
+    } else {
+      const col=acc.eff>=acc.base?'good':'warning';
+      accLine=`<div class="small" style="margin-top:4px;color:var(--${col})">↳ Accuracy: <b>${acc.base}% → ${acc.eff}%</b> (${esc(acc.factors.join(' · '))})</div>`;
+    }
+  }
   const summary=calcSummary(atk,def,mv,info,r,aS,dS);
   return `<div class="detail"><div class="calcline"><span class="calcline-txt">${esc(summary)}</span><button class="calcline-copy" type="button" data-copy="${esc(summary)}" title="Copy Showdown-style summary">Copy</button></div>
     <div style="margin-top:6px">${esc(effectiveForme(atk))}${aBoost} <b>${r.isCrit?'(crit) ':''}${esc(mv)}</b> (${bpLab}${r.eff!==1?', '+r.eff+'×':''}${r.moveType!==info.type?' · type→'+esc(r.moveType):''}${hitLab}) vs ${esc(effectiveForme(def))}${dBoost}:
     <b>${r.lo}–${r.hi}</b> (<b style="color:${dmgColor(r.pctHi)}">${r.pctLo.toFixed(1)}–${r.pctHi.toFixed(1)}%</b> of ${r.hp} HP) — ${koNote(r)}${sp}${berry}${pdNote}</div>
     ${descLine}
     ${ctx.length?`<div class="small" style="margin-top:2px">${ctx.join(' · ')}</div>`:''}
+    ${accLine}
     ${recoilLine}
+    ${healLine}
     <div class="small" style="margin-top:5px">${r.rolls?'rolls: '+r.rolls.join(', '):r.hits>1?'multi-hit · '+r.hits+' hits':''}</div></div>`;}
 function firstDmgIdx(m){return (m.moves||[]).findIndex(mv=>DEX.moves[mv]?.power);}
 // Pick the move that does the most damage (replaces firstDmgIdx for default selection)
@@ -3816,7 +4140,8 @@ function updateResults(){const el=g('dmgresults');
     btn.classList.add('done');btn.textContent='✓';
     try{tcount('calc/use-move',mv);}catch(_){}
   });}
-function loadIntoSlot(p,m,src){m.forme=src.forme;m.item=src.item||'';m.ability=src.ability||'';
+function loadIntoSlot(p,m,src){_resetSlotTransients(m);
+  m.forme=src.forme;m.item=src.item||'';m.ability=src.ability||'';
   m.nature=src.nature||'Serious';
   m.ev={...(src.ev||parseEVs(src.evs||''))};m.boost={...(src.boost||zeroBoost())};
   m.status=src.status||'ok';m.hpPct=src.hpPct??100;
@@ -3825,6 +4150,98 @@ function loadIntoSlot(p,m,src){m.forme=src.forme;m.item=src.item||'';m.ability=s
   g(p+'_search').value=src.forme;rebuildSetOptions(p,m);populateSlot(p,m);if(p==='a')selA=null;else selB=null;
   afterSlotChange(p,m);
   updateResults();}
+// Reset per-load transient flags (Marvel Scale manual override, borrowed-spread
+// note) so a fresh mon/spread starts from auto-derived defaults.
+function _resetSlotTransients(m){m._msManual=false;m._spreadNote=null;}
+// Load an enemy teamsheet mon into a slot (default: slot B). When the mon has no
+// EV spread (open team sheet), borrow the best-matching spread from the database
+// and surface a note under the stat block showing what did/didn't match.
+function loadEnemyMon(p, src){
+  const m=p==='a'?A:B;
+  let note=null;
+  if(src && !monHasSpread(src)){
+    const bs=bestSpreadFor(src);
+    if(bs){ src={...src, ev:{...bs.ev}, evs:'', nature:bs.nature}; note=bs.note; }
+  }
+  loadIntoSlot(p, m, src);   // clears _spreadNote via _resetSlotTransients
+  m._spreadNote=note;
+  syncSpreadNote(p, m);
+  try{ if(note) tcount && tcount('calc/spread-borrow', 'calc: spread borrowed'); }catch(e){}
+}
+// Render the borrowed-spread note strip under a slot's stat block.
+function syncSpreadNote(p,m){
+  const el=g(p+'_spreadnote'); if(!el) return;
+  const n=m&&m._spreadNote;
+  if(!n){el.hidden=true;el.innerHTML='';return;}
+  el.hidden=false;
+  const tick=b=>b?'<span class="sm-ok">✓</span>':'<span class="sm-no">✕</span>';
+  if(n.mostCommon){
+    el.innerHTML=`<span class="sm-ic">🧬</span><span>Sample spread — <b>most common</b> (no set matched this sheet's item/ability/moves)</span><button class="sm-x" title="Dismiss" type="button">✕</button>`;
+  } else {
+    const src=n.team?`from “${esc(n.team)}”${n.date?' · '+esc(n.date):''}`:'from the meta';
+    el.innerHTML=`<span class="sm-ic">🧬</span><span>Sample spread ${src} · Item ${tick(n.item)} · Ability ${tick(n.ability)} · Moves ${n.moves}/${n.totalMoves}</span><button class="sm-x" title="Dismiss" type="button">✕</button>`;
+  }
+  const x=el.querySelector('.sm-x'); if(x)x.onclick=()=>{m._spreadNote=null;el.hidden=true;el.innerHTML='';};
+}
+// ── Save-time spread-match offer (whole enemy team) ─────────────────────────
+// When an enemy teamsheet is saved with no spreads and same-species DB team(s)
+// exist, offer to copy a full team's spreads (natures+EVs only — items,
+// abilities, and moves stay as pasted since they match the real teamsheet).
+let _spreadMatchCandidates=[];
+function maybeOfferSpreadMatch(){
+  if(!enemyTeam || !enemyTeam.length) return;
+  if(!enemyTeam.some(m=>!monHasSpread(m))) return;      // every mon already has a spread
+  const matches=matchingTeamsFor(enemyTeam);
+  if(!matches.length) return;                            // nothing to borrow from
+  _spreadMatchCandidates=matches;
+  renderSpreadMatchModal(matches);
+  const modal=document.getElementById('spreadmatch');
+  if(modal)modal.classList.add('open');
+  try{ tcount && tcount('calc/spread-offer','calc: spread-match offered'); }catch(e){}
+}
+function renderSpreadMatchModal(matches){
+  const body=document.getElementById('spreadmatch-body');
+  if(!body)return;
+  const n=enemyTeam.length;
+  body.innerHTML=matches.map((c,ci)=>{
+    const items=c.rows.filter(r=>r.match&&r.match.item).length;
+    const abil =c.rows.filter(r=>r.match&&r.match.ability).length;
+    const full =items===n && abil===n;
+    const mons=c.rows.map(r=>{
+      const nm=esc(r.sheet.forme||r.sheet.name||'');
+      if(!r.db) return `<div class="sm-mon"><span class="sm-mon-nm">${nm}</span><span class="sm-tk sm-no">no spread</span></div>`;
+      const ev=r.db.evs?esc(r.db.evs):'—';
+      const nat=r.db.nature&&r.db.nature!=='Serious'?' '+esc(r.db.nature):'';
+      const it=r.match.item?'<span class="sm-ok">i</span>':'<span class="sm-no">i</span>';
+      const ab=r.match.ability?'<span class="sm-ok">a</span>':'<span class="sm-no">a</span>';
+      return `<div class="sm-mon"><span class="sm-mon-nm">${nm}</span> <span class="sm-mon-ev">${ev}${nat}</span><span class="sm-tk" title="item / ability / moves matched vs your sheet">${it} ${ab} ${r.match.moves}/${r.match.totalMoves}m</span></div>`;
+    }).join('');
+    return `<div class="sm-team${full?' best':''}">
+      <div class="sm-team-head"><b>${esc(c.team.description||c.team.team_id||'Team')}</b>
+        <span class="sm-score">items ${items}/${n} · abilities ${abil}/${n}${c.team.date?' · '+esc(c.team.date):''}</span>
+        ${full?'<span class="sm-badge">full match</span>':''}
+        <button class="ts-btn ts-btn-accent sm-use" type="button" data-ci="${ci}">Use these spreads</button></div>
+      <div class="sm-team-mons">${mons}</div></div>`;
+  }).join('');
+  body.querySelectorAll('.sm-use').forEach(btn=>btn.onclick=()=>applySpreadMatch(+btn.dataset.ci));
+}
+function applySpreadMatch(ci){
+  const cand=_spreadMatchCandidates[ci];
+  if(!cand)return;
+  cand.rows.forEach(row=>{
+    if(!row.db)return;
+    const sm=row.sheet;                       // same object ref inside enemyTeam
+    if(monHasSpread(sm))return;               // never overwrite a spread the sheet had
+    sm.ev=parseEVs(row.db.evs); sm.evs=row.db.evs||''; sm.nature=row.db.nature||sm.nature||'Serious';
+  });
+  // Regenerate + persist the raw paste so spreads survive reloads and show in the textarea.
+  enemyTeam.raw=serializeShowdown(enemyTeam);
+  try{localStorage.setItem('vgc_enemyteam_raw', enemyTeam.raw);}catch(e){}
+  closeSpreadMatch();
+  renderDmg();
+  try{ tcount && tcount('calc/spread-apply','calc: spread-match applied'); }catch(e){}
+}
+function closeSpreadMatch(){const m=document.getElementById('spreadmatch');if(m)m.classList.remove('open');}
 // For mega formes, the dataset's "most common ability" is the PRE-mega
 // ability (pastes list base ability since mega ability auto-applies in-game).
 // PokéAPI gives the post-mega ability. Override on load so calc + auto-wires
@@ -3849,6 +4266,8 @@ function correctMegaAbility(m){
 // triggers the same auto-wires, field sync, and other-slot re-render.
 function afterSlotChange(p, m){
   applySlotAutoWire(p,m);
+  syncMarvelDefault(m);   // re-derive Marvel Scale when ability/status just changed
+  syncCounters(p,m);      // show/hide the Marvel Scale toggle row
   syncFxRow(p,p==='a'?sideA:sideB);
   syncFieldUI();
   // Refresh the OTHER slot's stats so Intimidate indicator updates there
@@ -3900,7 +4319,7 @@ function renderDmg(){
       </div>
     </div>
     <div id="dmgresults"></div>
-    <div class="small calcfoot"><b>VGC doubles only.</b> Champions ruleset (lv50, IVs max, 1 SP = 8 EV — 32 SP/stat ≡ old 252 EV cap, 66 SP total). <b>Modeled:</b> STAB · type chart · spread · stat boosts · status (burn/Guts) · current HP (Multiscale) · weather (incl. extremes Harsh Sun/Heavy Rain/Strong Winds) · terrains (Electric/Grassy/Misty/Psychic, grounded only; Grassy halves EQ) · screens (×0.5 singles / ×2/3 doubles, Aurora Veil snow-only; crit bypasses) · Helping Hand · Friend Guard (doubles) · Power Spot · Battery · Steely Spirit · Flower Gift · Crit (ignores +def/-atk boosts; Sniper ×2.25) · Trick/Magic/Wonder Room · Gravity (ground hits Flying, suppresses Levitate) · <b>multi-hit moves</b> (Triple Axel/Triple Kick escalating BP; Population Bomb/Bullet Seed; Skill Link → max hits) · <b>move quirks</b>: Foul Play (defender Atk) · Body Press (user Def) · Psyshock/Psystrike/Secret Sword (target Def) · Facade (2× + ignores burn when statused) · Hex/Venoshock/Brine/Acrobatics/Knock Off · Low Kick/Grass Knot/Heavy Slam (weight) · Water Spout/Eruption (HP%) · <b>Intimidate auto-apply</b> (with Clear Body / Hyper Cutter / Inner Focus / Scrappy / Own Tempo / Oblivious immunity; Defiant counters; Competitive on special) · <b>contact/flag abilities</b>: Tough Claws ×1.3 (contact) · Iron Fist ×1.2 (punch) · Mega Launcher ×1.5 (pulse) · Strong Jaw ×1.5 (bite) · Sharpness ×1.5 (slicing) · Punk Rock ×1.3 atk / ×0.5 def (sound) · Soundproof immune (sound) · Bulletproof immune (bullet) · Fluffy ×0.5 contact + ×2 fire · -ate abilities (Pixilate/Aerilate/Refrigerate/Galvanize: Normal→type ×1.2 STAB) · Adaptability · Technician · Tinted Lens · Huge/Pure Power · Solar Power · Sand Force · Sniper · Neuroforce · Levitate / type-absorb immunities · Multiscale / Shadow Shield · Filter / Solid Rock / Prism Armor · Thick Fat · Heatproof · Purifying Salt · Fur Coat · Ice Scales · Choice/Specs/Life Orb/AV/Eviolite/type-boost items · Muscle Band ×1.1 phys · Wise Glasses ×1.1 spec · Expert Belt ×1.2 SE · Iron Ball grounding. · <b>Champions specifics:</b> Fire Mane (Mega Pyroar) · Fairy Aura toggle (Mega Floette-Eternal) · Eelevate ground-immunity (Mega Eelektross) · Mega Sol personal-sun (Mega Meganium) · Dragonize (Mega Feraligatr, Normal→Dragon ×1.2 STAB) · Piercing Drill (Mega Excadrill, note only — Protect not modeled) · Weather Ball type shift · Reg-B patches (Make It Rain acc 100→95, move BP shifts).</div>`;
+    <div class="small calcfoot"><b>VGC doubles only.</b> Champions ruleset (lv50, IVs max, 1 SP = 8 EV — 32 SP/stat ≡ old 252 EV cap, 66 SP total). <b>Modeled:</b> STAB · type chart · spread · stat boosts · status (burn/Guts) · current HP (Multiscale) · weather (incl. extremes Harsh Sun/Heavy Rain/Strong Winds) · terrains (Electric/Grassy/Misty/Psychic, grounded only; Grassy halves EQ) · screens (×0.5 singles / ×2/3 doubles, Aurora Veil snow-only; crit bypasses) · Helping Hand · Friend Guard (doubles) · Power Spot · Battery · Steely Spirit · Flower Gift · Crit (ignores +def/-atk boosts; Sniper ×2.25) · Trick/Magic/Wonder Room · Gravity (ground hits Flying, suppresses Levitate) · <b>multi-hit moves</b> (Triple Axel/Triple Kick escalating BP; Population Bomb/Bullet Seed; Skill Link → max hits) · <b>move quirks</b>: Foul Play (defender Atk) · Body Press (user Def) · Psyshock/Psystrike/Secret Sword (target Def) · Facade (2× + ignores burn when statused) · Hex/Venoshock/Brine/Acrobatics/Knock Off · Low Kick/Grass Knot/Heavy Slam (weight) · Water Spout/Eruption (HP%) · <b>Intimidate auto-apply</b> (with Clear Body / Hyper Cutter / Inner Focus / Scrappy / Own Tempo / Oblivious immunity; Defiant counters; Competitive on special) · <b>contact/flag abilities</b>: Tough Claws ×1.3 (contact) · Iron Fist ×1.2 (punch) · Mega Launcher ×1.5 (pulse) · Strong Jaw ×1.5 (bite) · Sharpness ×1.5 (slicing) · Punk Rock ×1.3 atk / ×0.5 def (sound) · Soundproof immune (sound) · Bulletproof immune (bullet) · Fluffy ×0.5 contact + ×2 fire · -ate abilities (Pixilate/Aerilate/Refrigerate/Galvanize: Normal→type ×1.2 STAB) · Adaptability · Technician · Tinted Lens · Huge/Pure Power · Solar Power · Sand Force · Sniper · Neuroforce · Levitate / type-absorb immunities · Multiscale / Shadow Shield · Filter / Solid Rock / Prism Armor · Thick Fat · Heatproof · Purifying Salt · Fur Coat · Ice Scales · Choice/Specs/Life Orb/AV/Eviolite/type-boost items · Muscle Band ×1.1 phys · Wise Glasses ×1.1 spec · Expert Belt ×1.2 SE · Metronome stack (×1.0→×2.0) · Light Ball (Pikachu Atk/SpA ×2) · Hustle Atk ×1.5 · Iron Ball grounding · <b>result-panel readouts</b>: effective accuracy (Wide Lens/Compound Eyes/Victory Star/Hustle/No Guard · Bright Powder/Sand Veil/Snow Cloak) · drain + Shell Bell heal-back. · <b>Champions specifics:</b> Fire Mane (Mega Pyroar) · Fairy Aura toggle (Mega Floette-Eternal) · Eelevate ground-immunity (Mega Eelektross) · Mega Sol personal-sun (Mega Meganium) · Dragonize (Mega Feraligatr, Normal→Dragon ×1.2 STAB) · Piercing Drill (Mega Excadrill, note only — Protect not modeled) · Weather Ball type shift · Reg-B patches (Make It Rain acc 100→95, move BP shifts).</div>`;
   wireSlot('a',A);wireSlot('b',B);
   // Field button handlers (single-click). Doubles is hard-pinned (see line ~838) — no Singles toggle in UI.
   document.querySelectorAll('[data-grp="weat"]').forEach(b=>b.onclick=()=>{
@@ -3919,6 +4338,7 @@ function renderDmg(){
     const raw=g('enemyta').value;
     try{localStorage.setItem('vgc_enemyteam_raw',raw);}catch(e){}
     enemyTeam=parseShowdown(raw);enemyTeam.raw=raw;renderDmg();
+    maybeOfferSpreadMatch();   // open-team-sheet: offer to borrow spreads
   };
   const enemybuild=g('enemybuild'); if(enemybuild) enemybuild.onclick=()=>openBuilder('enemy');
   const enemyclear=g('enemyclear'); if(enemyclear) enemyclear.onclick=()=>{
@@ -3933,14 +4353,13 @@ function renderDmg(){
     loadIntoSlot(p, p==='a'?A:B, myTeam[+b.dataset.i]);
   });
   // Fight-team opponent picker inside slot B: always loads to enemy side.
+  // Enemy loads route through loadEnemyMon so spread-less mons auto-borrow a spread.
   document.querySelectorAll('.ftbtn[data-fti]').forEach(b=>b.onclick=()=>{
-    const p=targetSlot('b');
-    loadIntoSlot(p, p==='a'?A:B, fightTeam.mons[+b.dataset.fti]);
+    loadEnemyMon(targetSlot('b'), fightTeam.mons[+b.dataset.fti]);
   });
   // Persistent enemy-team quick picks (slot B, when no fightTeam is active).
   document.querySelectorAll('.etbtn[data-eti]').forEach(b=>b.onclick=()=>{
-    const p=targetSlot('b');
-    loadIntoSlot(p, p==='a'?A:B, enemyTeam[+b.dataset.eti]);
+    loadEnemyMon(targetSlot('b'), enemyTeam[+b.dataset.eti]);
   });
   // Pin/lock buttons in the slot headers
   document.querySelectorAll('.pinbtn').forEach(b=>b.onclick=()=>{
@@ -4317,8 +4736,17 @@ function spRenderForme(name){
   return `${pokeSprite(name,'28')}<span class="sp-name">${esc(name)}</span>${ct?`<span class="sp-meta">${ct}</span>`:''}`;
 }
 function spRenderItem(name){
-  // Show a generic accent dot until item sprites are added in a future build.
-  return `<span class="sp-itemicon">◆</span><span class="sp-name">${esc(name)}</span>`;
+  // Icon from the dex item sprite (build_dex.py downloads PokéAPI item art);
+  // falls back to a generic accent dot when the item has no sprite (Champions-
+  // new mega stones etc.). Line 2 shows the item's effect summary.
+  const slug=DEX.items&&DEX.items[name]&&DEX.items[name].sprite;
+  const icon=slug
+    ? `<img class="sp-itemimg" src="data/sprites/items/${slug}.png" alt="" loading="lazy" onerror="this.classList.add('empty');this.removeAttribute('src')">`
+    : `<span class="sp-itemicon">◆</span>`;
+  const desc=descFor('item', name);
+  const line1=`<div class="sp-line1">${icon}<span class="sp-name">${esc(name)}</span></div>`;
+  const line2=desc?`<div class="sp-line2 sp-desc">${esc(desc)}</div>`:'';
+  return line1+line2;
 }
 function spRenderAbility(name, forme){
   const desc=ABILITY_DESC[name]||'';
@@ -4787,7 +5215,9 @@ document.addEventListener('keydown',e=>{
       : (fightTeam?.mons[i] || enemyTeam[i] || myTeam[i]);
     if(!src) return;
     const tgt = e.shiftKey ? targetSlot('a') : targetSlot('b');
-    loadIntoSlot(tgt, tgt==='a'?A:B, src);
+    // Enemy loads (non-shift) borrow a spread when the sheet mon has none.
+    if(e.shiftKey) loadIntoSlot(tgt, tgt==='a'?A:B, src);
+    else loadEnemyMon(tgt, src);
     e.preventDefault();return;
   }
   if(e.key==='Tab' && !e.shiftKey){swapAB();e.preventDefault();return;}
@@ -4801,7 +5231,7 @@ document.addEventListener('keydown',e=>{
     if(!mons) return;
     const idx=mons.findIndex(m=>(m.forme||m.name)===B.forme);
     const dir=e.key===']'?1:-1, next=((idx>=0?idx:0)+dir+mons.length)%mons.length;
-    loadIntoSlot('b',B,mons[next]);
+    loadEnemyMon('b',mons[next]);
     e.preventDefault();return;
   }
   if(e.key==='?'){showHelpOverlay(true);e.preventDefault();return;}
@@ -5213,6 +5643,7 @@ function _tbDoSave(){
   if(pasteEl) pasteEl.value = raw;
   closeBuilder();
   renderDmg();
+  if(tbMode === 'enemy') maybeOfferSpreadMatch();   // offer to borrow spreads for spread-less enemy sheets
   try{ tcount && tcount('builder/save','builder: save ' + tbMode); }catch(e){}
 }
 function tbSave(){
