@@ -979,10 +979,10 @@
     align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
   #spreadmatch.open{display:flex}
   #spreadmatch .sm-box{background:var(--panel);border:1px solid var(--def-border);border-radius:14px;
-    padding:22px 24px;max-width:640px;width:100%;max-height:86vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.6)}
+    padding:22px 24px;max-width:820px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.6)}
   #spreadmatch .sm-title{font-family:'Rajdhani','Inter',sans-serif;font-size:19px;font-weight:700;margin-bottom:4px;color:var(--def-color)}
   #spreadmatch .sm-sub{color:var(--muted-foreground);font-size:12px;margin-bottom:14px;line-height:1.5}
-  #spreadmatch .sm-list{margin:0 0 16px;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px;overflow-y:auto}
+  #spreadmatch .sm-list{margin:0 0 16px;padding:0 2px 0 0;list-style:none;display:flex;flex-direction:column;gap:10px;overflow-y:auto;flex:1;min-height:0}
   #spreadmatch .sm-team{background:var(--muted);border:1px solid var(--border);border-radius:9px;padding:11px 13px}
   #spreadmatch .sm-team.best{border-color:var(--good);background:var(--good-bg)}
   #spreadmatch .sm-team-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
@@ -990,14 +990,22 @@
   #spreadmatch .sm-score{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10.5px;color:var(--muted-foreground)}
   #spreadmatch .sm-badge{font-size:9.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--good);border:1px solid var(--good-border);background:var(--good-bg);border-radius:9px;padding:1px 7px}
   #spreadmatch .sm-use{margin-left:auto}
-  #spreadmatch .sm-team-mons{display:grid;grid-template-columns:1fr 1fr;gap:5px 12px}
-  @media (max-width:520px){#spreadmatch .sm-team-mons{grid-template-columns:1fr}}
-  #spreadmatch .sm-mon{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--muted-foreground);min-width:0}
-  #spreadmatch .sm-mon .sm-mon-nm{color:var(--foreground);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  #spreadmatch .sm-mon .sm-mon-ev{font-family:'JetBrains Mono',ui-monospace,monospace;color:var(--def-color);white-space:nowrap}
-  #spreadmatch .sm-mon .sm-tk{margin-left:auto;font-size:10px;white-space:nowrap;letter-spacing:.5px}
-  #spreadmatch .sm-mon .sm-ok{color:var(--good);font-weight:700}
-  #spreadmatch .sm-mon .sm-no{color:var(--bad);font-weight:700}
+  #spreadmatch .sm-count{font-size:12px;color:var(--muted-foreground);margin-bottom:12px;line-height:1.5}
+  #spreadmatch .sm-count b{color:var(--foreground)}
+  /* Each candidate team renders as a mini team-card: reuse the app's .mon cards. */
+  #spreadmatch .sm-team-mons{display:grid;grid-template-columns:repeat(auto-fill,minmax(212px,1fr));gap:8px}
+  #spreadmatch .sm-team-mons .mon{margin:0;background:var(--panel);border-color:var(--line)}
+  #spreadmatch .sm-team.best .sm-team-mons .mon{background:var(--panel)}
+  #spreadmatch .sm-team-mons .it.ok{color:var(--good)}
+  #spreadmatch .sm-team-mons .it.no{color:var(--bad)}
+  #spreadmatch .sm-team-mons .ab.ok{color:var(--good)}
+  #spreadmatch .sm-team-mons .ab.no{color:var(--bad)}
+  /* The EV line is the payload that gets copied — surface it in the modal accent. */
+  #spreadmatch .sm-team-mons .sm-spread{color:var(--def-color);font-weight:600;font-size:11.5px;
+    font-family:'JetBrains Mono',ui-monospace,monospace}
+  /* Moves the candidate shares with your sheet stay bright; the rest dim back. */
+  #spreadmatch .sm-mvw{display:inline-flex}
+  #spreadmatch .sm-mvw.dim{opacity:.32}
   #spreadmatch .sm-actions{display:flex;gap:10px;justify-content:flex-end}
   /* ─── Team Builder overlay ─────────────────────────────────────────── */
   .myteam-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
@@ -2113,7 +2121,7 @@ const ITEM_DESC = {
   // Sheer Force / Loaded Dice — modeled
   'Loaded Dice':'Variable multi-hit moves floor at 4 hits (Pop Bomb 4-7, Bullet Seed 4-5)',
   'Booster Energy':'Consumed on send-in to trigger Protosynthesis/Quark Drive (prep only)',
-  // Type-resist berries — modeled via secondary "with berry X-Y%" line
+  // Type-resist berries — halving is folded into the main damage line (Showdown-style)
   'Occa Berry':'Halves incoming super-effective Fire hit (once)',
   'Passho Berry':'Halves incoming super-effective Water hit (once)',
   'Wacan Berry':'Halves incoming super-effective Electric hit (once)',
@@ -2175,9 +2183,9 @@ const ESCALATING_BP={'Triple Axel':[20,40,60],'Triple Kick':[10,20,30]};
 // Moves whose BP scales with the attacker's current HP%: BP = max(1, floor(150 * hpPct / 100))
 // Type-resist berries: consumed ONCE when the holder takes a super-effective
 // hit of that type, halving damage (or ×0.25 with Ripen). Chilan Berry halves
-// ANY Normal hit (not just SE). We surface as a secondary damage line "with
-// berry X-Y%" so users see both outcomes; assume unconsumed on the main line
-// since the berry only fires once per battle.
+// ANY Normal hit (not just SE). The halving is folded straight into the main
+// damage roll (Showdown-style) so the headline numbers, spread, and KO% all
+// reflect the cushioned hit; a small "<berry> ½×" tag labels why.
 const BERRY_TYPE={
   'Occa Berry':'fire','Passho Berry':'water','Wacan Berry':'electric','Rindo Berry':'grass',
   'Yache Berry':'ice','Chople Berry':'fighting','Kebia Berry':'poison','Shuca Berry':'ground',
@@ -3020,6 +3028,18 @@ function calcDmg(atk,move,def,atkSide,defSide){
   if(isCrit) mod=chainMod(mod,M(1.5));
   // Burn: halve physical (after STAB/type). Skip if Guts applied above.
   if(burnedAtk) mod=chainMod(mod,M(0.5));
+  // Type-resist berry (Chople, Passho, …) or Chilan (any Normal hit): the
+  // defender's held berry halves an incoming super-effective hit of its type
+  // — ×0.25 with Ripen. Applied here as a final damage modifier, exactly like
+  // Showdown, so the MAIN damage line, the full roll spread, and the KO% all
+  // reflect the cushioned hit (rather than showing full damage + a side note).
+  // Suppressed under Magic Room (items disabled); resist berries DO cushion crits.
+  const berryType = BERRY_TYPE[dItem];
+  const isChilan = dItem===CHILAN_BERRY && moveType==='normal';
+  const berryFires = !field.magicRoom && ((berryType===moveType && eff>1) || isChilan);
+  const berryMult = berryFires ? (def.ability==='Ripen' ? 0.25 : 0.5) : 1;
+  if(berryFires) mod=chainMod(mod, M(berryMult));
+  const berry = berryFires ? { item: dItem, mult: berryMult } : null;
   const hp=ds.hp;
   const range=sp=>{
     if(hits===1){
@@ -3035,26 +3055,6 @@ function calcDmg(atk,move,def,atkSide,defSide){
   };
   const single=range(1),spreadR=range(0.75),isSpread=!!mv.spread;
   const active=(doubles&&isSpread)?spreadR:single;
-  // Type-resist berry: if the defender holds a matching berry and this move
-  // is super-effective (or Chilan Berry vs any Normal move), compute a second
-  // damage line at ×0.5 (or ×0.25 with Ripen). Berry doesn't apply on crit if
-  // the calc is set to crit (berries don't cushion crits in modern gens for
-  // some — but Type-resist berries DO cushion). Suppressed under Magic Room.
-  const berryType = BERRY_TYPE[dItem];
-  const isChilan = dItem===CHILAN_BERRY && moveType==='normal';
-  const berryFires = !field.magicRoom && ((berryType===moveType && eff>1) || isChilan);
-  let berry=null;
-  if(berryFires){
-    const berryMult = def.ability==='Ripen' ? 0.25 : 0.5;
-    berry = {
-      lo: Math.max(1, pokeRound(active.lo * berryMult)),
-      hi: Math.max(1, pokeRound(active.hi * berryMult)),
-      item: dItem,
-      mult: berryMult,
-    };
-    berry.pctLo = berry.lo/hp*100;
-    berry.pctHi = berry.hi/hp*100;
-  }
   // KO calculations should compare damage to CURRENT HP, not max HP.
   // curHP is the defender's remaining HP based on the hpPct slider.
   const curHpPct=Math.max(0,Math.min(100, def.hpPct??100));
@@ -3918,7 +3918,11 @@ function calcSummary(atk, def, mv, info, r, aS, dS){
   const aItem=field.magicRoom?'':atk.item;
   const dItem=field.magicRoom?'':def.item;
   const aItemStr=(aItem && (ATK_ITEM_INLINE.has(aItem) || ITEM_TYPE_BOOST[aItem]===r.moveType))?` ${aItem}`:'';
-  const dItemStr=(dItem && DEF_ITEM_INLINE.has(dItem))?` ${dItem}`:'';
+  // Inline the defender's item when damage-relevant (Assault Vest/Eviolite) or
+  // a resist berry that actually cushioned this hit (r.berry set) — matches
+  // Showdown's "… Chople Berry Kingambit …" phrasing now that the reduction is
+  // baked into the main damage numbers.
+  const dItemStr=(dItem && (DEF_ITEM_INLINE.has(dItem) || (r.berry && r.berry.item===dItem)))?` ${dItem}`:'';
   // Inline abilities (attacker/defender) when damage-relevant. Mirrors Showdown's
   // "4 Atk Life Orb Adaptability Kingdra ..." format — ability sits right after
   // the item, before the mon name. Solves the ambiguity where two calc lines
@@ -3991,9 +3995,10 @@ function moveDetailHTML(side,atk,def,i){const mv=atk.moves[i];const info=DEX.mov
   // Doubles is hard-pinned. For spread moves, the headline IS the 0.75× spread range;
   // show the single-target range as a secondary line in case the move lands solo.
   const sp=r.isSpread?` · <span class="small">if single-target ${r.single.pctLo.toFixed(1)}–${r.single.pctHi.toFixed(1)}%</span>`:'';
-  // Berry indicator — mirrors the "if single-target" hint pattern. Only rendered
-  // when a matching type-resist berry (or Chilan) is on the defender.
-  const berry=r.berry?` · <span class="small" style="color:var(--good)">with ${esc(r.berry.item)} ${r.berry.pctLo.toFixed(1)}–${r.berry.pctHi.toFixed(1)}%</span>`:'';
+  // Berry indicator. The main damage line already reflects the halved hit
+  // (the berry is folded into the calc, Showdown-style), so this tag just
+  // names the berry and its multiplier so the reduction isn't a mystery.
+  const berry=r.berry?` · <span class="small" style="color:var(--good)">${esc(r.berry.item)} ${r.berry.mult===0.25?'¼×':'½×'}</span>`:'';
   // Piercing Drill (Mega Excadrill): 25% of a Protect-blocked hit still lands.
   // Protect isn't modeled in the calc, so surface this as a visual note only.
   const pdNote=atk.ability==='Piercing Drill' ? ' · <span class="small" style="color:var(--accent2)">Piercing Drill: 25% still lands through Protect</span>' : '';
@@ -4231,25 +4236,36 @@ function renderSpreadMatchModal(matches){
   const body=document.getElementById('spreadmatch-body');
   if(!body)return;
   const n=enemyTeam.length;
-  body.innerHTML=matches.map((c,ci)=>{
+  const head=`<div class="sm-count"><b>${matches.length}</b> database team${matches.length!==1?'s':''} run these same ${n} Pokémon — pick one to copy its EV spreads. <span style="color:var(--good)">Bright moves</span> match your teamsheet; the <span style="color:var(--def-color)">violet line</span> is the spread that gets copied.</div>`;
+  body.innerHTML=head+matches.map((c,ci)=>{
     const items=c.rows.filter(r=>r.match&&r.match.item).length;
     const abil =c.rows.filter(r=>r.match&&r.match.ability).length;
+    const mvTot=c.rows.reduce((a,r)=>a+(r.match?r.match.moves:0),0);
+    const mvMax=c.rows.reduce((a,r)=>a+(r.match?r.match.totalMoves:0),0);
     const full =items===n && abil===n;
+    // Each mon renders as the app's team-card .mon component (sprite + @item +
+    // ability + type-coloured move pills + EV line) so the modal matches the site.
     const mons=c.rows.map(r=>{
-      const nm=esc(r.sheet.forme||r.sheet.name||'');
-      if(!r.db) return `<div class="sm-mon"><span class="sm-mon-nm">${nm}</span><span class="sm-tk sm-no">no spread</span></div>`;
-      const ev=r.db.evs?esc(r.db.evs):'—';
-      const nat=r.db.nature&&r.db.nature!=='Serious'?' '+esc(r.db.nature):'';
-      const it=r.match.item?'<span class="sm-ok">i</span>':'<span class="sm-no">i</span>';
-      const ab=r.match.ability?'<span class="sm-ok">a</span>':'<span class="sm-no">a</span>';
-      return `<div class="sm-mon"><span class="sm-mon-nm">${nm}</span> <span class="sm-mon-ev">${ev}${nat}</span><span class="sm-tk" title="item / ability / moves matched vs your sheet">${it} ${ab} ${r.match.moves}/${r.match.totalMoves}m</span></div>`;
+      const label=r.sheet.forme||r.sheet.name||'';
+      const sprite=pokeSprite(label,'28');
+      if(!r.db) return `<div class="mon"><div class="nm">${sprite}<span class="mon-label">${esc(label)}</span></div><div class="ab no">— no spread in this team —</div></div>`;
+      const sheetMoves=new Set((r.sheet.moves||[]).filter(Boolean).map(_norm));
+      const it=r.db.item?`<span class="it ${r.match.item?'ok':'no'}" title="${r.match.item?'matches your sheet':'differs from your sheet'}">@ ${esc(r.db.item)}</span>`:'';
+      const ab=r.db.ability?`<div class="ab ${r.match.ability?'ok':'no'}">${esc(r.db.ability)}</div>`:'';
+      const moves=(r.db.moves||[]).filter(Boolean).map(mv=>
+        `<span class="sm-mvw ${sheetMoves.has(_norm(mv))?'':'dim'}">${movePill(mv)}</span>`).join('');
+      const spread=`<div class="ev sm-spread">${r.db.evs?esc(r.db.evs):'— no EVs —'}${r.db.nature&&r.db.nature!=='Serious'?' · '+esc(r.db.nature):''}</div>`;
+      return `<div class="mon"><div class="nm">${sprite}<span class="mon-label">${esc(label)}</span> ${it}</div>${ab}${moves?`<div class="moves">${moves}</div>`:''}${spread}</div>`;
     }).join('');
     return `<div class="sm-team${full?' best':''}">
-      <div class="sm-team-head"><b>${esc(c.team.description||c.team.team_id||'Team')}</b>
-        <span class="sm-score">items ${items}/${n} · abilities ${abil}/${n}${c.team.date?' · '+esc(c.team.date):''}</span>
-        ${full?'<span class="sm-badge">full match</span>':''}
-        <button class="ts-btn ts-btn-accent sm-use" type="button" data-ci="${ci}">Use these spreads</button></div>
-      <div class="sm-team-mons">${mons}</div></div>`;
+      <div class="sm-team-head">
+        <b>${esc(c.team.description||c.team.team_id||'Team')}</b>
+        ${full?'<span class="sm-badge">exact build</span>':''}
+        <span class="sm-score">items ${items}/${n} · abilities ${abil}/${n} · moves ${mvTot}/${mvMax}${c.team.date?' · '+esc(c.team.date):''}</span>
+        <button class="ts-btn ts-btn-accent sm-use" type="button" data-ci="${ci}">Use these spreads</button>
+      </div>
+      <div class="sm-team-mons">${mons}</div>
+    </div>`;
   }).join('');
   body.querySelectorAll('.sm-use').forEach(btn=>btn.onclick=()=>applySpreadMatch(+btn.dataset.ci));
 }

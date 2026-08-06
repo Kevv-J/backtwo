@@ -4,7 +4,7 @@
 
 import test from 'node:test';
 import { calc } from './harness.js';
-import { mkMon, mkSide, mkField, assertRatio } from './fixtures.js';
+import { mkMon, mkSide, mkField, assertRatio, assertRange } from './fixtures.js';
 
 // ── Supreme Overlord (Kingambit) ────────────────────────────────────────────
 test('Supreme Overlord: +10% per fainted ally, cap 5 → ×1.5 at 5', () => {
@@ -88,15 +88,31 @@ test('Loaded Dice: Bullet Seed hit count floors at 4', () => {
 });
 
 // ── Type-resist berry ───────────────────────────────────────────────────────
-test('Occa Berry: SE Fire hit shows secondary "with berry" line at ~×0.5', () => {
+test('Occa Berry: SE Fire hit is halved on the MAIN line (Showdown-style)', () => {
   const atk = mkMon({ forme: 'Pyroar-Mega', ability: 'Fire Mane', nature: 'Modest', ev: { spa: 32 }, moves: ['Heat Wave'] });
   // Find a Grass mon in the dex to be the SE target
   const grassDef = Object.keys(await_dex()).find(n => await_dex()[n].types.includes('grass'));
   if (!grassDef) return;  // no grass in dex, skip
-  const def = mkMon({ forme: grassDef, item: 'Occa Berry' });
-  const r = calc({ atk, def, sA: mkSide(), sB: mkSide(), w: 'none', f: mkField(), move: 'Heat Wave' });
-  if (!r.berry) throw new Error('expected berry field to be populated for Occa vs SE Fire');
-  assertRatio(r.berry.hi / r.hi, 0.5, 'Occa berry halves');
+  const defBerry = mkMon({ forme: grassDef, item: 'Occa Berry' });
+  const defBare  = mkMon({ forme: grassDef, item: '' });
+  const rBerry = calc({ atk, def: defBerry, sA: mkSide(), sB: mkSide(), w: 'none', f: mkField(), move: 'Heat Wave' });
+  const rBare  = calc({ atk, def: defBare,  sA: mkSide(), sB: mkSide(), w: 'none', f: mkField(), move: 'Heat Wave' });
+  // The reduction is now baked into the main damage numbers, not a side line:
+  // r.hi itself is the cushioned max roll, ~half the bare hit.
+  if (!rBerry.berry) throw new Error('expected berry field to be flagged for Occa vs SE Fire');
+  assertRatio(rBerry.hi / rBare.hi, 0.5, 'Occa berry halves the main line');
+});
+
+test('Chople Berry: exact main-line numbers match Showdown (Sneasler CC vs Kingambit)', (t) => {
+  // Regression pin for the reported case: neutral 32-Atk Sneasler Close Combat
+  // vs 10 HP / 10 Def Kingambit holding Chople Berry.
+  // Showdown: 168-198 (90.8 - 107%). The berry must reduce the MAIN line, not a
+  // secondary hint — halving Attack (−2 stages) would give 168-204, which is wrong.
+  const atk = mkMon({ forme: 'Sneasler', nature: 'Serious', ev: { atk: 32 }, moves: ['Close Combat'] });
+  const def = mkMon({ forme: 'Kingambit', item: 'Chople Berry', nature: 'Serious', ev: { hp: 10, def: 10 } });
+  const r = calc({ atk, def, sA: mkSide(), sB: mkSide(), w: 'none', f: mkField(), move: 'Close Combat' });
+  if (!r) throw new Error('calc returned null');
+  assertRange(t, r, [168, 198]);
 });
 
 // helper — the harness exports DEX via named export
