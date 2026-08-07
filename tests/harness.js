@@ -102,11 +102,15 @@ const setStateInjection = `
 globalThis.__setState = function(atk, def, sa, sb, w, f) {
   A = atk; B = def; sideA = sa; sideB = sb; weather = w; field = f;
 };
+// Read the live let-bindings back out (afterSlotSwitch reassigns weather/field/
+// sideA/sideB to fresh objects, so callers need the current references).
+globalThis.__getState = function() { return { weather, field, sideA, sideB, A, B }; };
 globalThis.__exportCalc = { calcDmg, effectiveBP, statsOf, pokeRound,
   chainMod, applyMod, M, FP_ONE, newSide, newField, newMon, DEX, parseShowdown,
   calcSummary, jsForme, normSpec, PSYSHOCK_MOVES,
   spreadMatchScore, monHasSpread, bestSpreadFor, matchingTeamsFor,
-  accuracyInfo, healInfo, recoilInfo, legalMoveIds, toId, descFor };
+  accuracyInfo, healInfo, recoilInfo, legalMoveIds, toId, descFor,
+  afterSlotSwitch, applySlotAutoWire };
 `;
 const combined = stubDoc
   + scripts.map((body, i) =>
@@ -135,10 +139,16 @@ export const {
   calcSummary, jsForme, normSpec, PSYSHOCK_MOVES,
   spreadMatchScore, monHasSpread, bestSpreadFor, matchingTeamsFor,
   accuracyInfo, healInfo, recoilInfo, legalMoveIds, toId, descFor,
+  afterSlotSwitch, applySlotAutoWire,
 } = _exp;
 
 export function setState({ atk, def, sA, sB, w, f }) {
   ctx.__setState(atk, def, sA, sB, w, f);
+}
+
+// Read the calc engine's live global state (weather/field/sideA/sideB/A/B).
+export function getState() {
+  return ctx.__getState();
 }
 
 // Convenience: run calcDmg with a state block so tests read as one line.

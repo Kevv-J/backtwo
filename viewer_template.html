@@ -3373,7 +3373,7 @@ function wireSlot(p,m){
     rebuildSetOptions(p,m);
     g(p+'_search').value=v;populateSlot(p,m);
     if(p==='a')selA=null;else selB=null;
-    afterSlotChange(p,m);
+    afterSlotSwitch(p,m);
     updateResults();}
   // Slot Pokémon search — smart picker (replaces native datalist)
   attachSmartPicker(g(p+'_search'),{
@@ -4181,7 +4181,7 @@ function loadIntoSlot(p,m,src){_resetSlotTransients(m);
   m.moves=(src.moves||[]).slice(0,4);while(m.moves.length<4)m.moves.push('');
   correctMegaAbility(m);  // calc-side only — teams view keeps raw paste ability
   g(p+'_search').value=src.forme;rebuildSetOptions(p,m);populateSlot(p,m);if(p==='a')selA=null;else selB=null;
-  afterSlotChange(p,m);
+  afterSlotSwitch(p,m);
   updateResults();}
 // Reset per-load transient flags (Marvel Scale manual override, borrowed-spread
 // note) so a fresh mon/spread starts from auto-derived defaults.
@@ -4318,6 +4318,33 @@ function afterSlotChange(p, m){
   // when this slot's mon becomes/stops-being an Intimidator.
   const other=p==='a'?'b':'a', otherM=p==='a'?B:A;
   if(otherM.forme)renderFinals(other,otherM);
+}
+// Called when a BRAND-NEW Pokémon is loaded into slot p — a species pick or a
+// quick-pick, NOT a same-mon edit (ability/item/spread tweaks). Each switch is
+// a fresh scenario, so we wipe the shared field (weather / terrain / Trick·
+// Magic·Wonder Room / Gravity / Fairy Aura) and the switched side's battle
+// effects (crit, Helping Hand, Reflect / Light Screen / Aurora Veil, Tailwind,
+// Friend Guard, …). Status + boosts already reset via the load path; the
+// non-switched side keeps its own battle effects. Ability-intrinsic field/side
+// effects then re-derive from BOTH mons (Drought's sun, a Surge's terrain,
+// Power Spot, Fairy Aura, …) so a standing setter keeps its effect while the
+// user's manual toggles don't linger onto the next matchup.
+function afterSlotSwitch(p,m){
+  weather='none';
+  field=newField();
+  if(p==='a') sideA=newSide(); else sideB=newSide();
+  // Re-derive ability weather/terrain from scratch for both slots. Keep each
+  // tracker's `flags`/`fieldFlags` so applySlotAutoWire can still clear a
+  // now-invalid auto-set side flag (e.g. Flower Gift once its sun is gone).
+  _autoWiredA.weather=_autoWiredA.terrain=_autoWiredA.monKey=null;
+  _autoWiredB.weather=_autoWiredB.terrain=_autoWiredB.monKey=null;
+  // Switched slot claims the field first (a just-sent-in weather/terrain setter
+  // wins), then the standing slot re-claims whatever is still free.
+  afterSlotChange(p,m);
+  const other=p==='a'?'b':'a', otherM=p==='a'?B:A;
+  applySlotAutoWire(other,otherM);
+  syncFxRow(other, other==='a'?sideA:sideB);
+  syncFieldUI();
 }
 function renderDmg(){
   g('dmgpad').innerHTML=`
