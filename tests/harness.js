@@ -104,13 +104,13 @@ globalThis.__setState = function(atk, def, sa, sb, w, f) {
 };
 // Read the live let-bindings back out (afterSlotSwitch reassigns weather/field/
 // sideA/sideB to fresh objects, so callers need the current references).
-globalThis.__getState = function() { return { weather, field, sideA, sideB, A, B }; };
+globalThis.__getState = function() { return { weather, field, sideA, sideB, A, B, shortcutsEnabled }; };
 globalThis.__exportCalc = { calcDmg, effectiveBP, statsOf, pokeRound,
   chainMod, applyMod, M, FP_ONE, newSide, newField, newMon, DEX, parseShowdown,
   calcSummary, jsForme, normSpec, PSYSHOCK_MOVES,
   spreadMatchScore, monHasSpread, bestSpreadFor, matchingTeamsFor,
   accuracyInfo, healInfo, recoilInfo, legalMoveIds, toId, descFor,
-  afterSlotSwitch, applySlotAutoWire };
+  afterSlotSwitch, applySlotAutoWire, classifyCalcKey, setShortcutsEnabled, effSpeed };
 `;
 const combined = stubDoc
   + scripts.map((body, i) =>
@@ -139,7 +139,7 @@ export const {
   calcSummary, jsForme, normSpec, PSYSHOCK_MOVES,
   spreadMatchScore, monHasSpread, bestSpreadFor, matchingTeamsFor,
   accuracyInfo, healInfo, recoilInfo, legalMoveIds, toId, descFor,
-  afterSlotSwitch, applySlotAutoWire,
+  afterSlotSwitch, applySlotAutoWire, classifyCalcKey, setShortcutsEnabled, effSpeed,
 } = _exp;
 
 export function setState({ atk, def, sA, sB, w, f }) {

@@ -432,6 +432,9 @@
   .myteam-lbl{display:inline-flex;align-items:center;gap:8px}
   .myteam-lbl strong{color:var(--foreground);font-size:14px;letter-spacing:.01em}
   .myteam-ic{font-size:18px;line-height:1}
+  /* Trainer avatars (Red = my team, Gary = enemy) — crisp pixel art, sized to
+     sit like an icon in the section header without ballooning its height. */
+  .myteam-ic-img{width:auto;height:34px;image-rendering:pixelated;margin:-6px -2px;flex:none}
   .myteam-hint{color:var(--muted-foreground);font-size:11px;font-family:'JetBrains Mono',ui-monospace,monospace}
   .calcfoot{margin-top:14px;padding:10px 14px;background:var(--panel);border:1px solid var(--line);border-radius:10px;line-height:1.5}
   .myrow{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-bottom:7px}
@@ -818,6 +821,19 @@
   #hotkeytoast kbd{font-family:'JetBrains Mono',ui-monospace,monospace;background:var(--secondary);border:1px solid var(--atk-border);color:var(--atk-color);border-radius:4px;padding:1px 7px;font-size:11px;font-weight:600}
   #hotkeytoast .dismiss{margin-left:6px;background:transparent;border:1px solid var(--border);color:var(--muted-foreground);border-radius:4px;padding:2px 8px;font-size:11px;font-family:inherit;cursor:pointer}
   #hotkeytoast .dismiss:hover{border-color:var(--foreground);color:var(--foreground)}
+  /* Power-mode shortcut indicator — top-right pill + hover/focus legend */
+  #shortcutbadge{position:fixed;top:calc(58px + max(4px,env(safe-area-inset-top)));right:max(12px,env(safe-area-inset-right));z-index:88}
+  #shortcutbadge[hidden]{display:none}
+  .sb-pill{display:inline-flex;align-items:center;gap:6px;font:600 11px/1 'Rajdhani','Inter',sans-serif;letter-spacing:.05em;text-transform:uppercase;color:var(--atk-color);background:var(--card-elev);border:1px solid var(--atk-border);border-radius:999px;padding:5px 11px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,0.35)}
+  .sb-pill::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--atk-color);box-shadow:0 0 6px var(--atk-color)}
+  .sb-pill:hover,.sb-pill:focus-visible{filter:brightness(1.12);outline:none}
+  #shortcutlegend{position:absolute;top:calc(100% + 8px);right:0;min-width:252px;background:var(--card-elev);border:1px solid var(--atk-border);border-radius:10px;padding:10px 12px;box-shadow:0 10px 30px rgba(0,0,0,0.5);opacity:0;visibility:hidden;transform:translateY(-4px);transition:opacity .14s,transform .14s;pointer-events:none}
+  #shortcutbadge:hover #shortcutlegend,#shortcutbadge:focus-within #shortcutlegend{opacity:1;visibility:visible;transform:translateY(0)}
+  .sl-hd{font:700 11px/1 'Rajdhani','Inter',sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--muted-foreground);margin-bottom:8px}
+  .sl-grid{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;align-items:center;font-size:12px;color:var(--foreground)}
+  .sl-grid kbd{justify-self:start;font-family:'JetBrains Mono',ui-monospace,monospace;background:var(--secondary);border:1px solid var(--atk-border);color:var(--atk-color);border-radius:4px;padding:1px 6px;font-size:11px;font-weight:600;white-space:nowrap}
+  #sctoast{position:fixed;top:calc(58px + max(4px,env(safe-area-inset-top)));left:50%;transform:translate(-50%,-6px);z-index:95;background:var(--card-elev);border:1px solid var(--atk-border);border-radius:999px;padding:6px 14px;font:600 12px/1 'Rajdhani','Inter',sans-serif;letter-spacing:.03em;color:var(--foreground);box-shadow:0 6px 20px rgba(0,0,0,0.45);opacity:0;visibility:hidden;transition:opacity .16s,transform .16s;pointer-events:none}
+  #sctoast.show{opacity:1;visibility:visible;transform:translate(-50%,0)}
   /* ─── Help pill in header (opens tour / hotkeys / guide / about menu) ─── */
   .help-pill{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;
     border-radius:50%;border:1px solid var(--border);background:transparent;color:var(--muted-foreground);
@@ -1182,16 +1198,18 @@
   <div class="hovbox" onclick="event.stopPropagation()">
     <h3>Hotkeys</h3>
     <div class="hovgrid">
+      <kbd style="background:linear-gradient(135deg,rgba(34,211,238,0.18),rgba(167,139,250,0.18));border-color:var(--atk-color);color:var(--foreground)">Shift+K</kbd><span><b>Enable / disable</b> the calc shortcuts below (off by default — a ⌨ badge shows top-right when on)</span>
       <kbd style="background:linear-gradient(135deg,rgba(34,211,238,0.18),rgba(167,139,250,0.18));border-color:var(--atk-color);color:var(--foreground)">b 2</kbd><span>Jump to Damage Calc (the brand mark)</span>
-      <kbd>1–6</kbd><span>Load opponent's mon (or my team if no opposing team) into B</span>
-      <kbd>Shift+1–6</kbd><span>Load my team mon into A</span>
-      <kbd>[ / ]</kbd><span>Cycle B through opposing team mons</span>
-      <kbd>Tab</kbd><span>Swap A ↔ B (sides also swap)</span>
+      <kbd>1–6</kbd><span>Load <b>my team</b> mon into A</span>
+      <kbd>Alt+1–6</kbd><span>Load <b>enemy</b> mon into B</span>
+      <kbd>C</kbd> / <kbd>Alt+C</kbd><span>Toggle Crit — my team / enemy</span>
+      <kbd>H</kbd> / <kbd>Alt+H</kbd><span>Toggle Helping Hand — my team / enemy</span>
+      <kbd>R</kbd> / <kbd>Alt+R</kbd><span>Toggle Reflect — my team / enemy</span>
+      <kbd>L</kbd> / <kbd>Alt+L</kbd><span>Toggle Light Screen — my team / enemy</span>
       <kbd>W</kbd><span>Cycle weather</span>
       <kbd>T</kbd><span>Cycle terrain</span>
-      <kbd>R</kbd><span>Toggle Trick Room</span>
-      <kbd>C</kbd><span>Toggle Crit on side A</span>
-      <kbd>Esc</kbd><span>Clear opposing team</span>
+      <kbd>Tab</kbd><span>Swap A ↔ B (sides also swap)</span>
+      <kbd>Esc</kbd><span>Clear enemy team</span>
       <kbd>?</kbd><span>Show this overlay</span>
     </div>
     <div class="small" style="margin-top:10px;text-align:center">Click anywhere to dismiss.</div>
@@ -1340,6 +1358,30 @@
   <span>tip — press <kbd>?</kbd> anywhere for hotkeys, or <kbd>b 2</kbd> to jump to the damage calc</span>
   <button class="dismiss" id="toastdismiss">got it</button>
 </div>
+
+<!-- Power-mode shortcut indicator (top-right) + hover/focus legend. Shown only
+     while Shift+K power-mode is on AND the Damage Calc view is active. -->
+<div id="shortcutbadge" hidden>
+  <button type="button" class="sb-pill" aria-describedby="shortcutlegend"
+          title="Keyboard shortcuts are on — click or press Shift+K to turn off">⌨ Shortcuts on</button>
+  <div id="shortcutlegend" role="tooltip">
+    <div class="sl-hd">Calc shortcuts — <span style="color:var(--muted-foreground);text-transform:none;letter-spacing:0">bare = my team · Alt = enemy</span></div>
+    <div class="sl-grid">
+      <kbd>Shift+K</kbd><span>Turn shortcuts off</span>
+      <kbd>1–6</kbd><span>Load my team mon → A</span>
+      <kbd>Alt+1–6</kbd><span>Load enemy mon → B</span>
+      <kbd>C / Alt+C</kbd><span>Crit — my / enemy</span>
+      <kbd>H / Alt+H</kbd><span>Helping Hand — my / enemy</span>
+      <kbd>R / Alt+R</kbd><span>Reflect — my / enemy</span>
+      <kbd>L / Alt+L</kbd><span>Light Screen — my / enemy</span>
+      <kbd>W</kbd><span>Cycle weather</span>
+      <kbd>T</kbd><span>Cycle terrain</span>
+      <kbd>Tab</kbd><span>Swap A ↔ B</span>
+      <kbd>Esc</kbd><span>Clear enemy team</span>
+    </div>
+  </div>
+</div>
+<div id="sctoast" aria-live="polite"></div>
 
 <!-- ─── Guided tour: splash + spotlight + tooltip ───────────────────────── -->
 <div id="toursplash" role="dialog" aria-labelledby="toursplash-title" aria-modal="true">
@@ -1904,7 +1946,7 @@ const ABILITY_DESC = {
   'Tinted Lens':'Doubles damage of not-very-effective moves',
   'Huge Power':'Attack stat is doubled',
   'Pure Power':'Attack stat is doubled',
-  'Solar Power':'SpA ×1.5 in Sun (Cost: 1/8 HP/turn — not modeled)',
+  'Solar Power':'SpA ×1.5 in Sun (self-cost 1/8 HP/turn not modeled)',
   'Sand Force':'Rock/Ground/Steel moves ×1.3 in Sand',
   'Sniper':'Critical hits do ×1.5 extra damage (×2.25 total)',
   'Neuroforce':'Super-effective moves ×1.25',
@@ -1932,7 +1974,7 @@ const ABILITY_DESC = {
   'Levitate':'Immune to Ground (unless Gravity)',
   'Flash Fire':'Immune to Fire',
   'Water Absorb':'Immune to Water',
-  'Dry Skin':'Immune to Water; +25% Fire damage taken (not modeled)',
+  'Dry Skin':'Immune to Water; +25% Fire damage taken',
   'Storm Drain':'Immune to Water; draws Water moves',
   'Volt Absorb':'Immune to Electric',
   'Lightning Rod':'Immune to Electric; draws Electric moves',
@@ -1993,14 +2035,14 @@ const ABILITY_DESC = {
   'Flame Body':'30% to burn contact attacker (not modeled)',
   'Cute Charm':'30% to infatuate contact attacker (not modeled)',
   'Disguise':'First hit reduced to chip damage (Mimikyu only)',
-  'Overgrow':'Grass moves ×1.5 below 1/3 HP (not modeled)',
-  'Blaze':'Fire moves ×1.5 below 1/3 HP (not modeled)',
-  'Torrent':'Water moves ×1.5 below 1/3 HP (not modeled)',
-  'Swarm':'Bug moves ×1.5 below 1/3 HP (not modeled)',
+  'Overgrow':'Grass moves ×1.5 at ≤1/3 HP',
+  'Blaze':'Fire moves ×1.5 at ≤1/3 HP',
+  'Torrent':'Water moves ×1.5 at ≤1/3 HP',
+  'Swarm':'Bug moves ×1.5 at ≤1/3 HP',
   // Common weather / passive / VGC abilities the picker used to leave blank
   'Rain Dish':'Restores 1/16 HP per turn in Rain',
   'Ice Body':'Restores 1/16 HP per turn in Snow',
-  'Solar Power':'SpA ×1.5 in Sun (Cost: 1/8 HP/turn — not modeled)',
+  'Solar Power':'SpA ×1.5 in Sun (self-cost 1/8 HP/turn not modeled)',
   'Armor Tail':'Blocks moves with priority (targets can\'t use priority moves against this mon)',
   'Queenly Majesty':'Blocks moves with priority',
   'Dazzling':'Blocks moves with priority',
@@ -2015,7 +2057,7 @@ const ABILITY_DESC = {
   'Serene Grace':'Secondary effects trigger 2× more often',
   'Prankster':'Status moves get +1 priority (fails vs Dark)',
   'Gale Wings':'Flying moves get +1 priority at full HP',
-  'Analytic':'Damage ×1.3 when moving last (not modeled)',
+  'Analytic':'Damage ×1.3 when moving last (toggle in the counter row)',
   'Poison Heal':'Heals 1/8 HP per turn when poisoned',
   'Rocky Payload':'Rock moves ×1.5',
   'Toxic Chain':'30% to badly poison on hit (not modeled)',
@@ -2075,7 +2117,7 @@ const ITEM_DESC = {
   'Choice Band':'Atk ×1.5, locks into the first move',
   'Choice Specs':'SpA ×1.5, locks into the first move',
   'Choice Scarf':'Speed ×1.5, locks into the first move',
-  'Life Orb':'Damage ×1.3 (cost: 1/10 HP per attack — not modeled)',
+  'Life Orb':'Damage ×1.3 (self-cost 1/10 HP per hit not modeled)',
   'Assault Vest':'SpD ×1.5; cannot use status moves',
   'Eviolite':'Def +50%, SpD +50% (NFE Pokémon only — not enforced)',
   'Focus Sash':'Survives a one-shot from full HP at 1 HP (consumed)',
@@ -2110,7 +2152,7 @@ const ITEM_DESC = {
   'Expert Belt':'Super-effective moves ×1.2',
   'Wide Lens':'Move accuracy ×1.1 (shown on the result line)',
   'Zoom Lens':'Move accuracy ×1.2 if moving after target (not modeled)',
-  'Metronome':'Consecutive same-move use ×1.2 → ×2.0 stack (not modeled)',
+  'Metronome':'Consecutive same-move use ×1.2 → ×2.0 stack',
   'Big Root':'Drain moves recover +30%',
   'Shed Shell':'Guarantees switch-out through trap moves (not modeled)',
   'Light Clay':'Screens last 8 turns instead of 5 (not modeled)',
@@ -2146,7 +2188,7 @@ const ITEM_DESC = {
   "King's Rock":'Attacks may make the target flinch (not modeled)',
   'Quick Claw':'Small chance to move first regardless of Speed (not modeled)',
   'Scope Lens':'Raises the holder\'s critical-hit ratio (toggle Crit to model)',
-  'Bright Powder':'Lowers opponents\' accuracy (accuracy not modeled)',
+  'Bright Powder':'Lowers opponents\' accuracy ×0.9 (shown in the accuracy readout)',
   'Shell Bell':'Heals the holder for 1/8 of the damage it deals',
   // Status / utility berries
   'Cheri Berry':'Cures paralysis once (not modeled)',
@@ -2176,6 +2218,8 @@ const ALL_ABILITIES=[...new Set(TEAMS.flatMap(t=>t.mons.map(m=>m.ability)).filte
 const STAT_KEYS=[['hp','HP'],['atk','Atk'],['def','Def'],['spa','SpA'],['spd','SpD'],['spe','Spe']];
 const BOOST_OPTS=Array.from({length:13},(_,i)=>i-6).map(n=>`<option value="${n}">${n>0?'+'+n:n}</option>`).join('');
 const ABIL_IMMUNE={Levitate:'ground',Eelevate:'ground','Flash Fire':'fire','Water Absorb':'water','Dry Skin':'water','Storm Drain':'water','Volt Absorb':'electric','Lightning Rod':'electric','Motor Drive':'electric','Sap Sipper':'grass','Earth Eater':'ground','Well-Baked Body':'fire'};
+// Pinch abilities — the mon's own STAB type is boosted ×1.5 at ≤1/3 HP.
+const PINCH_ABILITY={'Overgrow':'grass','Blaze':'fire','Torrent':'water','Swarm':'bug'};
 // Type-changing "-ate" abilities: Normal moves become the ability's type and get 1.2x.
 const ATE_TYPE={Pixilate:'fairy',Aerilate:'flying',Refrigerate:'ice',Galvanize:'electric',Dragonize:'dragon'};
 // Escalating-BP multi-hit moves (BP per hit, in order)
@@ -2434,7 +2478,7 @@ const SIDE_FX=[
   ['reflect','Reflect','×0.5 phys (×2/3 in doubles)'],
   ['lightScreen','Light Screen','×0.5 special'],
   ['auroraVeil','Aurora Veil','×0.5 both (Snow only)'],
-  ['tailwind','Tailwind','×2 Speed (informational)'],
+  ['tailwind','Tailwind','×2 Speed'],
   ['helpingHand','Helping Hand','×1.5 outgoing damage'],
   ['friendGuard','Friend Guard','×0.75 incoming (doubles)'],
   ['flowerGift','Flower Gift','+50% Atk and ally SpD in Sun'],
@@ -2450,6 +2494,10 @@ function newSide(){return{reflect:0,lightScreen:0,auroraVeil:0,tailwind:0,helpin
 function newField(){return{terrain:'none',trickRoom:0,gravity:0,magicRoom:0,wonderRoom:0,fairyAura:0};}
 let A=newMon(),B=newMon(),doubles=true,weather='none',myTeam=[],enemyTeam=[],selA=null,selB=null;
 let field=newField(),sideA=newSide(),sideB=newSide();
+// Power-user calc keyboard shortcuts are opt-in (Shift+K toggles). Persisted so
+// the choice sticks across reloads; default OFF so bare keys never hijack
+// copy/paste/tab-switch. See classifyCalcKey + the dmg-view keydown handler.
+let shortcutsEnabled=false; try{shortcutsEnabled=localStorage.getItem('bt_shortcuts_on')==='1';}catch(e){}
 let fightTeam=null;  // {team, mons, sourceTeamId} when "Fight this team" is active (transient — from archive browse)
 // enemyTeam: persisted-to-localStorage mirror of myTeam, for open-team-sheet tournaments
 // and Find-Team's "Fight These 6". Slot B falls back to enemyTeam when fightTeam is null.
@@ -2952,6 +3000,12 @@ function calcDmg(atk,move,def,atkSide,defSide){
   if(atk.ability==='Transistor'      && moveType==='electric') mod=chainMod(mod,M(1.5));
   if(atk.ability==='Steelworker'     && moveType==='steel')  mod=chainMod(mod,M(1.5));
   if(atk.ability==='Rocky Payload'   && moveType==='rock')   mod=chainMod(mod,M(1.5));
+  // Pinch abilities (Overgrow/Blaze/Torrent/Swarm): the mon's STAB type gets
+  // ×1.5 while it sits at ≤1/3 HP — reads the attacker's HP% slider.
+  if(PINCH_ABILITY[atk.ability]===moveType && (atk.hpPct??100)<=100/3) mod=chainMod(mod,M(1.5));
+  // Analytic: ×1.3 when the user moves last. Turn order isn't simulated, so it's
+  // a manual toggle (atk.analytic) shown in the counter row when the ability is set.
+  if(atk.ability==='Analytic' && atk.analytic) mod=chainMod(mod,M(1.3));
   // Sheer Force (Nidoking / Iron Moth / Sneasler / Camerupt-Mega etc.):
   // damaging moves with a secondary effect gain ×1.3, and Life Orb recoil is
   // suppressed (recoil not modeled — LO ×1.3 damage already applied above).
@@ -3000,6 +3054,8 @@ function calcDmg(atk,move,def,atkSide,defSide){
   if((def.ability==='Filter'||def.ability==='Solid Rock'||def.ability==='Prism Armor') && eff>1) mod=chainMod(mod,M(0.75));
   if(def.ability==='Thick Fat' && (moveType==='fire'||moveType==='ice')) mod=chainMod(mod,M(0.5));
   if(def.ability==='Heatproof' && moveType==='fire') mod=chainMod(mod,M(0.5));
+  // Dry Skin: +25% Fire damage taken (its Water immunity is handled in ABIL_IMMUNE).
+  if(def.ability==='Dry Skin' && moveType==='fire') mod=chainMod(mod,M(1.25));
   if(def.ability==='Purifying Salt' && moveType==='ghost') mod=chainMod(mod,M(0.5));
   // Fluffy: ×0.5 on contact, ×2 on fire (so fire+contact = 1×).
   if(def.ability==='Fluffy'){let fl=1;if(mv.contact)fl*=0.5;if(moveType==='fire')fl*=2;if(fl!==1)mod=chainMod(mod,M(fl));}
@@ -3145,6 +3201,10 @@ function slotHTML(p,title){
       <span class="counterlbl" title="Metronome (item): +20% damage per consecutive use of the SAME move, capping at ×2.0 from the 6th use. Resets the moment you switch moves. Set which use this is — 1 = first use (×1.0), 2 = second (×1.2), …">Metronome uses</span>
       <div class="counterstep"><button data-step="-1">−</button><span class="counterval" id="${p}_cnt_mt">1</span><button data-step="+1">+</button><span class="counter-mult" id="${p}_cnt_mtx">×1.0</span></div>
     </div>
+    <div class="counterrow" data-counter="analytic" hidden>
+      <span class="counterlbl" title="Analytic: ×1.3 damage when this Pokémon moves LAST. Turn order isn't simulated, so toggle it on when this mon is the slower one (or moves after the target).">Analytic (moving last)</span>
+      <div class="countertoggle"><button class="mstoggle" id="${p}_an_btn" type="button">Off</button></div>
+    </div>
   </div>
   <div class="seclabel">HP <span id="${p}_hplabel" class="hplabel">100% · — / —</span></div>
   <div class="hprow">
@@ -3180,15 +3240,20 @@ function renderFinals(p,m){const s=statsOf(m);
     // computes it itself). Atk: -1 (or +1 net Defiant); SpA: +2 Competitive.
     const virtIntim = m.forme ? virtIntimStage(m, other, k) : 0;
     const effB=b+virtIntim;
-    // Choice Scarf: the Spe cell shows the ACTUAL ×1.5 in-battle Speed as the
-    // value (bold), with the pre-scarf stat in parens + a ×1.5 chip. Mirrors
-    // effSpeed's scarf step; suppressed under Magic Room.
-    const scarf = (k==='spe' && m.item==='Choice Scarf' && !field.magicRoom);
-    if(scarf){
-      const pre=effB?applyBoost(v,effB):v;     // Speed after any stage boost, pre-scarf
-      const spd=Math.floor(pre*1.5);
+    // Speed cell shows the ACTUAL in-battle Speed (effSpeed) whenever a field /
+    // item / side modifier changes it — Tailwind ×2, Choice Scarf ×1.5, paralysis
+    // ×0.5, weather speed abilities, etc. — with the raw stat in parens and a chip
+    // per common multiplier. Keeps the cell consistent with the speed ribbon.
+    const sideFx = p==='a'?sideA:sideB;
+    const stageSpe = effB?applyBoost(v,effB):v;                 // speed after stat stages only
+    const inBattleSpe = k==='spe' ? effSpeed(m, sideFx) : null;
+    if(k==='spe' && inBattleSpe!=null && inBattleSpe!==stageSpe){
+      const sign = inBattleSpe>=stageSpe ? 'up' : 'down';
+      const chips=[];
+      if(sideFx?.tailwind) chips.push('<span class="scarfx" title="Tailwind ×2 Speed">×2</span>');
+      if(m.item==='Choice Scarf' && !field.magicRoom) chips.push('<span class="scarfx" title="Choice Scarf ×1.5 Speed">×1.5</span>');
       const stageChip=effB?` <span class="bsign ${effB>0?'up':'down'}">${effB>0?'+'+effB:effB}</span>`:'';
-      cell.innerHTML=`<b class="up" title="Choice Scarf: ${pre} ×1.5 = ${spd}">${spd}</b> <span class="finbase">(${v})</span> <span class="scarfx">×1.5</span>${stageChip}`;
+      cell.innerHTML=`<b class="${sign}" title="in-battle Speed = ${inBattleSpe}">${inBattleSpe}</b> <span class="finbase">(${v})</span> ${chips.join(' ')}${stageChip}`;
     } else if(effB){
       const boosted=applyBoost(v,effB);
       const sign=effB>0?'up':'down';
@@ -3324,15 +3389,20 @@ function syncCounters(p,m){
   const showTH=moves.includes('Rage Fist');
   const showMS=m.ability==='Marvel Scale';
   const showMT=m.item==='Metronome';
-  wrap.hidden=!(showFA||showTH||showMS||showMT);
+  const showAN=m.ability==='Analytic';
+  wrap.hidden=!(showFA||showTH||showMS||showMT||showAN);
   const faRow=wrap.querySelector('[data-counter="faintedAllies"]');
   const thRow=wrap.querySelector('[data-counter="timesHit"]');
   const msRow=wrap.querySelector('[data-counter="marvelScale"]');
   const mtRow=wrap.querySelector('[data-counter="metronome"]');
+  const anRow=wrap.querySelector('[data-counter="analytic"]');
   if(faRow)faRow.hidden=!showFA;
   if(thRow)thRow.hidden=!showTH;
   if(msRow)msRow.hidden=!showMS;
   if(mtRow)mtRow.hidden=!showMT;
+  if(anRow)anRow.hidden=!showAN;
+  const anBtn=g(p+'_an_btn');
+  if(anBtn){anBtn.textContent=m.analytic?'On':'Off';anBtn.classList.toggle('on',!!m.analytic);}
   const faVal=g(p+'_cnt_fa'), thVal=g(p+'_cnt_th');
   if(faVal)faVal.textContent=m.faintedAllies||0;
   if(thVal)thVal.textContent=m.timesHit||0;
@@ -3499,10 +3569,16 @@ function wireSlot(p,m){
   // later status changes stop auto-overriding it (same idea as the Rage Fist counter).
   const msBtn=g(p+'_ms_btn');
   if(msBtn)msBtn.onclick=()=>{m.marvelScale=!m.marvelScale;m._msManual=true;syncCounters(p,m);updateResults();};
-  // Side-effects buttons (toggle, single-click)
-  const side=p==='a'?sideA:sideB;
+  // Analytic manual toggle — ×1.3 when moving last (turn order isn't simulated).
+  const anBtn=g(p+'_an_btn');
+  if(anBtn)anBtn.onclick=()=>{m.analytic=!m.analytic;syncCounters(p,m);updateResults();};
+  // Side-effects buttons (toggle, single-click). Read the LIVE side object inside
+  // the handler — afterSlotSwitch may reassign sideA/sideB after this wiring runs.
   document.querySelectorAll(`[data-grp="${p}_fx"]`).forEach(btn=>btn.onclick=()=>{
-    const k=btn.dataset.v;side[k]=side[k]?0:1;btn.classList.toggle('active',!!side[k]);updateResults();});
+    const side=p==='a'?sideA:sideB;
+    const k=btn.dataset.v;side[k]=side[k]?0:1;btn.classList.toggle('active',!!side[k]);
+    if(k==='tailwind') renderFinals(p,m);   // Tailwind ×2 shows on the Speed cell
+    updateResults();});
   // HP slider drives the %; the number input drives actual HP (auto-converts).
   g(p+'_hp').addEventListener('input',()=>{
     m.hpPct=+g(p+'_hp').value;syncHPUI(p,m);updateResults();
@@ -4185,7 +4261,7 @@ function loadIntoSlot(p,m,src){_resetSlotTransients(m);
   updateResults();}
 // Reset per-load transient flags (Marvel Scale manual override, borrowed-spread
 // note) so a fresh mon/spread starts from auto-derived defaults.
-function _resetSlotTransients(m){m._msManual=false;m._spreadNote=null;}
+function _resetSlotTransients(m){m._msManual=false;m._spreadNote=null;m.analytic=false;}
 // Load an enemy teamsheet mon into a slot (default: slot B). When the mon has no
 // EV spread (open team sheet), borrow the best-matching spread from the database
 // and surface a note under the stat block showing what did/didn't match.
@@ -4353,13 +4429,13 @@ function renderDmg(){
     <datalist id="movelist">${ALL_MOVES.map(mv=>`<option value="${esc(mv)}">`).join('')}</datalist>
     <datalist id="abilitylist">${ALL_ABILITIES.map(a=>`<option value="${esc(a)}">`).join('')}</datalist>
     <div class="teamsrow">
-    <details class="myteam" data-tour="myteam-paste" ${myTeam.length?'':'open'}><summary>${myTeam.length?'<span class="myteam-lbl"><span class="myteam-ic">🎒</span><strong>My Team</strong> <span class="small myteam-hint">tap to edit</span></span>':'<strong>Paste your team</strong> <span class="small">Showdown export — saved in this browser, used for quick-picks</span>'}</summary>
+    <details class="myteam" data-tour="myteam-paste" ${myTeam.length?'':'open'}><summary>${myTeam.length?'<span class="myteam-lbl"><img class="myteam-ic myteam-ic-img" src="data/sprites/trainer-red.png" alt="Red" loading="lazy"><strong>My Team</strong> <span class="small myteam-hint">tap to edit</span></span>':'<strong>Paste your team</strong> <span class="small">Showdown export — saved in this browser, used for quick-picks</span>'}</summary>
       <textarea id="myta" placeholder="Garchomp @ Sitrus Berry&#10;Ability: Rough Skin&#10;EVs: 32 Atk / 32 Spe&#10;Jolly Nature&#10;- Earthquake&#10;- Dragon Claw&#10;...">${esc(myTeam.raw||'')}</textarea>
       <div class="myteam-actions">
         <button id="mysave" class="btn">Save my team</button>
         <button id="mybuild" data-tour="open-builder" class="btn btn-alt" title="Build a team with dropdowns instead of pasting">🛠 Build team →</button>
       </div></details>
-    <details class="myteam enemyteam"><summary>${enemyTeam.length?'<span class="myteam-lbl"><span class="myteam-ic">⚔</span><strong>Enemy Team</strong> <span class="small myteam-hint">tap to edit</span></span>':'<span class="myteam-lbl"><span class="myteam-ic">⚔</span><strong>Enemy Team</strong> <span class="small">open-team-sheet opponent — quick-pick chips appear on the Enemy slot</span></span>'}</summary>
+    <details class="myteam enemyteam"><summary>${enemyTeam.length?'<span class="myteam-lbl"><img class="myteam-ic myteam-ic-img" src="data/sprites/trainer-gary.png" alt="Gary" loading="lazy"><strong>Enemy Team</strong> <span class="small myteam-hint">tap to edit</span></span>':'<span class="myteam-lbl"><img class="myteam-ic myteam-ic-img" src="data/sprites/trainer-gary.png" alt="Gary" loading="lazy"><strong>Enemy Team</strong> <span class="small">open-team-sheet opponent — quick-pick chips appear on the Enemy slot</span></span>'}</summary>
       <textarea id="enemyta" placeholder="Landorus-Therian @ Assault Vest&#10;Ability: Intimidate&#10;EVs: 32 HP / 32 Atk / 32 Spe&#10;Adamant Nature&#10;- Earthquake&#10;- Rock Slide&#10;...">${esc(enemyTeam.raw||'')}</textarea>
       <div class="myteam-actions">
         <button id="enemysave" class="btn">Save enemy team</button>
@@ -4390,17 +4466,20 @@ function renderDmg(){
       </div>
     </div>
     <div id="dmgresults"></div>
-    <div class="small calcfoot"><b>VGC doubles only.</b> Champions ruleset (lv50, IVs max, 1 SP = 8 EV — 32 SP/stat ≡ old 252 EV cap, 66 SP total). <b>Modeled:</b> STAB · type chart · spread · stat boosts · status (burn/Guts) · current HP (Multiscale) · weather (incl. extremes Harsh Sun/Heavy Rain/Strong Winds) · terrains (Electric/Grassy/Misty/Psychic, grounded only; Grassy halves EQ) · screens (×0.5 singles / ×2/3 doubles, Aurora Veil snow-only; crit bypasses) · Helping Hand · Friend Guard (doubles) · Power Spot · Battery · Steely Spirit · Flower Gift · Crit (ignores +def/-atk boosts; Sniper ×2.25) · Trick/Magic/Wonder Room · Gravity (ground hits Flying, suppresses Levitate) · <b>multi-hit moves</b> (Triple Axel/Triple Kick escalating BP; Population Bomb/Bullet Seed; Skill Link → max hits) · <b>move quirks</b>: Foul Play (defender Atk) · Body Press (user Def) · Psyshock/Psystrike/Secret Sword (target Def) · Facade (2× + ignores burn when statused) · Hex/Venoshock/Brine/Acrobatics/Knock Off · Low Kick/Grass Knot/Heavy Slam (weight) · Water Spout/Eruption (HP%) · <b>Intimidate auto-apply</b> (with Clear Body / Hyper Cutter / Inner Focus / Scrappy / Own Tempo / Oblivious immunity; Defiant counters; Competitive on special) · <b>contact/flag abilities</b>: Tough Claws ×1.3 (contact) · Iron Fist ×1.2 (punch) · Mega Launcher ×1.5 (pulse) · Strong Jaw ×1.5 (bite) · Sharpness ×1.5 (slicing) · Punk Rock ×1.3 atk / ×0.5 def (sound) · Soundproof immune (sound) · Bulletproof immune (bullet) · Fluffy ×0.5 contact + ×2 fire · -ate abilities (Pixilate/Aerilate/Refrigerate/Galvanize: Normal→type ×1.2 STAB) · Adaptability · Technician · Tinted Lens · Huge/Pure Power · Solar Power · Sand Force · Sniper · Neuroforce · Levitate / type-absorb immunities · Multiscale / Shadow Shield · Filter / Solid Rock / Prism Armor · Thick Fat · Heatproof · Purifying Salt · Fur Coat · Ice Scales · Choice/Specs/Life Orb/AV/Eviolite/type-boost items · Muscle Band ×1.1 phys · Wise Glasses ×1.1 spec · Expert Belt ×1.2 SE · Metronome stack (×1.0→×2.0) · Light Ball (Pikachu Atk/SpA ×2) · Hustle Atk ×1.5 · Iron Ball grounding · <b>result-panel readouts</b>: effective accuracy (Wide Lens/Compound Eyes/Victory Star/Hustle/No Guard · Bright Powder/Sand Veil/Snow Cloak) · drain + Shell Bell heal-back. · <b>Champions specifics:</b> Fire Mane (Mega Pyroar) · Fairy Aura toggle (Mega Floette-Eternal) · Eelevate ground-immunity (Mega Eelektross) · Mega Sol personal-sun (Mega Meganium) · Dragonize (Mega Feraligatr, Normal→Dragon ×1.2 STAB) · Piercing Drill (Mega Excadrill, note only — Protect not modeled) · Weather Ball type shift · Reg-B patches (Make It Rain acc 100→95, move BP shifts).</div>`;
+    <div class="small calcfoot"><b>VGC doubles only.</b> Champions ruleset (lv50, IVs max, 1 SP = 8 EV — 32 SP/stat ≡ old 252 EV cap, 66 SP total). <b>Modeled:</b> STAB · type chart · spread · stat boosts · status (burn/Guts) · current HP (Multiscale) · weather (incl. extremes Harsh Sun/Heavy Rain/Strong Winds) · terrains (Electric/Grassy/Misty/Psychic, grounded only; Grassy halves EQ) · screens (×0.5 singles / ×2/3 doubles, Aurora Veil snow-only; crit bypasses) · Helping Hand · Friend Guard (doubles) · Power Spot · Battery · Steely Spirit · Flower Gift · Crit (ignores +def/-atk boosts; Sniper ×2.25) · Trick/Magic/Wonder Room · Gravity (ground hits Flying, suppresses Levitate) · <b>multi-hit moves</b> (Triple Axel/Triple Kick escalating BP; Population Bomb/Bullet Seed; Skill Link → max hits) · <b>move quirks</b>: Foul Play (defender Atk) · Body Press (user Def) · Psyshock/Psystrike/Secret Sword (target Def) · Facade (2× + ignores burn when statused) · Hex/Venoshock/Brine/Acrobatics/Knock Off · Low Kick/Grass Knot/Heavy Slam (weight) · Water Spout/Eruption (HP%) · <b>Intimidate auto-apply</b> (with Clear Body / Hyper Cutter / Inner Focus / Scrappy / Own Tempo / Oblivious immunity; Defiant counters; Competitive on special) · <b>contact/flag abilities</b>: Tough Claws ×1.3 (contact) · Iron Fist ×1.2 (punch) · Mega Launcher ×1.5 (pulse) · Strong Jaw ×1.5 (bite) · Sharpness ×1.5 (slicing) · Punk Rock ×1.3 atk / ×0.5 def (sound) · Soundproof immune (sound) · Bulletproof immune (bullet) · Fluffy ×0.5 contact + ×2 fire · -ate abilities (Pixilate/Aerilate/Refrigerate/Galvanize: Normal→type ×1.2 STAB) · Adaptability · Technician · Tinted Lens · Huge/Pure Power · Solar Power · Sand Force · Sniper · Neuroforce · Overgrow/Blaze/Torrent/Swarm (pinch ×1.5 at ≤⅓ HP) · Analytic ×1.3 (moving-last toggle) · Levitate / type-absorb immunities · Multiscale / Shadow Shield · Filter / Solid Rock / Prism Armor · Thick Fat · Heatproof · Dry Skin (Water immune + Fire ×1.25) · Purifying Salt · Fur Coat · Ice Scales · Choice/Specs/Life Orb/AV/Eviolite/type-boost items · Muscle Band ×1.1 phys · Wise Glasses ×1.1 spec · Expert Belt ×1.2 SE · Metronome stack (×1.0→×2.0) · Light Ball (Pikachu Atk/SpA ×2) · Hustle Atk ×1.5 · Iron Ball grounding · <b>result-panel readouts</b>: effective accuracy (Wide Lens/Compound Eyes/Victory Star/Hustle/No Guard · Bright Powder/Sand Veil/Snow Cloak) · drain + Shell Bell heal-back. · <b>Champions specifics:</b> Fire Mane (Mega Pyroar) · Fairy Aura toggle (Mega Floette-Eternal) · Eelevate ground-immunity (Mega Eelektross) · Mega Sol personal-sun (Mega Meganium) · Dragonize (Mega Feraligatr, Normal→Dragon ×1.2 STAB) · Piercing Drill (Mega Excadrill, note only — Protect not modeled) · Weather Ball type shift · Reg-B patches (Make It Rain acc 100→95, move BP shifts).</div>`;
   wireSlot('a',A);wireSlot('b',B);
   // Field button handlers (single-click). Doubles is hard-pinned (see line ~838) — no Singles toggle in UI.
   document.querySelectorAll('[data-grp="weat"]').forEach(b=>b.onclick=()=>{
-    weather=b.dataset.v;syncBtnGroup('weat',weather);
+    // Click the active weather again → toggle it back off (to none).
+    weather=(weather===b.dataset.v)?'none':b.dataset.v;syncBtnGroup('weat',weather);
     // Flower Gift is sun-conditional — re-evaluate slot auto-wires
     applySlotAutoWire('a',A);applySlotAutoWire('b',B);
     syncFxRow('a',sideA);syncFxRow('b',sideB);
     updateResults();
   });
-  document.querySelectorAll('[data-grp="terr"]').forEach(b=>b.onclick=()=>{field.terrain=b.dataset.v;syncBtnGroup('terr',field.terrain);updateResults();});
+  document.querySelectorAll('[data-grp="terr"]').forEach(b=>b.onclick=()=>{
+    // Click the active terrain again → toggle it back off (to none).
+    field.terrain=(field.terrain===b.dataset.v)?'none':b.dataset.v;syncBtnGroup('terr',field.terrain);updateResults();});
   document.querySelectorAll('[data-grp="rm"]').forEach(b=>b.onclick=()=>{const k=b.dataset.v;field[k]=field[k]?0:1;b.classList.toggle('active',!!field[k]);updateResults();});
   g('mysave').onclick=()=>{const raw=g('myta').value;try{localStorage.setItem('vgc_myteam_raw',raw);}catch(e){}
     myTeam=parseShowdown(raw);myTeam.raw=raw;renderDmg();};
@@ -5033,6 +5112,7 @@ function setView(v){view=v;
   else if(v==='share'){ /* content rendered by renderSharedTeam via the router */ }
   else renderTeams();
   autoFocusForView(v);
+  syncShortcutBadge();   // the power-mode indicator is calc-view-only
 }
 
 // ─── Shared-team page (full-page read-only team view) ──────────────────────
@@ -5278,40 +5358,100 @@ function swapAB(){const tmp=A;A=B;B=tmp;
   if(view==='dmg')renderDmg();}
 function cycleArr(arr,cur,dir){const i=arr.findIndex(x=>x[0]===cur);return arr[(i+dir+arr.length)%arr.length][0];}
 function showHelpOverlay(show){const o=document.getElementById('helpoverlay');if(o)o.style.display=show?'flex':'none';}
+// ── Calc keyboard-shortcut gating ──────────────────────────────────────────
+// Single source of truth for what a bare keypress means in the calc view (the
+// caller has already excluded typing + non-dmg views):
+//   'pass'   → a Ctrl/Cmd combo — hands off, the browser/OS keeps it
+//   'toggle' → the Shift+K master switch (works even while shortcuts are off)
+//   'off'    → power-mode disabled; ignore the key (Alt+key falls back to the OS)
+//   'fire'   → a live shortcut may run
+// Ctrl/Cmd always belong to the browser (copy/reload/tab-switch). Alt is an APP
+// modifier ONLY in power-mode — bare keys act on my team (side A), Alt+key on the
+// enemy (side B) — so Alt is handed back to the OS whenever power-mode is off.
+// e.code (physical key) is used, not e.key, so Alt/Shift-produced characters
+// (Mac Option+c → "ç", Shift+1 → "!") still resolve to the right shortcut.
+function classifyCalcKey(e, enabled){
+  if(e.ctrlKey||e.metaKey) return 'pass';
+  if(e.shiftKey && e.code==='KeyK') return 'toggle';
+  if(!enabled) return 'off';
+  return 'fire';
+}
+function setShortcutsEnabled(on){
+  shortcutsEnabled=!!on;
+  try{localStorage.setItem('bt_shortcuts_on', shortcutsEnabled?'1':'0');}catch(e){}
+  syncShortcutBadge();
+  showScToast(shortcutsEnabled);
+  try{ tcount && tcount('calc/shortcuts-'+(shortcutsEnabled?'on':'off'), 'calc: shortcuts '+(shortcutsEnabled?'on':'off')); }catch(e){}
+}
+// Top-right "⌨ Shortcuts on" indicator — visible only while power-mode is on AND
+// we're in the calc view (the only place these shortcuts do anything).
+function syncShortcutBadge(){
+  const b=document.getElementById('shortcutbadge');
+  if(b) b.hidden=!(shortcutsEnabled && view==='dmg');
+}
+// Brief toast confirming a toggle — the badge shows steady-state, this confirms
+// the flip (esp. OFF, when the badge disappears).
+let _scToastT=0;
+function showScToast(on){
+  const t=document.getElementById('sctoast');
+  if(!t) return;
+  t.textContent=on?'⌨ Shortcuts on':'⌨ Shortcuts off';
+  t.classList.add('show');
+  clearTimeout(_scToastT);
+  _scToastT=setTimeout(()=>t.classList.remove('show'),1400);
+}
+// Toggle a per-side battle-effect flag from a keyboard shortcut. Bare key = my
+// team (side A); Alt = enemy (side B). Reads the LIVE side object (afterSlotSwitch
+// may have reassigned sideA/sideB) and refreshes that side's fx-button row.
+function toggleSideFx(alt, key){
+  const p=alt?'b':'a', side=alt?sideB:sideA;
+  side[key]=side[key]?0:1;
+  syncFxRow(p, side);
+  if(key==='tailwind') renderFinals(p, alt?B:A);   // Tailwind changes the Speed cell
+  updateResults();
+}
 document.addEventListener('keydown',e=>{
   if(e.target.matches('input, textarea, select, [contenteditable]')) return;
   if(view!=='dmg') return;
-  if(e.key>='1' && e.key<='6'){
-    const i=+e.key-1;
-    // 1..6 → enemy slot from fightTeam > enemyTeam > myTeam (fallback);
-    // Shift+1..6 → ally slot from myTeam.
-    const src = e.shiftKey
-      ? myTeam[i]
-      : (fightTeam?.mons[i] || enemyTeam[i] || myTeam[i]);
-    if(!src) return;
-    const tgt = e.shiftKey ? targetSlot('a') : targetSlot('b');
-    // Enemy loads (non-shift) borrow a spread when the sheet mon has none.
-    if(e.shiftKey) loadIntoSlot(tgt, tgt==='a'?A:B, src);
-    else loadEnemyMon(tgt, src);
-    e.preventDefault();return;
-  }
-  if(e.key==='Tab' && !e.shiftKey){swapAB();e.preventDefault();return;}
-  if(e.key==='w'||e.key==='W'){weather=cycleArr(WEATHERS,weather,1);syncBtnGroup('weat',weather);updateResults();e.preventDefault();return;}
-  if(e.key==='t'||e.key==='T'){field.terrain=cycleArr(TERRAINS,field.terrain,1);syncBtnGroup('terr',field.terrain);updateResults();e.preventDefault();return;}
-  if(e.key==='r'||e.key==='R'){field.trickRoom=!field.trickRoom;document.querySelector('[data-grp="rm"][data-v="trickRoom"]')?.classList.toggle('active',!!field.trickRoom);updateResults();e.preventDefault();return;}
-  if(e.key==='c'||e.key==='C'){sideA.crit=sideA.crit?0:1;syncFxRow('a',sideA);updateResults();e.preventDefault();return;}
-  if(e.key==='Escape'){if(fightTeam){fightTeam=null;renderDmg();e.preventDefault();}return;}
-  if(e.key==='['||e.key===']'){
-    const mons=fightTeam?.mons || (enemyTeam.length?enemyTeam:null);
-    if(!mons) return;
-    const idx=mons.findIndex(m=>(m.forme||m.name)===B.forme);
-    const dir=e.key===']'?1:-1, next=((idx>=0?idx:0)+dir+mons.length)%mons.length;
-    loadEnemyMon('b',mons[next]);
-    e.preventDefault();return;
-  }
+  const _cls=classifyCalcKey(e, shortcutsEnabled);
+  if(_cls==='pass') return;                                   // Ctrl/Cmd/Alt → browser/OS
+  if(_cls==='toggle'){setShortcutsEnabled(!shortcutsEnabled);e.preventDefault();return;}
+  // '?' opens the Hotkeys overlay whether or not power-mode is on — it's how you
+  // discover Shift+K in the first place.
   if(e.key==='?'){showHelpOverlay(true);e.preventDefault();return;}
+  if(_cls==='off') return;                                    // power-mode off → bare keys inert
+  // 1–6 → load MY team into A; Alt+1–6 → load ENEMY into B. e.code (Digit1..6)
+  // so Shift/Alt-produced characters ("!", "¡") don't break the match.
+  const dm=/^(?:Digit|Numpad)([1-6])$/.exec(e.code);
+  if(dm){
+    e.preventDefault();
+    const i=+dm[1]-1;
+    if(e.altKey){                                             // enemy → slot B
+      const src=fightTeam?.mons[i] || enemyTeam[i] || myTeam[i];
+      if(src) loadEnemyMon('b', src);                         // borrows a spread if the sheet has none
+    }else{                                                    // my team → slot A
+      const src=myTeam[i];
+      if(src) loadIntoSlot('a', A, src);
+    }
+    return;
+  }
+  // Per-side battle effects — bare = my team (A), Alt = enemy (B).
+  if(e.code==='KeyC'){toggleSideFx(e.altKey,'crit');e.preventDefault();return;}
+  if(e.code==='KeyH'){toggleSideFx(e.altKey,'helpingHand');e.preventDefault();return;}
+  if(e.code==='KeyR'){toggleSideFx(e.altKey,'reflect');e.preventDefault();return;}
+  if(e.code==='KeyL'){toggleSideFx(e.altKey,'lightScreen');e.preventDefault();return;}
+  // Field-wide toggles — bare key only (Alt is reserved for the enemy side above).
+  // (Trick Room has no calc/damage effect — turn-order display only — so it has
+  // no hotkey; toggle it from the field bar when you want the speed-order flip.)
+  if(!e.altKey && e.code==='KeyW'){weather=cycleArr(WEATHERS,weather,1);syncBtnGroup('weat',weather);applySlotAutoWire('a',A);applySlotAutoWire('b',B);syncFxRow('a',sideA);syncFxRow('b',sideB);updateResults();e.preventDefault();return;}
+  if(!e.altKey && e.code==='KeyT'){field.terrain=cycleArr(TERRAINS,field.terrain,1);syncBtnGroup('terr',field.terrain);updateResults();e.preventDefault();return;}
+  // Tab swaps sides — bare only, never intercept Alt+Tab (OS window switch).
+  if(e.code==='Tab' && !e.shiftKey && !e.altKey){swapAB();e.preventDefault();return;}
+  if(e.code==='Escape'){if(fightTeam){fightTeam=null;renderDmg();e.preventDefault();}return;}
 });
 document.addEventListener('click',e=>{if(e.target.id==='helpoverlay'||e.target.closest('#helpoverlay'))showHelpOverlay(false);});
+// The top-right indicator doubles as a mouse off-switch (matches Shift+K).
+document.getElementById('shortcutbadge')?.querySelector('.sb-pill')?.addEventListener('click',()=>setShortcutsEnabled(false));
 
 // Global hotkeys (work outside the dmg view too). Handles the brand 'b 2' sequence
 // (type 'b' then '2' within 600ms → jump to Damage Calc) and global '?' help.

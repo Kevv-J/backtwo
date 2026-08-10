@@ -3,8 +3,57 @@
 // a specific ability or item interaction.
 
 import test from 'node:test';
-import { calc } from './harness.js';
+import { calc, effSpeed } from './harness.js';
 import { mkMon, mkSide, mkField, assertRatio, assertRange } from './fixtures.js';
+
+// ── Tailwind speed (×2) ──────────────────────────────────────────────────────
+test('Tailwind doubles the mon\'s in-battle Speed (effSpeed)', () => {
+  const m = mkMon({ forme: 'Garchomp', nature: 'Jolly', ev: { spe: 32 } });
+  const base = effSpeed(m, mkSide());
+  const tw = effSpeed(m, mkSide({ tailwind: true }));
+  if (!base || !tw) throw new Error('effSpeed returned null');
+  assertRatio(tw / base, 2, 'Tailwind ×2 Speed');
+});
+
+// ── Dry Skin ─────────────────────────────────────────────────────────────────
+test('Dry Skin: +25% Fire damage taken', () => {
+  const atk = mkMon({ forme: 'Charizard', nature: 'Modest', ev: { spa: 32 }, moves: ['Flamethrower'] });
+  const def = { forme: 'Garchomp', nature: 'Serious', ev: {}, moves: ['', '', '', ''] };
+  const plain = mkMon({ ...def, ability: '' });
+  const dry = mkMon({ ...def, ability: 'Dry Skin' });
+  const rP = calc({ atk, def: plain, sA: mkSide(), sB: mkSide(), w: 'none', f: mkField(), move: 'Flamethrower' });
+  const rD = calc({ atk, def: dry, sA: mkSide(), sB: mkSide(), w: 'none', f: mkField(), move: 'Flamethrower' });
+  assertRatio(rD.hi / rP.hi, 1.25, 'Dry Skin Fire ×1.25');
+});
+
+test('Dry Skin: immune to Water (eff 0)', () => {
+  const atk = mkMon({ forme: 'Archaludon', nature: 'Modest', ev: { spa: 32 }, moves: ['Surf'] });
+  const dry = mkMon({ forme: 'Garchomp', ability: 'Dry Skin' });
+  const r = calc({ atk, def: dry, sA: mkSide(), sB: mkSide(), w: 'none', f: mkField(), move: 'Surf' });
+  if (r.eff !== 0) throw new Error(`Dry Skin should be Water-immune, eff=${r.eff}`);
+});
+
+// ── Pinch abilities (Overgrow/Blaze/Torrent/Swarm) ──────────────────────────
+test('Overgrow: Grass move ×1.5 at ≤1/3 HP, ×1.0 above', () => {
+  const s = { forme: 'Sinistcha', ability: 'Overgrow', nature: 'Modest', ev: { spa: 32 }, moves: ['Energy Ball'] };
+  const full = mkMon({ ...s, hpPct: 100 });
+  const low = mkMon({ ...s, hpPct: 30 });
+  const def = mkMon({ forme: 'Garchomp', ev: { hp: 32 } });
+  const rF = calc({ atk: full, def, sA: mkSide(), sB: mkSide(), w: 'none', f: mkField(), move: 'Energy Ball' });
+  const rL = calc({ atk: low, def, sA: mkSide(), sB: mkSide(), w: 'none', f: mkField(), move: 'Energy Ball' });
+  assertRatio(rL.hi / rF.hi, 1.5, 'Overgrow pinch ×1.5');
+});
+
+// ── Analytic ─────────────────────────────────────────────────────────────────
+test('Analytic: ×1.3 when the moving-last toggle is on', () => {
+  const base = { forme: 'Garchomp', ability: 'Analytic', nature: 'Modest', ev: { spa: 32 }, moves: ['Draco Meteor'] };
+  const off = mkMon(base);
+  const on = mkMon(base); on.analytic = true;
+  const def = mkMon({ forme: 'Kingambit', ev: { hp: 32 } });
+  const rOff = calc({ atk: off, def, sA: mkSide(), sB: mkSide(), w: 'none', f: mkField(), move: 'Draco Meteor' });
+  const rOn = calc({ atk: on, def, sA: mkSide(), sB: mkSide(), w: 'none', f: mkField(), move: 'Draco Meteor' });
+  assertRatio(rOn.hi / rOff.hi, 1.3, 'Analytic ×1.3');
+});
 
 // ── Supreme Overlord (Kingambit) ────────────────────────────────────────────
 test('Supreme Overlord: +10% per fainted ally, cap 5 → ×1.5 at 5', () => {
