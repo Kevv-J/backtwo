@@ -1,14 +1,14 @@
 {
-  "generated_at_utc": "2026-08-11T09:51:01Z",
-  "build_sha": "6d401a8",
-  "build_date": "2026-08-11",
+  "generated_at_utc": "2026-08-14T12:35:25Z",
+  "build_sha": "67e36a6",
+  "build_date": "2026-08-14",
   "scrape": {
-    "team_total": 1799,
+    "team_total": 1816,
     "by_reg": {
       "M-A": 1104,
-      "M-B": 695
+      "M-B": 712
     },
-    "resolved_pastes": 1799,
+    "resolved_pastes": 1816,
     "resolve_rate": 1.0
   },
   "dex": {
