@@ -1,7 +1,7 @@
 {
-  "generated_at_utc": "2026-09-08T13:09:47Z",
-  "build_sha": "cd98273",
-  "build_date": "2026-09-08",
+  "generated_at_utc": "2026-09-11T15:21:39Z",
+  "build_sha": "7695957",
+  "build_date": "2026-09-11",
   "scrape": {
     "team_total": 1965,
     "by_reg": {
@@ -13,11 +13,11 @@
   },
   "dex": {
     "forme_count": 314,
-    "move_count": 499,
+    "move_count": 513,
     "type_count": 18,
     "item_icon_count": 113,
-    "learnset_species": 232,
-    "legal_species": 317
+    "learnset_species": 258,
+    "legal_species": 352
   },
   "sources": {
     "vgcpastes_sheet_id": "1axlwmzPA49rYkqXh7zHvAtSP-TKbM0ijGYBPRflLSWw",
