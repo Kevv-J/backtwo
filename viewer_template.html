@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Pokémon Champions VGC Teams, Team Finder &amp; Damage Calc — backtwo</title>
-<meta name="description" content="Search {{TEAM_COUNT}}+ Pokémon Champions VGC tournament teams by the mons you already run. Free, open-source team finder, Reg M-A/M-B team database, and doubles damage calculator in one tool.">
+<meta name="description" content="Search {{TEAM_COUNT}}+ Pokémon Champions VGC tournament teams by the mons you already run. Free, open-source team finder, Reg M-A/M-B/M-C team database, and doubles damage calculator in one tool.">
 <meta name="author" content="Kevin John">
 <meta name="google-site-verification" content="VCRbpOqt6hDuCSlJ2bhzWAMr7_tSNX5VLJ6dS582PZA">
 <meta name="msvalidate.01" content="C9C946F11C06C01FF4B808B914653039">
@@ -34,7 +34,7 @@
 "isAccessibleForFree":true,
 "license":"https://github.com/Kevv-J/backtwo/blob/main/LICENSE",
 "author":{"@type":"Person","name":"Kevin John","url":"https://github.com/Kevv-J"},
-"featureList":["Search {{TEAM_COUNT}}+ Pokémon Champions VGC tournament teams by partial team match","Regulation M-A and M-B team archive","Doubles damage calculator with Mega Evolution and Stat Points","Pokémon usage and meta browser","Guided interactive tour"]}
+"featureList":["Search {{TEAM_COUNT}}+ Pokémon Champions VGC tournament teams by partial team match","Regulation M-A, M-B and M-C team archive","Doubles damage calculator with Mega Evolution and Stat Points","Pokémon usage and meta browser","Guided interactive tour"]}
 </script>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='50%25' stop-color='%2322d3ee'/%3E%3Cstop offset='50%25' stop-color='%23a78bfa'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='32' cy='32' r='30' fill='url(%23g)'/%3E%3Ctext x='32' y='44' text-anchor='middle' font-family='Rajdhani,Inter,sans-serif' font-weight='700' font-size='38' fill='%23ffffff'%3E2%3C/text%3E%3C/svg%3E">
 <!-- Telemetry: GoatCounter — free, cookieless, GDPR-safe. The data-goatcounter
@@ -65,6 +65,8 @@
     /* Side dichotomy: attacker = cyan, defender = violet */
     --atk-color:#22d3ee; --atk-bg:rgba(6,182,212,0.10); --atk-border:rgba(6,182,212,0.30);
     --def-color:#a78bfa; --def-bg:rgba(139,92,246,0.10); --def-border:rgba(139,92,246,0.30);
+    /* M-C = amber: the current regulation's reg pill (cyan → violet → amber) */
+    --mc-color:#f5b04a; --mc-bg:rgba(245,176,74,0.12); --mc-border:rgba(245,176,74,0.34);
     /* Status colour roles */
     --good:#34d399;        /* emerald: OHKO / positive / terrain */
     --good-bg:rgba(16,185,129,0.18); --good-border:rgba(16,185,129,0.35);
@@ -117,6 +119,7 @@
   .regbtn.active{color:var(--warning);background:var(--card-elev);box-shadow:0 0 0 1px var(--warning-border)}
   .regbtn.active[data-reg="M-A"]{color:var(--atk-color);box-shadow:0 0 0 1px var(--atk-border);background:var(--card-elev)}
   .regbtn.active[data-reg="M-B"]{color:var(--def-color);box-shadow:0 0 0 1px var(--def-border);background:var(--card-elev)}
+  .regbtn.active[data-reg="M-C"]{color:var(--mc-color);box-shadow:0 0 0 1px var(--mc-border);background:var(--card-elev)}
   .regbadge{display:inline-block;font-size:9px;background:rgba(34,211,238,0.10);color:var(--primary);border:1px solid rgba(34,211,238,0.25);border-radius:3px;padding:1px 5px;margin-left:6px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
   .regbadge.mb{background:rgba(245,158,11,0.10);color:var(--warning);border-color:rgba(245,158,11,0.30)}
   .newbadge{display:inline-block;font-size:9px;background:rgba(16,185,129,0.10);color:var(--good);border:1px solid rgba(16,185,129,0.30);border-radius:3px;padding:1px 5px;margin-left:6px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
@@ -1220,13 +1223,14 @@
     <span class="applogo">2</span>
     <h1 class="wordmark"><span class="wm-a">back</span><span class="wm-b">two</span></h1>
   </a>
-  <span class="sub" id="stat">VGC · Reg M-A/B</span>
+  <span class="sub" id="stat">VGC · Reg M-A/B/C</span>
   <span class="freshness" id="freshness" title="Data refreshed from VGCPastes on this build"></span>
   <span class="fieldsum" id="fieldsum"></span>
   <input id="search" placeholder="Search…">
   <div class="regs" data-tour="reg-pills" title="Reg A shows only that reg's teams. Later regs are additive: each pill includes prior-reg teams still legal in that reg.">
     <div class="regbtn" data-reg="M-A">Reg A</div>
-    <div class="regbtn active" data-reg="M-B">Reg B</div>
+    <div class="regbtn" data-reg="M-B">Reg B</div>
+    <div class="regbtn active" data-reg="M-C">Reg C</div>
   </div>
   <div class="tabs">
     <div class="tab active" data-view="poke">Pokémon</div>
@@ -1263,7 +1267,7 @@
       different sites:</p>
       <ul>
         <li><strong>A tournament team database</strong> — {{TEAM_COUNT}} real
-        Pokémon Champions teams from Regulation M-A and M-B events, with full
+        Pokémon Champions teams from Regulation M-A, M-B and M-C events, with full
         Showdown pastes, spreads, items and moves.</li>
         <li><strong>A reverse team finder</strong> — type in the Pokémon you
         already run and it finds the tournament teams built around that core,
@@ -1523,22 +1527,25 @@ function boostMult(s){return s>=0?(2+s)/2:2/(2-s);}
 function applyBoost(stat,s){return s>=0?Math.floor(stat*(2+s)/2):Math.floor(stat*2/(2-s));}
 
 // ---------- forme helpers ----------
-const isMega=l=>/-Mega(-[XY])?$/.test(l);
-const baseOf=l=>l.replace(/-Mega(-[XY])?$/,'');
+const isMega=l=>/-Mega(-[A-Z])?$/.test(l);
+const baseOf=l=>l.replace(/-Mega(-[A-Z])?$/,'');
 // Canonical-case map, populated once ALL_FORMES exists. Lets us fold user pastes
 // that mis-case a forme (Kommo-O → Kommo-o, meowstic-f → Meowstic-F) into the
 // spelling DEX.formes actually uses, so the paste path doesn't silently break.
 let FORME_CANON = null;
 function normSpec(n){
   if(!n) return n;
-  n = n.replace(/-Mega(-[XY])?$/i, '');
+  n = n.replace(/-Mega(-[A-Z])?$/i, '');
   if(/^floette$/i.test(n)) n = 'Floette-Eternal';
   if(FORME_CANON) return FORME_CANON.get(n.toLowerCase()) || n;
   return n;
 }
-const isStone=it=>!!it&&it!=='Eviolite'&&/ite( [XY])?$/.test(it);
+const isStone=it=>!!it&&it!=='Eviolite'&&/ite( [XYZ])?$/.test(it);
 function jsForme(name,item){name=normSpec(name);if(!isStone(item))return name;
-  const xy=/ ([XY])$/.exec(item);
+  // A trailing " X"/" Y"/" Z" on the stone picks the mega variant. Champions M-C
+  // added Z-megas (Absolite Z → Absol-Mega-Z, Garchompite Z, Lucarionite Z)
+  // alongside each mon's classic Mega.
+  const xy=/ ([XYZ])$/.exec(item);
   if(xy){const lab=`${name}-Mega-${xy[1]}`;return DEX.formes[lab]?lab:(DEX.formes[name+'-Mega']?name+'-Mega':name);}
   const m=name+'-Mega';return DEX.formes[m]?m:name;}
 // Legal-ability lookup — a Mega forme's LEGAL abilities are its base mon's,
@@ -1556,7 +1563,7 @@ function isHiddenAbility(forme, name){
 }
 // Showdown-style id (lowercase alphanumerics only) — matches DEX.learnsets keys.
 function toId(s){return (s||'').toLowerCase().replace(/[^a-z0-9]/g,'');}
-// Champions Reg M-B legal move set (move ids) for a forme, from Showdown's
+// Champions Reg M-C legal move set (move ids) for a forme, from Showdown's
 // champions-mod learnsets (DEX.learnsets, keyed by species id). Megas inherit the
 // base species; regional/other formes key on their own id. Returns a Set, or null
 // when we have no learnset for the mon (→ picker shows moves untagged). Memoised.
@@ -1585,12 +1592,15 @@ const monAllRegs=new Map();
 TEAMS.forEach(t=>{const r=t.reg||'M-A';t.mons.forEach(m=>{const k=m.forme||m.name;if(!k)return;
   if(!monAllRegs.has(k))monAllRegs.set(k,new Set());monAllRegs.get(k).add(r);});});
 function isNewInMB(name){const r=monAllRegs.get(name);return !!(r&&r.has('M-B')&&!r.has('M-A'));}
+function isNewInMC(name){const r=monAllRegs.get(name);return !!(r&&r.has('M-C')&&!r.has('M-B')&&!r.has('M-A'));}
 function representativeSet(e){const m={};e.sets.forEach(s=>{const k=s.item+'|'+s.evs;m[k]=m[k]||{...s,n:0};m[k].n++;});
   return Object.values(m).sort((a,b)=>b.n-a.n)[0]||e.sets[0];}
-// regFilter='M-A' shows only M-A teams. 'M-B' shows BOTH M-A and M-B teams,
-// because M-A's pool is also legal under M-B. Default to M-B (the superset).
-let regFilter='M-B';
-function teamInScope(t){return regFilter==='M-A'?(t.reg==='M-A'):true;}
+// Reg scope is additive/cumulative — each reg's pool stays legal under the next
+// (M-C ⊇ M-B ⊇ M-A). 'M-A' shows only M-A; 'M-B' shows M-A+M-B; 'M-C' (default,
+// the current superset) shows everything. Ranked so the check is order-based.
+const REG_RANK={'M-A':0,'M-B':1,'M-C':2};
+let regFilter='M-C';
+function teamInScope(t){return (REG_RANK[t.reg]??0) <= (REG_RANK[regFilter]??2);}
 let idx,pokeList,megaBases,speedRank,speedPos,scopeTeams;
 function rebuildIndex(){
   idx=new Map();
@@ -1598,7 +1608,7 @@ function rebuildIndex(){
   scopeTeams.forEach(t=>{const formes=t.mons.map(m=>m.forme||m.name).filter(Boolean);
     t.mons.forEach(m=>{const key=m.forme||m.name;if(!key)return;
       let e=idx.get(key);
-      if(!e){e={name:key,count:0,items:{},abilities:{},natures:{},moves:{},teammates:{},sets:[],teams:[],regCount:{'M-A':0,'M-B':0}};idx.set(key,e);}
+      if(!e){e={name:key,count:0,items:{},abilities:{},natures:{},moves:{},teammates:{},sets:[],teams:[],regCount:{'M-A':0,'M-B':0,'M-C':0}};idx.set(key,e);}
       e.count++;e.regCount[t.reg||'M-A']++;
       bump(e.items,m.item);bump(e.abilities,m.ability);bump(e.natures,m.nature);
       (m.moves||[]).forEach(mv=>bump(e.moves,mv));
@@ -1649,7 +1659,7 @@ let q='',selMon=null,megaCmp=false;
 function renderPokeList(){
   const f=q?pokeList.filter(p=>p.name.toLowerCase().includes(q)):pokeList;
   document.getElementById('list').innerHTML=f.map(p=>{
-    const mb=isNewInMB(p.name)?'<span class="newbadge">new M-B</span>':'';
+    const mb=isNewInMC(p.name)?'<span class="newbadge">new M-C</span>':isNewInMB(p.name)?'<span class="newbadge">new M-B</span>':'';
     const hm=(!isMega(p.name)&&megaBases.has(p.name))?'<span class="badge">has Mega</span>':'';
     return `<div class="row ${selMon===p.name?'sel':''}" data-name="${esc(p.name)}"><span class="rowname">${pokeSprite(p.name,'24')}<span>${hl(p.name,q)}${mb}${hm}</span></span><span class="ct">${p.count}</span></div>`;
   }).join('')||'<div class="empty">No match.</div>';
@@ -1791,14 +1801,15 @@ function renderDetail(name){
   document.getElementById('mhero')?.remove();  // clear mobile hero when drilling in
   const pct=(e.count/scopeTeams.length*100).toFixed(1);
   const mega=isMega(name), hasMega=!isMega(name)&&megaBases.has(name);
-  const newMB=isNewInMB(name);
+  const newMB=isNewInMB(name), newMC=isNewInMC(name);
   const cmpToggle=(mega||hasMega)?`<label class="tg"><input type="checkbox" id="megacmp" ${megaCmp?'checked':''}> compare ${mega?'vs base':'vs Mega'}</label>`:'';
   const teams=e.teams.slice().sort((a,b)=>(a.rank&&a.rank!=='-'?0:1)-(b.rank&&b.rank!=='-'?0:1));
-  const split=regFilter==='M-B'?` <span class="small">(M-A: ${e.regCount['M-A']} · M-B: ${e.regCount['M-B']})</span>`:'';
+  const split=regFilter==='M-C'?` <span class="small">(M-A: ${e.regCount['M-A']} · M-B: ${e.regCount['M-B']} · M-C: ${e.regCount['M-C']})</span>`
+    :regFilter==='M-B'?` <span class="small">(M-A: ${e.regCount['M-A']} · M-B: ${e.regCount['M-B']})</span>`:'';
   document.getElementById('view-poke').classList.add('detail-open');
   document.getElementById('detail').innerHTML=`
     <button class="mobile-back" id="mobileback" aria-label="Back to Pokémon list">← Pokémon list</button>
-    <h2>${pokeSprite(name,'48')}<span class="h2-name">${esc(e.name)}</span>${newMB?'<span class="newbadge">new M-B</span>':''}${(!mega&&hasMega)?'<span class="badge">has Mega</span>':''}</h2>
+    <h2>${pokeSprite(name,'48')}<span class="h2-name">${esc(e.name)}</span>${newMC?'<span class="newbadge">new M-C</span>':newMB?'<span class="newbadge">new M-B</span>':''}${(!mega&&hasMega)?'<span class="badge">has Mega</span>':''}</h2>
     <div class="usage">${e.count} teams · ${pct}% of ${regFilter} meta${split} ${cmpToggle}</div>
     <div class="grid">
       <div data-tour="detail-stats">${statBlock(name)}</div>
@@ -1923,6 +1934,9 @@ const CHAMPIONS_ITEMS=[
   'Pidgeotite','Pinsirite','Pyroarite','Raichunite X','Raichunite Y','Sablenite','Sceptilite',
   'Scizorite','Scolipite','Scovillainite','Scraftinite','Sharpedonite','Skarmorite','Slowbronite',
   'Staraptite','Starminite','Steelixite','Swampertite','Tyranitarite','Venusaurite','Victreebelite',
+  // Reg M-C stones (2026-09-09): Salamencite + new invented stones + the Z-mega
+  // stones — the trailing " Z" is what jsForme reads to pick the Z variant.
+  'Absolite Z','Baxcalibrite','Garchompite Z','Golisopite','Lucarionite Z','Salamencite',
 ];
 const ALL_ITEMS=[...new Set([
   ...CHAMPIONS_ITEMS,
@@ -1969,6 +1983,7 @@ const ABILITY_DESC = {
   'Heatproof':'Fire damage halved',
   'Purifying Salt':'Ghost damage halved; immune to status',
   'Fluffy':'Contact damage halved; Fire damage doubled',
+  'Aura Guard':'Contact damage taken halved (Mega Lucario Z)',
   'Fur Coat':'Defense effectively doubled vs physical',
   'Ice Scales':'SpD effectively doubled vs special',
   'Levitate':'Immune to Ground (unless Gravity)',
@@ -2182,7 +2197,7 @@ const ITEM_DESC = {
   'Babiri Berry':'Halves incoming super-effective Steel hit (once)',
   'Roseli Berry':'Halves incoming super-effective Fairy hit (once)',
   'Chilan Berry':'Halves any incoming Normal hit (SE or not — once)',
-  // Champions M-B held items previously absent from the picker
+  // Champions M-C held items previously absent from the picker
   'Light Ball':'Doubles Pikachu\'s Atk & SpA',
   'Focus Band':'May hold on with 1 HP when hit by a KO move (each hit — not modeled)',
   "King's Rock":'Attacks may make the target flinch (not modeled)',
@@ -2601,7 +2616,7 @@ function syncFieldUI(){
 function targetSlot(defaultP){return pinned==='a'?'b':pinned==='b'?'a':defaultP;}
 function zeroEV(){return{hp:0,atk:0,def:0,spa:0,spd:0,spe:0};}
 function zeroBoost(){return{atk:0,def:0,spa:0,spd:0,spe:0};}
-function newMon(){return{forme:'',item:'',ability:'',nature:'Serious',ev:zeroEV(),boost:zeroBoost(),moves:['','','',''],status:'ok',hpPct:100,faintedAllies:0,timesHit:0};}
+function newMon(){return{forme:'',item:'',ability:'',nature:'Serious',ev:zeroEV(),boost:zeroBoost(),moves:['','','',''],status:'ok',hpPct:100,faintedAllies:0,timesHit:0,beatup:4};}
 function statsOf(m){const f=effectiveForme(m);return f?statline(f,m.ev,m.nature):null;}
 // Grounded check: defender takes terrain effects only if grounded. Flying type
 // or Levitate ability mean ungrounded (unless Gravity overrides them).
@@ -2789,12 +2804,30 @@ function oneRoll(base,roll,spreadMod,stab,eff,itemMod){
   return Math.max(1,d);
 }
 // "atkSide" / "defSide" pass the per-side field effects (sideA when atk=A, etc.).
-function calcDmg(atk,move,def,atkSide,defSide){
-  const mv=DEX.moves[move];if(!mv||!mv.power)return null;
+function calcDmg(atk,move,def,atkSide,defSide,opts){
+  const mv=DEX.moves[move];if(!mv||(!mv.power && move!=='Beat Up'))return null;
   const as=statsOf(atk),ds=statsOf(def);if(!as||!ds)return null;
   // Effective BP (HP%-scaled moves, status/HP doublers). Used in place of mv.power throughout.
-  const bp=effectiveBP(move,atk,def);
+  let bp=effectiveBP(move,atk,def);
   atkSide=atkSide||newSide();defSide=defSide||newSide();
+  // Beat Up: one strike per HEALTHY participant. Champions is bring-of-4, so the
+  // count caps at 4; atk.beatup is a manual 1–4 counter (like Rage Fist's, since
+  // teammates' live status/faint isn't simulated), default 4. Each strike's BP is
+  // 5+floor(that member's BASE Attack/10); the attacking stat, Dark STAB, and
+  // every other modifier still come from the on-screen user (Gen V+, per
+  // Showdown/Bulbapedia) — the ally only feeds its species base Atk. Base Atks
+  // come from the loaded party (opts.partyAtks: side A = myTeam, side B =
+  // fightTeam/enemyTeam), taking the first N and padding with the user's own base
+  // Atk when the party is shorter or absent.
+  let bpListBeatUp=null;
+  if(move==='Beat Up'){
+    const own=DEX.formes[effectiveForme(atk)]?.stats?.atk||5;
+    const party=(opts&&opts.partyAtks&&opts.partyAtks.length)?opts.partyAtks:[own];
+    const n=Math.max(1, Math.min(4, atk.beatup??4));
+    const atks=[]; for(let i=0;i<n;i++) atks.push(party[i]??own);
+    bpListBeatUp=atks.map(a=>Math.max(1, 5+Math.floor(a/10)));
+    bp=bpListBeatUp[0];
+  }
   const phys=mv.category==='physical';
   // Type-changing -ate abilities (Pixilate/Aerilate/Refrigerate/Galvanize): Normal moves change type + 1.2x
   let moveType=mv.type;let ateMul=1;
@@ -2901,8 +2934,8 @@ function calcDmg(atk,move,def,atkSide,defSide){
   const baseFor=p=>Math.floor(Math.floor(Math.floor(22*p*Aa/D)/50))+2;
   const base=baseFor(bp);
   // multi-hit: how many hits to compute (1 if not multi-hit)
-  let hits=hitsOf(move, atk.ability);
-  let bpList=ESCALATING_BP[move]||(hits>1?Array(hits).fill(bp):[bp]);
+  let hits = bpListBeatUp ? bpListBeatUp.length : hitsOf(move, atk.ability);
+  let bpList = bpListBeatUp || ESCALATING_BP[move] || (hits>1?Array(hits).fill(bp):[bp]);
   // Parental Bond (Mega Kangaskhan): single-target damaging moves hit twice.
   // Hit 2 has 25% BP. Doesn't stack with existing multi-hit / spread moves.
   if(atk.ability==='Parental Bond' && hits===1 && !mv.spread && mv.power){
@@ -3059,6 +3092,9 @@ function calcDmg(atk,move,def,atkSide,defSide){
   if(def.ability==='Purifying Salt' && moveType==='ghost') mod=chainMod(mod,M(0.5));
   // Fluffy: ×0.5 on contact, ×2 on fire (so fire+contact = 1×).
   if(def.ability==='Fluffy'){let fl=1;if(mv.contact)fl*=0.5;if(moveType==='fire')fl*=2;if(fl!==1)mod=chainMod(mod,M(fl));}
+  // Aura Guard (Mega Lucario Z's signature, Champions M-C): halves damage taken
+  // from contact moves. Pure defensive ×0.5 on contact — no fire/type interaction.
+  if(def.ability==='Aura Guard' && mv.contact) mod=chainMod(mod,M(0.5));
   if(def.ability==='Punk Rock' && mv.sound) mod=chainMod(mod,M(0.5));
   if(def.ability==='Ice Scales' && !phys){/* applied to D above */}
   // Side effects (per-side multipliers)
@@ -3115,7 +3151,7 @@ function calcDmg(atk,move,def,atkSide,defSide){
   // curHP is the defender's remaining HP based on the hpPct slider.
   const curHpPct=Math.max(0,Math.min(100, def.hpPct??100));
   const curHP=Math.max(1, Math.floor(hp * curHpPct / 100));
-  return{...active,eff,hp,curHP,curHpPct,bp,bpRaw:mv.power,cat:mv.category,isSpread,single,spreadR,berry,isCrit,moveType,hits,intimidate};
+  return{...active,eff,hp,curHP,curHpPct,bp,bpRaw:(bpListBeatUp?bp:mv.power),cat:mv.category,isSpread,single,spreadR,berry,isCrit,moveType,hits,intimidate};
 }
 function dmgColor(p){if(p>=100)return'#ff7a7a';if(p>=50)return'#ffb070';if(p>=30)return'#ffd166';if(p>0)return'#9aa3b2';return'#5a5f6a';}
 function koNote(r){
@@ -3204,6 +3240,10 @@ function slotHTML(p,title){
     <div class="counterrow" data-counter="analytic" hidden>
       <span class="counterlbl" title="Analytic: ×1.3 damage when this Pokémon moves LAST. Turn order isn't simulated, so toggle it on when this mon is the slower one (or moves after the target).">Analytic (moving last)</span>
       <div class="countertoggle"><button class="mstoggle" id="${p}_an_btn" type="button">Off</button></div>
+    </div>
+    <div class="counterrow" data-counter="beatup" hidden>
+      <span class="counterlbl" title="Beat Up: one strike per HEALTHY party member. Champions is bring-of-4, so this caps at 4. Each strike's BP = 5+⌊that member's base Atk/10⌋ (from the loaded team, else the user's own base Atk); drop the count for any statused or fainted teammate.">Healthy allies</span>
+      <div class="counterstep"><button data-step="-1">−</button><span class="counterval" id="${p}_cnt_bu">4</span><button data-step="+1">+</button></div>
     </div>
   </div>
   <div class="seclabel">HP <span id="${p}_hplabel" class="hplabel">100% · — / —</span></div>
@@ -3390,17 +3430,21 @@ function syncCounters(p,m){
   const showMS=m.ability==='Marvel Scale';
   const showMT=m.item==='Metronome';
   const showAN=m.ability==='Analytic';
-  wrap.hidden=!(showFA||showTH||showMS||showMT||showAN);
+  const showBU=moves.includes('Beat Up');
+  wrap.hidden=!(showFA||showTH||showMS||showMT||showAN||showBU);
   const faRow=wrap.querySelector('[data-counter="faintedAllies"]');
   const thRow=wrap.querySelector('[data-counter="timesHit"]');
   const msRow=wrap.querySelector('[data-counter="marvelScale"]');
   const mtRow=wrap.querySelector('[data-counter="metronome"]');
   const anRow=wrap.querySelector('[data-counter="analytic"]');
+  const buRow=wrap.querySelector('[data-counter="beatup"]');
   if(faRow)faRow.hidden=!showFA;
   if(thRow)thRow.hidden=!showTH;
   if(msRow)msRow.hidden=!showMS;
   if(mtRow)mtRow.hidden=!showMT;
   if(anRow)anRow.hidden=!showAN;
+  if(buRow)buRow.hidden=!showBU;
+  const buVal=g(p+'_cnt_bu'); if(buVal)buVal.textContent=Math.max(1,Math.min(4,m.beatup??4));
   const anBtn=g(p+'_an_btn');
   if(anBtn){anBtn.textContent=m.analytic?'On':'Off';anBtn.classList.toggle('on',!!m.analytic);}
   const faVal=g(p+'_cnt_fa'), thVal=g(p+'_cnt_th');
@@ -3595,8 +3639,8 @@ function wireSlot(p,m){
   // Counter steppers — show/hide tracked via syncCounters; values clamp here
   document.querySelectorAll(`#${p}_counters .counterrow`).forEach(row=>{
     const key=row.dataset.counter;
-    const cap=key==='faintedAllies'?5:6;   // faintedAllies 5; timesHit & metronome (uses) 6
-    const floor=key==='metronome'?1:0;     // Metronome counts uses from 1 (first use)
+    const cap=key==='faintedAllies'?5:key==='beatup'?4:6;   // faintedAllies 5; beatup 4 (bring-of-4); timesHit & metronome 6
+    const floor=(key==='metronome'||key==='beatup')?1:0;    // Metronome uses & Beat Up allies count from 1
     row.querySelectorAll('button[data-step]').forEach(btn=>btn.onclick=()=>{
       const delta=+btn.dataset.step;
       m[key]=Math.max(floor,Math.min(cap,(m[key]||floor)+delta));
@@ -3606,7 +3650,7 @@ function wireSlot(p,m){
   [0,1,2,3].forEach(i=>{
     attachSmartPicker(g(p+'_mv'+i),{
       source:()=>ALL_MOVES,
-      // Legal (Champions M-B learnset) moves sort to the top; within each group,
+      // Legal (Champions M-C learnset) moves sort to the top; within each group,
       // damaging moves rank first. Illegal moves still appear (tagged), below.
       usage:(n)=>{const L=legalMoveIds(m.forme);return (L&&L.has(toId(n))?1e7:0)+(DEX.moves[n]?.power||0);},
       // On focus (empty), show the mon's legal moves (top by power) instead of the
@@ -3802,8 +3846,8 @@ function moveListHTML(side,atk,def){
     const info=DEX.moves[mv];
     const sel=(side==='A'?selA:selB)===i;
     if(!info) return {i,mv,sel,kind:'unknown',r:null};
-    if(!info.power) return {i,mv,sel,kind:'status',r:null};
-    const r=calcDmg(atk,mv,def,aS,dS);
+    if(!info.power && mv!=='Beat Up') return {i,mv,sel,kind:'status',r:null};
+    const r=calcDmg(atk,mv,def,aS,dS, mv==='Beat Up'?{partyAtks:partyBaseAtks(side)}:undefined);
     return {i,mv,sel,kind:r?'damage':'nostat',r};
   }).filter(Boolean);
   // Sort: damaging moves by pctHi desc (best at top); status/unknown after
@@ -3944,6 +3988,7 @@ const DEF_ABIL_ACTIVE = {
   'Heatproof':        c => c.moveType==='fire',
   'Purifying Salt':   c => c.moveType==='ghost',
   'Fluffy':           c => !!c.mv.contact || c.moveType==='fire',
+  'Aura Guard':       c => !!c.mv.contact,
   'Punk Rock':        c => !!c.mv.sound,
   'Water Bubble':     c => c.moveType==='fire',
   'Levitate':         c => c.moveType==='ground' && !field.gravity,
@@ -4060,9 +4105,9 @@ function calcSummary(atk, def, mv, info, r, aS, dS){
 }
 function moveDetailHTML(side,atk,def,i){const mv=atk.moves[i];const info=DEX.moves[mv];
   if(!info)return '<div class="detail small">Type a move to see its calc.</div>';
-  if(!info.power)return `<div class="detail">${movePill(mv)} — status move (no damage).</div>`;
+  if(!info.power && mv!=='Beat Up')return `<div class="detail">${movePill(mv)} — status move (no damage).</div>`;
   const aS=side==='A'?sideA:sideB, dS=side==='A'?sideB:sideA;
-  const r=calcDmg(atk,mv,def,aS,dS);if(!r)return '<div class="detail small">No stat data for this matchup.</div>';
+  const r=calcDmg(atk,mv,def,aS,dS, mv==='Beat Up'?{partyAtks:partyBaseAtks(side)}:undefined);if(!r)return '<div class="detail small">No stat data for this matchup.</div>';
   const phys=info.category==='physical';
   const isBodyPressDetail = phys && mv==='Body Press';   // reads user's Def stage
   const aBoost=boostLabel(isBodyPressDetail?atk.boost?.def||0:(phys?atk.boost?.atk||0:atk.boost?.spa||0));
@@ -4106,6 +4151,11 @@ function moveDetailHTML(side,atk,def,i){const mv=atk.moves[i];const info=DEX.mov
     const defAtk = statsOf(def)?.atk;
     if(defAtk) bpLab = `${defAtk} BP`;
   }
+  // Beat Up uses a per-party-member BP array (5+⌊base Atk/10⌋), so surface every
+  // strike's BP instead of a single scaled number.
+  if(mv==='Beat Up' && r.perHit){
+    bpLab = `${r.perHit.map(h=>h.bp).join('/')} BP <span class="small">(per party member)</span>`;
+  }
   // Recoil damage to the attacker — Brave Bird etc. (% of damage dealt) or
   // Mind Blown / Steel Beam (% of attacker's max HP). Rock Head prevents
   // damage-based recoil; Magic Guard prevents both.
@@ -4145,15 +4195,25 @@ function moveDetailHTML(side,atk,def,i){const mv=atk.moves[i];const info=DEX.mov
     ${recoilLine}
     ${healLine}
     <div class="small" style="margin-top:5px">${r.rolls?'rolls: '+r.rolls.join(', '):r.hits>1?'multi-hit · '+r.hits+' hits':''}</div></div>`;}
-function firstDmgIdx(m){return (m.moves||[]).findIndex(mv=>DEX.moves[mv]?.power);}
+// Beat Up draws one strike per party member from each member's BASE Attack.
+// Side A's party is the user's saved team (myTeam); side B's is the team being
+// fought (fightTeam) or the saved enemy team. Returns null when no team is
+// loaded, so calcDmg falls back to a lone-user single strike.
+function partyBaseAtks(side){
+  const team = side==='A' ? myTeam : (fightTeam ? fightTeam.mons : enemyTeam);
+  if(!team || !team.length) return null;
+  const list=team.map(m=>DEX.formes[m.forme||m.name]?.stats?.atk).filter(a=>a>0);
+  return list.length ? list : null;
+}
+function firstDmgIdx(m){return (m.moves||[]).findIndex(mv=>DEX.moves[mv]?.power||mv==='Beat Up');}
 // Pick the move that does the most damage (replaces firstDmgIdx for default selection)
 function bestDmgIdx(atk,def,side){
   const aS=side==='A'?sideA:sideB, dS=side==='A'?sideB:sideA;
   let bestI=-1, bestHi=-1;
   (atk.moves||[]).forEach((mv,i)=>{
     if(!mv) return;
-    const info=DEX.moves[mv];if(!info?.power) return;
-    const r=calcDmg(atk,mv,def,aS,dS);
+    const info=DEX.moves[mv];if(!info?.power && mv!=='Beat Up') return;
+    const r=calcDmg(atk,mv,def,aS,dS, mv==='Beat Up'?{partyAtks:partyBaseAtks(side)}:undefined);
     if(r && r.pctHi>bestHi){bestHi=r.pctHi;bestI=i;}
   });
   return bestI>=0 ? bestI : firstDmgIdx(atk);
@@ -4261,7 +4321,7 @@ function loadIntoSlot(p,m,src){_resetSlotTransients(m);
   updateResults();}
 // Reset per-load transient flags (Marvel Scale manual override, borrowed-spread
 // note) so a fresh mon/spread starts from auto-derived defaults.
-function _resetSlotTransients(m){m._msManual=false;m._spreadNote=null;m.analytic=false;}
+function _resetSlotTransients(m){m._msManual=false;m._spreadNote=null;m.analytic=false;m.beatup=4;}
 // Load an enemy teamsheet mon into a slot (default: slot B). When the mon has no
 // EV spread (open team sheet), borrow the best-matching spread from the database
 // and surface a note under the stat block showing what did/didn't match.
@@ -4466,7 +4526,7 @@ function renderDmg(){
       </div>
     </div>
     <div id="dmgresults"></div>
-    <div class="small calcfoot"><b>VGC doubles only.</b> Champions ruleset (lv50, IVs max, 1 SP = 8 EV — 32 SP/stat ≡ old 252 EV cap, 66 SP total). <b>Modeled:</b> STAB · type chart · spread · stat boosts · status (burn/Guts) · current HP (Multiscale) · weather (incl. extremes Harsh Sun/Heavy Rain/Strong Winds) · terrains (Electric/Grassy/Misty/Psychic, grounded only; Grassy halves EQ) · screens (×0.5 singles / ×2/3 doubles, Aurora Veil snow-only; crit bypasses) · Helping Hand · Friend Guard (doubles) · Power Spot · Battery · Steely Spirit · Flower Gift · Crit (ignores +def/-atk boosts; Sniper ×2.25) · Trick/Magic/Wonder Room · Gravity (ground hits Flying, suppresses Levitate) · <b>multi-hit moves</b> (Triple Axel/Triple Kick escalating BP; Population Bomb/Bullet Seed; Skill Link → max hits) · <b>move quirks</b>: Foul Play (defender Atk) · Body Press (user Def) · Psyshock/Psystrike/Secret Sword (target Def) · Facade (2× + ignores burn when statused) · Hex/Venoshock/Brine/Acrobatics/Knock Off · Low Kick/Grass Knot/Heavy Slam (weight) · Water Spout/Eruption (HP%) · <b>Intimidate auto-apply</b> (with Clear Body / Hyper Cutter / Inner Focus / Scrappy / Own Tempo / Oblivious immunity; Defiant counters; Competitive on special) · <b>contact/flag abilities</b>: Tough Claws ×1.3 (contact) · Iron Fist ×1.2 (punch) · Mega Launcher ×1.5 (pulse) · Strong Jaw ×1.5 (bite) · Sharpness ×1.5 (slicing) · Punk Rock ×1.3 atk / ×0.5 def (sound) · Soundproof immune (sound) · Bulletproof immune (bullet) · Fluffy ×0.5 contact + ×2 fire · -ate abilities (Pixilate/Aerilate/Refrigerate/Galvanize: Normal→type ×1.2 STAB) · Adaptability · Technician · Tinted Lens · Huge/Pure Power · Solar Power · Sand Force · Sniper · Neuroforce · Overgrow/Blaze/Torrent/Swarm (pinch ×1.5 at ≤⅓ HP) · Analytic ×1.3 (moving-last toggle) · Levitate / type-absorb immunities · Multiscale / Shadow Shield · Filter / Solid Rock / Prism Armor · Thick Fat · Heatproof · Dry Skin (Water immune + Fire ×1.25) · Purifying Salt · Fur Coat · Ice Scales · Choice/Specs/Life Orb/AV/Eviolite/type-boost items · Muscle Band ×1.1 phys · Wise Glasses ×1.1 spec · Expert Belt ×1.2 SE · Metronome stack (×1.0→×2.0) · Light Ball (Pikachu Atk/SpA ×2) · Hustle Atk ×1.5 · Iron Ball grounding · <b>result-panel readouts</b>: effective accuracy (Wide Lens/Compound Eyes/Victory Star/Hustle/No Guard · Bright Powder/Sand Veil/Snow Cloak) · drain + Shell Bell heal-back. · <b>Champions specifics:</b> Fire Mane (Mega Pyroar) · Fairy Aura toggle (Mega Floette-Eternal) · Eelevate ground-immunity (Mega Eelektross) · Mega Sol personal-sun (Mega Meganium) · Dragonize (Mega Feraligatr, Normal→Dragon ×1.2 STAB) · Piercing Drill (Mega Excadrill, note only — Protect not modeled) · Weather Ball type shift · Reg-B patches (Make It Rain acc 100→95, move BP shifts).</div>`;
+    <div class="small calcfoot"><b>VGC doubles only.</b> Champions ruleset (lv50, IVs max, 1 SP = 8 EV — 32 SP/stat ≡ old 252 EV cap, 66 SP total). <b>Modeled:</b> STAB · type chart · spread · stat boosts · status (burn/Guts) · current HP (Multiscale) · weather (incl. extremes Harsh Sun/Heavy Rain/Strong Winds) · terrains (Electric/Grassy/Misty/Psychic, grounded only; Grassy halves EQ) · screens (×0.5 singles / ×2/3 doubles, Aurora Veil snow-only; crit bypasses) · Helping Hand · Friend Guard (doubles) · Power Spot · Battery · Steely Spirit · Flower Gift · Crit (ignores +def/-atk boosts; Sniper ×2.25) · Trick/Magic/Wonder Room · Gravity (ground hits Flying, suppresses Levitate) · <b>multi-hit moves</b> (Triple Axel/Triple Kick escalating BP; Population Bomb/Bullet Seed; Skill Link → max hits; Beat Up — up to 4 healthy allies (counter), BP 5+⌊base Atk/10⌋ each, user's Atk + Dark STAB) · <b>move quirks</b>: Foul Play (defender Atk) · Body Press (user Def) · Psyshock/Psystrike/Secret Sword (target Def) · Facade (2× + ignores burn when statused) · Hex/Venoshock/Brine/Acrobatics/Knock Off · Low Kick/Grass Knot/Heavy Slam (weight) · Water Spout/Eruption (HP%) · <b>Intimidate auto-apply</b> (with Clear Body / Hyper Cutter / Inner Focus / Scrappy / Own Tempo / Oblivious immunity; Defiant counters; Competitive on special) · <b>contact/flag abilities</b>: Tough Claws ×1.3 (contact) · Iron Fist ×1.2 (punch) · Mega Launcher ×1.5 (pulse) · Strong Jaw ×1.5 (bite) · Sharpness ×1.5 (slicing) · Punk Rock ×1.3 atk / ×0.5 def (sound) · Soundproof immune (sound) · Bulletproof immune (bullet) · Fluffy ×0.5 contact + ×2 fire · -ate abilities (Pixilate/Aerilate/Refrigerate/Galvanize: Normal→type ×1.2 STAB) · Adaptability · Technician · Tinted Lens · Huge/Pure Power · Solar Power · Sand Force · Sniper · Neuroforce · Overgrow/Blaze/Torrent/Swarm (pinch ×1.5 at ≤⅓ HP) · Analytic ×1.3 (moving-last toggle) · Levitate / type-absorb immunities · Multiscale / Shadow Shield · Filter / Solid Rock / Prism Armor · Thick Fat · Heatproof · Dry Skin (Water immune + Fire ×1.25) · Purifying Salt · Fur Coat · Ice Scales · Choice/Specs/Life Orb/AV/Eviolite/type-boost items · Muscle Band ×1.1 phys · Wise Glasses ×1.1 spec · Expert Belt ×1.2 SE · Metronome stack (×1.0→×2.0) · Light Ball (Pikachu Atk/SpA ×2) · Hustle Atk ×1.5 · Iron Ball grounding · <b>result-panel readouts</b>: effective accuracy (Wide Lens/Compound Eyes/Victory Star/Hustle/No Guard · Bright Powder/Sand Veil/Snow Cloak) · drain + Shell Bell heal-back. · <b>Champions specifics:</b> Fire Mane (Mega Pyroar) · Fairy Aura toggle (Mega Floette-Eternal) · Eelevate ground-immunity (Mega Eelektross) · Mega Sol personal-sun (Mega Meganium) · Dragonize (Mega Feraligatr, Normal→Dragon ×1.2 STAB) · Piercing Drill (Mega Excadrill, note only — Protect not modeled) · Aura Guard (Mega Lucario Z: contact ×0.5) · Weather Ball type shift · Reg-C patches (Make It Rain acc 95 · Meteor Assault 170 · Slash 80).</div>`;
   wireSlot('a',A);wireSlot('b',B);
   // Field button handlers (single-click). Doubles is hard-pinned (see line ~838) — no Singles toggle in UI.
   document.querySelectorAll('[data-grp="weat"]').forEach(b=>b.onclick=()=>{
@@ -4545,8 +4605,8 @@ function renderMatrix(){
       const bMon={...b, forme:b.forme||b.name, ev:b.ev||parseEVs(b.evs||''), boost:zeroBoost(), status:'ok', hpPct:100};
       let best={pctHi:-1, pctLo:0, mv:'', isImmune:false};
       (aMon.moves||[]).forEach(mv=>{
-        if(!DEX.moves[mv]?.power) return;
-        const r=calcDmg(aMon,mv,bMon,sideA,sideB);
+        if(!DEX.moves[mv]?.power && mv!=='Beat Up') return;
+        const r=calcDmg(aMon,mv,bMon,sideA,sideB, mv==='Beat Up'?{partyAtks:partyBaseAtks('A')}:undefined);
         if(r && r.pctHi>best.pctHi){best={pctHi:r.pctHi, pctLo:r.pctLo, mv, isImmune:r.eff===0};}
       });
       if(best.pctHi<0){html+=`<td class="mxcell empty">—</td>`;return;}
@@ -4948,9 +5008,9 @@ function spRenderMove(name, legalSet){
   // to column so line 1 (name + chips) sits above line 2 (desc).
   const desc = info.shortDesc ? `<div class="sp-line2 sp-desc">${esc(info.shortDesc)}</div>` : '';
   // Legality tag — when a learnset is known for the current mon, moves it can't
-  // learn in Champions M-B get an "illegal" tag (unknown-learnset mons: no tag).
+  // learn in Champions M-C get an "illegal" tag (unknown-learnset mons: no tag).
   const legTag = (legalSet && !legalSet.has(toId(name)))
-    ? `<span class="sp-tag sp-tag-warn" title="Not in this Pokémon's Champions Reg M-B learnset">illegal</span>` : '';
+    ? `<span class="sp-tag sp-tag-warn" title="Not in this Pokémon's Champions Reg M-C learnset">illegal</span>` : '';
   const line1 = `<div class="sp-line1">${chip}<span class="sp-name">${esc(name)}</span>${legTag}<span class="sp-cat ${cat}">${catLab}</span>${bp}${prio}${acc}</div>`;
   return `${line1}${desc}`;
 }
@@ -5762,7 +5822,7 @@ function _tbWireSlot(i){
     onPick: v => { s.nature = v; tbSyncPaste(); },
     onClear: () => { s.nature = 'Serious'; tbSyncPaste(); },
   });
-  // Moves — smart picker; legal (Champions M-B learnset) moves sort to the top,
+  // Moves — smart picker; legal (Champions M-C learnset) moves sort to the top,
   // illegal ones appear below with a tag. Same behaviour as the calc slots.
   el.querySelectorAll('[data-move]').forEach(inp => {
     const j = +inp.dataset.move;

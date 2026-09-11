@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Build a local VGC team database from the VGCPastes Champions sheet.
 
-Pulls the public sheet as CSV (both the M-A and M-B tabs — M-B is additive
-over M-A), parses each team's metadata + pokepaste link, resolves every
-pokepaste to its full Showdown set, caches the raw pokepastes, and writes:
+Pulls the public sheet as CSV (the M-A, M-B and — once live — M-C tabs; each reg
+is additive over the prior), parses each team's metadata + pokepaste link,
+resolves every pokepaste to its full Showdown set, caches the raw pokepastes,
+and writes:
 
-  data/teams.json   -- structured dataset (each team tagged with reg="M-A"/"M-B")
+  data/teams.json   -- structured dataset (each team tagged with reg="M-A"/"M-B"/"M-C")
   index.html        -- self-contained searchable viewer (data embedded)
 
 Re-runnable: cached pokepastes are reused, so re-runs are fast and polite.
@@ -25,11 +26,22 @@ import requests
 
 SHEET_ID = "1axlwmzPA49rYkqXh7zHvAtSP-TKbM0ijGYBPRflLSWw"
 # Regulation tabs to pull (Reg I and Reg I Featured are deliberately skipped —
-# they're the prior gen). M-B is additive over M-A in the same format family.
-REGS: list[tuple[str, str]] = [
+# they're the prior gen). Each reg is additive over the prior in the same format
+# family (M-C ⊇ M-B ⊇ M-A). M-C's tab did not exist yet at 2026-09-10 (the format
+# launched 2026-09-09); its gid stays None until VGCPastes adds a "Champions M-C"
+# tab. When it does: re-enumerate the sheet for the real gid, confirm the team-id
+# prefix from live rows (M-A used "PC", not "MA", so don't assume "MC"), fill the
+# gid below, and once it clears the floor drop M-C from SOFT_REGS.
+REGS: list[tuple[str, str | None]] = [
     ("M-A", "791705272"),
     ("M-B", "1458357160"),
+    ("M-C", None),
 ]
+
+# Regs still onboarding: their VGCPastes tab may be absent or near-empty, so a
+# None/failed fetch is skipped gracefully and they're EXEMPT from the per-reg
+# floor. Temporary onboarding state, not a permanent exemption.
+SOFT_REGS: set[str] = {"M-C"}
 
 
 def csv_url(gid: str) -> str:
@@ -68,8 +80,9 @@ def extract_paste_id(url: str) -> str | None:
     return m.group(1) if m else None
 
 
-# Team IDs look like "PC906" (M-A) or "MB300" (M-B). Both regs use the same
-# column layout so one parser handles both.
+# Team IDs look like "PC906" (M-A), "MB300" (M-B), "MC###" (M-C, prefix TBD from
+# live rows). reg is tagged from the source tab, not the prefix, and ID_RE below
+# accepts any 2-4 letter prefix, so all regs use the same parser.
 ID_RE = re.compile(r"^[A-Z]{2,4}\d+$")
 
 
@@ -102,7 +115,7 @@ def parse_teams(rows: list[list[str]], reg: str) -> list[dict]:
         teams.append(
             {
                 "team_id": team_id,
-                "reg": reg,  # "M-A" or "M-B"
+                "reg": reg,  # "M-A", "M-B" or "M-C"
                 "description": cell(row, "Team Description"),
                 "creator": cell(row, "Full Name") or cell(row, "Owner"),
                 "owner_handle": cell(row, "Owner"),
@@ -234,7 +247,7 @@ def enrich(team: dict) -> dict:
 # permission revoke, paste service down).
 VALIDATION_THRESHOLDS = {
     "min_total_teams": 1200,        # current ~1404; floor at ~85% to absorb weekly drift
-    "min_per_reg_teams": 80,        # M-B is smaller (~300); floor catches "empty tab"
+    "min_per_reg_teams": 80,        # floor catches an "empty tab"; soft regs exempt
     "min_resolve_rate": 0.70,       # pokepaste resolve %; current ~97%; alerts on outage
     "max_empty_team_rate": 0.10,    # teams with zero mons; should be near-zero
 }
@@ -254,10 +267,11 @@ def validate_scrape(teams: list[dict]) -> list[str]:
 
     by_reg = {r: sum(1 for t in teams if t.get("reg") == r) for r, _ in REGS}
     for reg, _ in REGS:
-        if by_reg.get(reg, 0) < th["min_per_reg_teams"]:
+        floor = 0 if reg in SOFT_REGS else th["min_per_reg_teams"]
+        if by_reg.get(reg, 0) < floor:
             errors.append(
                 f"reg {reg} has {by_reg.get(reg, 0)} teams, below floor "
-                f"{th['min_per_reg_teams']} (tab gid may have changed)"
+                f"{floor} (tab gid may have changed)"
             )
 
     if n_total > 0:
@@ -289,12 +303,23 @@ def main() -> int:
     CACHE.mkdir(exist_ok=True)
 
     teams: list[dict] = []
+    active_regs = 0
     for reg, gid in REGS:
+        if not gid:
+            print(f"Skipping {reg}: no gid set yet (soft reg, tab not live).", flush=True)
+            continue
         print(f"Fetching {reg} (gid={gid}) ...", flush=True)
-        reg_teams = parse_teams(fetch_csv(gid), reg)
+        try:
+            reg_teams = parse_teams(fetch_csv(gid), reg)
+        except (requests.RequestException, RuntimeError) as e:
+            if reg in SOFT_REGS:
+                print(f"  WARN {reg}: fetch/parse failed ({e}); skipping (soft reg).", flush=True)
+                continue
+            raise  # an established reg failing hard is a real error — fail closed
         print(f"  parsed {len(reg_teams)} {reg} teams.", flush=True)
         teams.extend(reg_teams)
-    print(f"Total {len(teams)} teams across {len(REGS)} regulations.", flush=True)
+        active_regs += 1
+    print(f"Total {len(teams)} teams across {active_regs} regulations.", flush=True)
 
     print(f"Resolving pokepastes (cached reused) ...", flush=True)
     with ThreadPoolExecutor(max_workers=8) as pool:

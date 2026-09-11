@@ -120,6 +120,35 @@ MEGA_OVERRIDES: dict[str, dict] = {
         "ability": "Trace",
         "stats": {"hp": 74, "atk": 48, "def": 76, "spa": 143, "spd": 101, "spe": 124},
     },
+    # ── Reg M-C megas (2026-09-09). Stats/types/abilities cross-checked and
+    # adversarially verified against Game8 / GameWith / Serebii / MetaVGC /
+    # Pokémon Zone Champions dex pages (all agreed; each is base BST +100).
+    # Salamence-Mega is canon (ORAS) and present in PokéAPI, so it's seeded with
+    # its real slug in EXTRA_CALC_FORMES and needs NO override here. `types` is
+    # set only where the Mega changes typing.
+    "Baxcalibur-Mega": {
+        "ability": "Thermal Exchange",   # pre-existing ability; no single-hit calc effect
+        "stats": {"hp": 115, "atk": 175, "def": 117, "spa": 105, "spd": 101, "spe": 87},
+    },
+    "Golisopod-Mega": {
+        "ability": "Tough Claws",         # +30% contact (already modeled)
+        "stats": {"hp": 75, "atk": 150, "def": 175, "spa": 70, "spd": 120, "spe": 40},
+        "types": ["bug", "steel"],        # base Golisopod is Bug/Water
+    },
+    "Absol-Mega-Z": {
+        "ability": "Sharpness",           # +50% slicing (already modeled)
+        "stats": {"hp": 65, "atk": 154, "def": 60, "spa": 75, "spd": 60, "spe": 151},
+        "types": ["dark", "ghost"],       # base Absol is pure Dark
+    },
+    "Garchomp-Mega-Z": {
+        "ability": "Levitate",            # Ground immunity (already modeled)
+        "stats": {"hp": 108, "atk": 130, "def": 85, "spa": 141, "spd": 85, "spe": 151},
+        "types": ["dragon"],              # drops Ground — pure Dragon
+    },
+    "Lucario-Mega-Z": {
+        "ability": "Aura Guard",          # NEW: halves contact damage taken (×0.5) — see calc
+        "stats": {"hp": 70, "atk": 100, "def": 70, "spa": 164, "spd": 70, "spe": 151},
+    },
 }
 
 
@@ -166,6 +195,14 @@ MOVE_OVERRIDES: dict[str, dict] = {
     "Rock Polish":      {"boosts": {"spe": 2}, "mvTarget": "self"},
     "Autotomize":       {"boosts": {"spe": 2}, "mvTarget": "self"},
     "Shift Gear":       {"boosts": {"atk": 1, "spe": 2}, "mvTarget": "self"},
+    # Charge moves that raise the user's SpA on the gather turn (Electro Shot in
+    # rain skips the charge, so its first shot already lands at +1). Showdown
+    # encodes this in the charge callback, not as structured data, so the boost
+    # is invisible to the Use button. Backfill it as a self-boost on the DAMAGING
+    # move (like Draco Meteor / Overheat) — keeps mvTarget=normal, adds the Use
+    # button that bumps SpA +1 per press (+1/+2/+3 on repeat).
+    "Electro Shot":     {"self": {"boosts": {"spa": 1}}},
+    "Meteor Beam":      {"self": {"boosts": {"spa": 1}}},
 }
 
 
@@ -344,7 +381,7 @@ def move_slug(name: str) -> str:
 
 # ---------------------------------------------------------------------------
 # Item icons. The viewer's item picker shows a small PokéAPI item sprite next to
-# each item name. We fetch them for the Champions Regulation M-B legal pool
+# each item name. We fetch them for the Champions Regulation M-C legal pool
 # (mirrors CHAMPIONS_ITEMS in viewer_template.html) plus any mega stone that
 # shows up in the team data. Champions-new mega stones have no upstream art and
 # just fall back to a generic dot in the UI.
@@ -352,7 +389,7 @@ def move_slug(name: str) -> str:
 ITEM_SPRITE_DIR = SPRITE_DIR / "items"
 ITEM_SPRITE_BASE = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items"
 
-# Champions Reg M-B legal items (official / RotomPicks). KEEP IN SYNC with
+# Champions Reg M-C legal items (official / RotomPicks). KEEP IN SYNC with
 # CHAMPIONS_ITEMS in viewer_template.html.
 CHAMPIONS_ITEM_NAMES = [
     # Held items
@@ -381,6 +418,8 @@ CHAMPIONS_ITEM_NAMES = [
     "Pidgeotite", "Pinsirite", "Pyroarite", "Raichunite X", "Raichunite Y", "Sablenite", "Sceptilite",
     "Scizorite", "Scolipite", "Scovillainite", "Scraftinite", "Sharpedonite", "Skarmorite", "Slowbronite",
     "Staraptite", "Starminite", "Steelixite", "Swampertite", "Tyranitarite", "Venusaurite", "Victreebelite",
+    # Reg M-C stones (2026-09-09): Salamencite + new invented stones + Z-mega stones
+    "Absolite Z", "Baxcalibrite", "Garchompite Z", "Golisopite", "Lucarionite Z", "Salamencite",
 ]
 
 
@@ -428,18 +467,26 @@ def _to_id(name: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Champions Reg M-B legality data — Showdown's `champions` mod (the current
-# regulation; `championsregma` is the older M-A snapshot). We pull:
+# Champions Reg M-C legality data — Showdown's `champions` mod (always the
+# CURRENT regulation; Smogon advances it in place — `championsregma` froze M-A,
+# `championsregmb` froze M-B). We pull:
 #   learnsets.ts -> per-species legal move ids (for the picker's legal/illegal tag)
 #   moves.ts     -> the handful of Champions BP/accuracy overrides
 # Files are TypeScript object literals with regular tab indentation, so a small
 # line-based parser is enough (no JS eval needed).
+#
+# The cache key is REG-STAMPED (CHAMPIONS_REG): when a new regulation ships,
+# Smogon overwrites the SAME `champions` URL, so bumping CHAMPIONS_REG is what
+# misses the stale cache and forces a fresh pull. Without it, _fetch_champions_file
+# would silently reuse the prior reg's learnsets/roster/overrides (there is no
+# --skip-fetch flag for these files).
 # ---------------------------------------------------------------------------
+CHAMPIONS_REG = "M-C"
 CHAMPIONS_MOD_BASE = "https://raw.githubusercontent.com/smogon/pokemon-showdown/master/data/mods/champions"
 
 
 def _fetch_champions_file(fname: str) -> str | None:
-    cf = CACHE / f"champions_{fname}"
+    cf = CACHE / f"champions_{CHAMPIONS_REG}_{fname}"
     if cf.exists():
         try:
             return cf.read_text()
@@ -909,7 +956,7 @@ def _render_mon_page(label: str, a: dict, dex_formes: dict, total_teams: int,
     title = f"{esc} — Pokémon Champions VGC Usage, Items, Spreads &amp; Teams | backtwo"
     desc = (f"{label} usage in Pokémon Champions VGC: appears on {n} of {total_teams} "
             f"tournament teams. Common items, abilities, moves, natures, teammates, "
-            f"and the real Reg M-A/M-B teams running it.")
+            f"and the real Reg M-A/M-B/M-C teams running it.")
     desc = html.escape(desc, quote=True)
 
     img = (f'<img src="../../data/sprites/{sprite}.png" width="84" height="84" '
@@ -1006,7 +1053,7 @@ def _render_hub_page(pages: list[tuple[str, dict]], dex_formes: dict,
     desc = html.escape(
         f"Per-Pokémon usage across {total_teams} Pokémon Champions VGC tournament teams. "
         f"Items, abilities, moves, spreads and teammates for {len(pages)} Pokémon in "
-        f"Regulation M-A and M-B.", quote=True)
+        f"Regulation M-A, M-B and M-C.", quote=True)
 
     cards = []
     for label, a in pages:
@@ -1033,7 +1080,7 @@ def _render_hub_page(pages: list[tuple[str, dict]], dex_formes: dict,
 <p class="lede">Every Pokémon appearing on at least {MIN_TEAMS_FOR_PAGE} of the
 {total_teams} Pokémon Champions VGC tournament teams in the backtwo archive,
 sorted by usage. Each page shows the items, abilities, moves, natures and
-teammates that Pokémon actually runs in Regulation M-A and M-B, plus the real
+teammates that Pokémon actually runs in Regulation M-A, M-B and M-C, plus the real
 teams it appears on.</p>
 <a class="cta" href="../">Open the full app →</a>
 <h2>{len(pages)} Pokémon</h2>
@@ -1082,10 +1129,10 @@ def _render_teams_page(teams: list[dict], linkable: set[str]) -> str:
                          for r, c in sorted(by_reg.items()) if r != "?")
     toplist = ", ".join(html.escape(str(e)) for e, _ in events.most_common(8))
 
-    title = ("Pokémon Champions VGC Teams — Reg M-A &amp; M-B Tournament Archive | backtwo")
+    title = ("Pokémon Champions VGC Teams — Reg M-A, M-B &amp; M-C Tournament Archive | backtwo")
     desc = html.escape(
         f"An archive of {len(teams)} Pokémon Champions VGC tournament teams across "
-        f"Regulation M-A and M-B, with full Showdown pastes, spreads, items and moves. "
+        f"Regulation M-A, M-B and M-C, with full Showdown pastes, spreads, items and moves. "
         f"Free and open source.", quote=True)
 
     body = f"""
@@ -1544,7 +1591,7 @@ def main() -> None:
     # the meta-browser (they won't appear in team lists since no paste has them).
     EXTRA_CALC_FORMES = {
         "Aegislash-Blade": "aegislash-blade",
-        # Reg-M-B classics that VGCPastes teams haven't picked up yet but the
+        # Reg M-A/M-B/M-C classics that VGCPastes teams haven't picked up yet but the
         # calc should still support. Houndoom-Mega is a returning gen-VI Mega
         # legal in M-B and has PokéAPI data. Meowstic-Mega-M/-F are Champions-
         # new gendered splits — since PokéAPI likely lacks them, the labels
@@ -1603,6 +1650,49 @@ def main() -> None:
         "Skeledirge":             "skeledirge",
         "Quaquaval":              "quaquaval",
         "Palafin-Hero":           "palafin-hero",
+        # ── Reg M-C additions (2026-09-09) — the newly-legal base species from
+        # the champions roster diff (+35 ids = these + the 6 new megas, which are
+        # seeded with MEGA_OVERRIDES below). PokéAPI slugs for multi-form mons
+        # are quirky; verify at build time via the "sprites available, N without"
+        # line + any base-species fallback, and correct here / in SLUG_OVERRIDES.
+        "Rillaboom":              "rillaboom",
+        "Cinderace":              "cinderace",
+        "Inteleon":               "inteleon",
+        "Salamence":              "salamence",
+        "Baxcalibur":             "baxcalibur",
+        "Golisopod":              "golisopod",
+        "Arboliva":               "arboliva",
+        "Toxtricity":             "toxtricity-amped",
+        "Toxtricity-Low-Key":     "toxtricity-low-key",
+        "Indeedee":               "indeedee-male",
+        "Indeedee-F":             "indeedee-female",
+        "Squawkabilly":           "squawkabilly-green-plumage",
+        "Squawkabilly-Blue":      "squawkabilly-blue-plumage",
+        "Squawkabilly-White":     "squawkabilly-white-plumage",
+        "Squawkabilly-Yellow":    "squawkabilly-yellow-plumage",
+        "Pawmot":                 "pawmot",
+        "Grapploct":              "grapploct",
+        "Perrserker":             "perrserker",
+        "Mabosstiff":             "mabosstiff",
+        "Thievul":                "thievul",
+        "Pincurchin":             "pincurchin",
+        "Farfetch'd":             "farfetchd",
+        "Sirfetch'd":             "sirfetchd",
+        "Mr. Mime":               "mr-mime",
+        "Persian":                "persian",
+        "Persian-Alola":          "persian-alola",
+        "Gogoat":                 "gogoat",
+        "Swalot":                 "swalot",
+        "Wigglytuff":             "wigglytuff",
+        # M-C megas: PokéAPI lacks the invented ones, so fall back to the base
+        # species slug and let apply_mega_overrides patch stats/ability/types.
+        # Salamence-Mega is canon and IS in PokéAPI, so use its real slug.
+        "Salamence-Mega":         "salamence-mega",
+        "Baxcalibur-Mega":        "baxcalibur",
+        "Golisopod-Mega":         "golisopod",
+        "Absol-Mega-Z":           "absol",
+        "Garchomp-Mega-Z":        "garchomp",
+        "Lucario-Mega-Z":         "lucario",
     }
     for label, slug in EXTRA_CALC_FORMES.items():
         formes.setdefault(label, [slug])
@@ -1611,10 +1701,10 @@ def main() -> None:
     global _MOVE_FLAGS
     _MOVE_FLAGS = fetch_move_flags()
 
-    # Champions Reg M-B learnsets, pulled EARLY so every legal move gets fetched
+    # Champions Reg M-C learnsets, pulled EARLY so every legal move gets fetched
     # into the dex (not just the ones teams happen to use) — that lets the move
     # picker offer + tag the full legal pool per species.
-    print("Fetching Showdown champions mod (Reg M-B learnsets) ...", flush=True)
+    print(f"Fetching Showdown champions mod (Reg {CHAMPIONS_REG} learnsets) ...", flush=True)
     ls_text = _fetch_champions_file("learnsets.ts")
     raw_ls = parse_champions_learnsets(ls_text) if ls_text else {}
     if raw_ls:
@@ -1672,7 +1762,7 @@ def main() -> None:
     for label, info in dex_formes.items():
         if info.get("sprite"):
             continue
-        base = re.sub(r"-Mega(-[XY])?$", "", label)
+        base = re.sub(r"-Mega(-[A-Z])?$", "",label)
         if base != label and base in dex_formes and dex_formes[base].get("sprite"):
             info["sprite"] = dex_formes[base]["sprite"]
     missing = [k for k, v in dex_formes.items() if not v.get("sprite")]
@@ -1717,24 +1807,24 @@ def main() -> None:
                                             "showdown_abilities_desc.json", "BattleAbilities")
     print(f"  ✓ {len(dex_item_desc)} item + {len(dex_ability_desc)} ability descriptions", flush=True)
 
-    # Reg M-B roster (legal species ids) from champions formats-data.ts. Exposed
+    # Reg M-C roster (legal species ids) from champions formats-data.ts. Exposed
     # as DEX.legalSpecies; also a build-time coverage check vs our dex formes.
     fd_text = _fetch_champions_file("formats-data.ts")
     dex_legal_species = sorted(parse_champions_species(fd_text)) if fd_text else []
-    print(f"  ✓ {len(dex_legal_species)} species in the Reg M-B roster", flush=True)
+    print(f"  ✓ {len(dex_legal_species)} species in the Reg {CHAMPIONS_REG} roster", flush=True)
     if dex_legal_species:
         roster = set(dex_legal_species)
         missing = sorted(lbl for lbl in dex_formes
                          if _to_id(lbl) not in roster
-                         and _to_id(re.sub(r"-Mega(-[XY])?$", "", lbl)) not in roster)
+                         and _to_id(re.sub(r"-Mega(-[A-Z])?$", "",lbl)) not in roster)
         if missing:
-            print(f"  ℹ {len(missing)} dex formes not in the M-B roster (M-A-only etc.): "
+            print(f"  ℹ {len(missing)} dex formes not in the Reg {CHAMPIONS_REG} roster (older-reg-only etc.): "
                   f"{', '.join(missing[:8])}{' …' if len(missing) > 8 else ''}", flush=True)
 
     print("Building type chart ...", flush=True)
     typechart = build_typechart()
 
-    # Item icons + registry. Champions M-B legal pool plus any mega stone that
+    # Item icons + registry. Champions M-C legal pool plus any mega stone that
     # appears in the team data (all stones are legal). DEX.items maps a name to
     # its sprite slug so the viewer can show an icon (falls back to a dot when
     # absent — e.g. Champions-new stones PokéAPI has no art for).
