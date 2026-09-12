@@ -27,20 +27,20 @@ import requests
 SHEET_ID = "1axlwmzPA49rYkqXh7zHvAtSP-TKbM0ijGYBPRflLSWw"
 # Regulation tabs to pull (Reg I and Reg I Featured are deliberately skipped —
 # they're the prior gen). Each reg is additive over the prior in the same format
-# family (M-C ⊇ M-B ⊇ M-A). M-C's tab did not exist yet at 2026-09-10 (the format
-# launched 2026-09-09); its gid stays None until VGCPastes adds a "Champions M-C"
-# tab. When it does: re-enumerate the sheet for the real gid, confirm the team-id
-# prefix from live rows (M-A used "PC", not "MA", so don't assume "MC"), fill the
-# gid below, and once it clears the floor drop M-C from SOFT_REGS.
+# family (M-C ⊇ M-B ⊇ M-A). The "Champions M-C" tab went live 2026-09-12 at gid
+# 2001945654 (team-id prefix "MC", ~81 teams at launch). It stays in SOFT_REGS
+# while it's still fresh and hovering near the 80-team floor; graduate it (remove
+# from SOFT_REGS) once it's comfortably above the floor, so a genuine M-C scrape
+# failure re-arms the empty-tab alert.
 REGS: list[tuple[str, str | None]] = [
     ("M-A", "791705272"),
     ("M-B", "1458357160"),
-    ("M-C", None),
+    ("M-C", "2001945654"),
 ]
 
-# Regs still onboarding: their VGCPastes tab may be absent or near-empty, so a
-# None/failed fetch is skipped gracefully and they're EXEMPT from the per-reg
-# floor. Temporary onboarding state, not a permanent exemption.
+# Regs still onboarding: fetch failures are skipped gracefully and they're EXEMPT
+# from the per-reg floor, so a just-launched tab sitting right at the floor can't
+# abort the whole scrape. Temporary onboarding state, not a permanent exemption.
 SOFT_REGS: set[str] = {"M-C"}
 
 

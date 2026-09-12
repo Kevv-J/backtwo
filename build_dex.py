@@ -72,10 +72,14 @@ SLUG_OVERRIDES = {
     "Maushold-Four": "maushold-family-of-four",
     "Maushold-Three": "maushold-family-of-three",
     "Indeedee-F": "indeedee-female",
-    "Indeedee-M": "indeedee",
+    "Indeedee-M": "indeedee-male",
+    "Indeedee": "indeedee-male",          # bare "Indeedee" (male) — /pokemon/indeedee 404s
     "Urshifu-Rapid-Strike": "urshifu-rapid-strike",
     "Oinkologne-F": "oinkologne-female",
+    "Toxtricity": "toxtricity-amped",     # bare "Toxtricity" (amped) — /pokemon/toxtricity 404s
     "Toxtricity-Low-Key": "toxtricity-low-key",
+    "Meowstic-F": "meowstic-female",
+    "Meowstic-F-Mega": "meowstic-female", # pastes writing Meowstic-F + stone; mega stats via MEGA_OVERRIDES below
     # cosmetic-only formes: same stats as the base species
     "Vivillon-Fancy": "vivillon",
     "Vivillon-Pokeball": "vivillon",
@@ -117,6 +121,13 @@ MEGA_OVERRIDES: dict[str, dict] = {
         "stats": {"hp": 74, "atk": 48, "def": 76, "spa": 143, "spd": 101, "spe": 124},
     },
     "Meowstic-Mega-F": {
+        "ability": "Trace",
+        "stats": {"hp": 74, "atk": 48, "def": 76, "spa": 143, "spd": 101, "spe": 124},
+    },
+    # Some pastes name the female Meowstic Mega "Meowstic-F-Mega" (base-then-Mega)
+    # instead of "Meowstic-Mega-F"; alias it to the same stats so a team scrape
+    # resolves it rather than dropping the forme.
+    "Meowstic-F-Mega": {
         "ability": "Trace",
         "stats": {"hp": 74, "atk": 48, "def": 76, "spa": 143, "spd": 101, "spe": 124},
     },
