@@ -1,20 +1,20 @@
 {
-  "generated_at_utc": "2026-09-14T00:37:15Z",
-  "build_sha": "a5587ed",
-  "build_date": "2026-09-14",
+  "generated_at_utc": "2026-09-15T13:59:01Z",
+  "build_sha": "1840f11",
+  "build_date": "2026-09-15",
   "scrape": {
-    "team_total": 2149,
+    "team_total": 2219,
     "by_reg": {
       "M-A": 1104,
       "M-B": 861,
-      "M-C": 184
+      "M-C": 254
     },
-    "resolved_pastes": 2149,
+    "resolved_pastes": 2219,
     "resolve_rate": 1.0
   },
   "dex": {
     "forme_count": 351,
-    "move_count": 513,
+    "move_count": 514,
     "type_count": 18,
     "item_icon_count": 114,
     "learnset_species": 258,
