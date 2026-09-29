@@ -2254,6 +2254,13 @@ const BERRY_TYPE={
 };
 const CHILAN_BERRY='Chilan Berry';  // halves ANY normal move (SE not required)
 const HP_USER_SCALE=new Set(['Water Spout','Eruption','Dragon Energy']);
+// Damaging moves stored with power:null (variable BP) that the calc STILL computes
+// a real BP for — weight (Low Kick/Grass Knot/Heavy Slam/Heat Crash), HP% (Reversal/
+// Flail), or Beat Up's per-party-member strikes. They look like status moves to the
+// null-power guards, so those guards must let this set through, else they render as
+// "status move (no damage)". (Gyro/Electro Ball, Counter, OHKO moves etc. stay
+// excluded — the engine has no BP formula for them.)
+const COMPUTED_BP_MOVES=new Set(['Beat Up','Low Kick','Grass Knot','Heavy Slam','Heat Crash','Reversal','Flail']);
 // Sheer Force gets ×1.3 on damaging moves that have a REMOVABLE secondary
 // effect. PokéAPI doesn't surface that flag reliably, so curate the list of
 // VGC-common Sheer Force targets. Errata additions belong here as one-liners.
@@ -2381,8 +2388,13 @@ function accuracyInfo(move, atk, def){
 
 // Compute the effective BP for a move, accounting for HP%, status, and target-state doublers.
 function effectiveBP(move, atk, def){
-  const mv=DEX.moves[move];if(!mv||!mv.power)return mv?.power||0;
+  const mv=DEX.moves[move];if(!mv)return 0;
   let bp=mv.power;
+  // Status moves (null base power) short-circuit to 0 — EXCEPT the variable-BP set,
+  // whose real BP is computed from weight/HP further down (Low Kick/Grass Knot/
+  // Heavy Slam/Heat Crash/Reversal/Flail). Beat Up carries null too but has no
+  // formula here — calcDmg computes its per-strike BP and overrides this.
+  if(!bp && !COMPUTED_BP_MOVES.has(move))return 0;
   if(HP_USER_SCALE.has(move)) bp=Math.max(1,Math.floor(150*(atk.hpPct??100)/100));
   if(move==='Reversal'||move==='Flail'){
     const h=atk.hpPct??100;let found=20;
@@ -2805,7 +2817,7 @@ function oneRoll(base,roll,spreadMod,stab,eff,itemMod){
 }
 // "atkSide" / "defSide" pass the per-side field effects (sideA when atk=A, etc.).
 function calcDmg(atk,move,def,atkSide,defSide,opts){
-  const mv=DEX.moves[move];if(!mv||(!mv.power && move!=='Beat Up'))return null;
+  const mv=DEX.moves[move];if(!mv||(!mv.power && !COMPUTED_BP_MOVES.has(move)))return null;
   const as=statsOf(atk),ds=statsOf(def);if(!as||!ds)return null;
   // Effective BP (HP%-scaled moves, status/HP doublers). Used in place of mv.power throughout.
   let bp=effectiveBP(move,atk,def);
@@ -3151,7 +3163,7 @@ function calcDmg(atk,move,def,atkSide,defSide,opts){
   // curHP is the defender's remaining HP based on the hpPct slider.
   const curHpPct=Math.max(0,Math.min(100, def.hpPct??100));
   const curHP=Math.max(1, Math.floor(hp * curHpPct / 100));
-  return{...active,eff,hp,curHP,curHpPct,bp,bpRaw:(bpListBeatUp?bp:mv.power),cat:mv.category,isSpread,single,spreadR,berry,isCrit,moveType,hits,intimidate};
+  return{...active,eff,hp,curHP,curHpPct,bp,bpRaw:(mv.power ?? bp),cat:mv.category,isSpread,single,spreadR,berry,isCrit,moveType,hits,intimidate};
 }
 function dmgColor(p){if(p>=100)return'#ff7a7a';if(p>=50)return'#ffb070';if(p>=30)return'#ffd166';if(p>0)return'#9aa3b2';return'#5a5f6a';}
 function koNote(r){
@@ -3846,7 +3858,7 @@ function moveListHTML(side,atk,def){
     const info=DEX.moves[mv];
     const sel=(side==='A'?selA:selB)===i;
     if(!info) return {i,mv,sel,kind:'unknown',r:null};
-    if(!info.power && mv!=='Beat Up') return {i,mv,sel,kind:'status',r:null};
+    if(!info.power && !COMPUTED_BP_MOVES.has(mv)) return {i,mv,sel,kind:'status',r:null};
     const r=calcDmg(atk,mv,def,aS,dS, mv==='Beat Up'?{partyAtks:partyBaseAtks(side)}:undefined);
     return {i,mv,sel,kind:r?'damage':'nostat',r};
   }).filter(Boolean);
@@ -4105,7 +4117,7 @@ function calcSummary(atk, def, mv, info, r, aS, dS){
 }
 function moveDetailHTML(side,atk,def,i){const mv=atk.moves[i];const info=DEX.moves[mv];
   if(!info)return '<div class="detail small">Type a move to see its calc.</div>';
-  if(!info.power && mv!=='Beat Up')return `<div class="detail">${movePill(mv)} — status move (no damage).</div>`;
+  if(!info.power && !COMPUTED_BP_MOVES.has(mv))return `<div class="detail">${movePill(mv)} — status move (no damage).</div>`;
   const aS=side==='A'?sideA:sideB, dS=side==='A'?sideB:sideA;
   const r=calcDmg(atk,mv,def,aS,dS, mv==='Beat Up'?{partyAtks:partyBaseAtks(side)}:undefined);if(!r)return '<div class="detail small">No stat data for this matchup.</div>';
   const phys=info.category==='physical';
@@ -4205,14 +4217,14 @@ function partyBaseAtks(side){
   const list=team.map(m=>DEX.formes[m.forme||m.name]?.stats?.atk).filter(a=>a>0);
   return list.length ? list : null;
 }
-function firstDmgIdx(m){return (m.moves||[]).findIndex(mv=>DEX.moves[mv]?.power||mv==='Beat Up');}
+function firstDmgIdx(m){return (m.moves||[]).findIndex(mv=>DEX.moves[mv]?.power||COMPUTED_BP_MOVES.has(mv));}
 // Pick the move that does the most damage (replaces firstDmgIdx for default selection)
 function bestDmgIdx(atk,def,side){
   const aS=side==='A'?sideA:sideB, dS=side==='A'?sideB:sideA;
   let bestI=-1, bestHi=-1;
   (atk.moves||[]).forEach((mv,i)=>{
     if(!mv) return;
-    const info=DEX.moves[mv];if(!info?.power && mv!=='Beat Up') return;
+    const info=DEX.moves[mv];if(!info?.power && !COMPUTED_BP_MOVES.has(mv)) return;
     const r=calcDmg(atk,mv,def,aS,dS, mv==='Beat Up'?{partyAtks:partyBaseAtks(side)}:undefined);
     if(r && r.pctHi>bestHi){bestHi=r.pctHi;bestI=i;}
   });
@@ -4605,7 +4617,7 @@ function renderMatrix(){
       const bMon={...b, forme:b.forme||b.name, ev:b.ev||parseEVs(b.evs||''), boost:zeroBoost(), status:'ok', hpPct:100};
       let best={pctHi:-1, pctLo:0, mv:'', isImmune:false};
       (aMon.moves||[]).forEach(mv=>{
-        if(!DEX.moves[mv]?.power && mv!=='Beat Up') return;
+        if(!DEX.moves[mv]?.power && !COMPUTED_BP_MOVES.has(mv)) return;
         const r=calcDmg(aMon,mv,bMon,sideA,sideB, mv==='Beat Up'?{partyAtks:partyBaseAtks('A')}:undefined);
         if(r && r.pctHi>best.pctHi){best={pctHi:r.pctHi, pctLo:r.pctLo, mv, isImmune:r.eff===0};}
       });

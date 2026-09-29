@@ -78,6 +78,13 @@ SLUG_OVERRIDES = {
     "Oinkologne-F": "oinkologne-female",
     "Toxtricity": "toxtricity-amped",     # bare "Toxtricity" (amped) — /pokemon/toxtricity 404s
     "Toxtricity-Low-Key": "toxtricity-low-key",
+    # Squawkabilly plumages — PokéAPI slugs are "...-plumage"; team pastes use the
+    # bare/short names, whose naive slugs 404 (green is the default form).
+    "Squawkabilly": "squawkabilly-green-plumage",
+    "Squawkabilly-Green": "squawkabilly-green-plumage",
+    "Squawkabilly-Blue": "squawkabilly-blue-plumage",
+    "Squawkabilly-White": "squawkabilly-white-plumage",
+    "Squawkabilly-Yellow": "squawkabilly-yellow-plumage",
     "Meowstic-F": "meowstic-female",
     "Meowstic-F-Mega": "meowstic-female", # pastes writing Meowstic-F + stone; mega stats via MEGA_OVERRIDES below
     # cosmetic-only formes: same stats as the base species
@@ -1874,7 +1881,15 @@ def main() -> None:
     # build the self-contained viewer (data + dex injected) -- runs last
     build_sha, build_date = _build_stamp()
     template = TEMPLATE.read_text()
-    doc = template.replace("/*__DATA__*/null", json.dumps(teams, ensure_ascii=False))
+    # Embed a slimmed teams list: drop fields the runtime never reads. raw_paste
+    # is the big one (~1.2KB/team) — the viewer reconstructs paste text from `mons`
+    # via monToPaste, so the stored raw text is pure weight here; sheet_names /
+    # paste_id / format are unused too. The full-fidelity teams.json on disk keeps
+    # every field. Trims index.html by ~1.3KB × team count (keeps the growing
+    # archive under the size budget).
+    _EMBED_DROP = {"raw_paste", "sheet_names", "paste_id", "format"}
+    embed_teams = [{k: v for k, v in t.items() if k not in _EMBED_DROP} for t in teams]
+    doc = template.replace("/*__DATA__*/null", json.dumps(embed_teams, ensure_ascii=False))
     doc = doc.replace("/*__DEX__*/null", json.dumps(dex, ensure_ascii=False))
     doc = doc.replace("{{BUILD_SHA}}", build_sha)
     doc = doc.replace("{{BUILD_DATE}}", build_date)
