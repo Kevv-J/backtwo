@@ -593,9 +593,13 @@ def parse_champions_species(text: str) -> set[str]:
 
 
 def _showdown_shortdescs(url: str, cache_key: str, battle_var: str) -> dict[str, str]:
-    """Fetch a Showdown MAIN data file (items.js / abilities.js) and node-eval it
-    to map id -> shortDesc (falls back to the longer desc). The champions mod only
-    carries legality flags, so effect text comes from the base data files."""
+    """Fetch a Showdown TEXT data file (data/text/items.ts / abilities.ts from the
+    GitHub repo) and node-eval it to map id -> shortDesc (falls back to the longer
+    desc). Showdown stripped the description text out of the served
+    play.pokemonshowdown.com/data/*.js files (those now carry only battle
+    mechanics — spritenum/num/gen), so effect text comes from the repo's
+    `export const ItemsText/AbilitiesText` modules instead. The node step strips
+    the TS `import` lines + the `export const X: T =` wrapper before eval."""
     import subprocess
     cf = CACHE / cache_key
     if cf.exists():
@@ -612,7 +616,8 @@ def _showdown_shortdescs(url: str, cache_key: str, battle_var: str) -> dict[str,
     try:
         p = subprocess.run(
             ["node", "-e",
-             "let exports={};const code=require('fs').readFileSync('/dev/stdin','utf8');eval(code);"
+             "let exports={};let code=require('fs').readFileSync('/dev/stdin','utf8');"
+             "code=code.replace(/^import[^\\n]*\\n/gm,'').replace(/export const (\\w+)[^=]*=/,'exports.$1 =');eval(code);"
              f"const src=exports.{battle_var}||{{}};const out={{}};"
              "for(const [k,v] of Object.entries(src)){if(!v)continue;"
              "if(v.shortDesc)out[k]=v.shortDesc;else if(v.desc)out[k]=v.desc;}"
@@ -1819,10 +1824,13 @@ def main() -> None:
     # Item + ability effect text — Showdown's MAIN data files (the champions mod
     # only carries legality flags, not descriptions). Keyed by Showdown id.
     print("Fetching Showdown item/ability effect text ...", flush=True)
-    dex_item_desc = _showdown_shortdescs("https://play.pokemonshowdown.com/data/items.js",
-                                         "showdown_items_desc.json", "BattleItems")
-    dex_ability_desc = _showdown_shortdescs("https://play.pokemonshowdown.com/data/abilities.js",
-                                            "showdown_abilities_desc.json", "BattleAbilities")
+    # Descriptions now live in the repo's data/text/*.ts (Showdown dropped them
+    # from the served play.* data/*.js files). See _showdown_shortdescs.
+    SD_TEXT = "https://raw.githubusercontent.com/smogon/pokemon-showdown/master/data/text"
+    dex_item_desc = _showdown_shortdescs(f"{SD_TEXT}/items.ts",
+                                         "showdown_items_desc.json", "ItemsText")
+    dex_ability_desc = _showdown_shortdescs(f"{SD_TEXT}/abilities.ts",
+                                            "showdown_abilities_desc.json", "AbilitiesText")
     print(f"  ✓ {len(dex_item_desc)} item + {len(dex_ability_desc)} ability descriptions", flush=True)
 
     # Reg M-C roster (legal species ids) from champions formats-data.ts. Exposed

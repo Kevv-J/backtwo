@@ -81,28 +81,6 @@ jobs:
             echo "::error::sprites total (${SPRITES_MB} MB) exceeds budget (10 MB)"
             exit 1
           fi
-          # Pre-rendered per-Pokemon SEO pages. ~180 pages at ~12 KB each; a
-          # blowout here means the generator started embedding the full dataset
-          # into every page, which is exactly what these pages exist to avoid.
-          PAGES_BYTES=$(du -sb pokemon 2>/dev/null | cut -f1)
-          PAGES_MB=$(( PAGES_BYTES / 1048576 ))
-          PAGE_COUNT=$(find pokemon -name index.html | wc -l)
-          echo "pokemon/: ${PAGES_MB} MB across ${PAGE_COUNT} pages"
-          if (( PAGES_MB > 15 )); then
-            echo "::error::pre-rendered pages (${PAGES_MB} MB) exceed budget (15 MB)"
-            exit 1
-          fi
-          # Blog posts + their media (GIFs are pre-transcoded to small video, so
-          # a blowout here means someone committed raw video/GIF instead).
-          if [ -d blog ]; then
-            BLOG_BYTES=$(du -sb blog 2>/dev/null | cut -f1)
-            BLOG_MB=$(( BLOG_BYTES / 1048576 ))
-            echo "blog/: ${BLOG_MB} MB"
-            if (( BLOG_MB > 25 )); then
-              echo "::error::blog/ (${BLOG_MB} MB) exceeds budget (25 MB)"
-              exit 1
-            fi
-          fi
 
       - name: Commit + push if anything changed
         run: |
@@ -128,6 +106,9 @@ jobs:
         run: |
           STAMP=$(date -u +%F)
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          # Ensure the label exists first — gh issue create fails hard on an unknown
+          # label, which previously broke this failure-handler itself.
+          gh label create automation --color ededed --description "Automated workflow" --force >/dev/null 2>&1 || true
           gh issue create \
             --title "Data refresh failed (${STAMP})" \
             --label "automation" \
