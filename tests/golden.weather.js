@@ -56,3 +56,27 @@ test('Weather Ball: type shifts to Fire in Sun and doubles BP', () => {
   if (none.moveType !== 'normal') throw new Error(`expected normal, got ${none.moveType}`);
   if (sun.moveType !== 'fire') throw new Error(`expected fire, got ${sun.moveType}`);
 });
+
+// Bug: Terrain Pulse ignored terrain entirely (always 50 BP Normal), so a Mega
+// Launcher Blastoise did identical damage to Rillaboom in Grassy vs Psychic.
+// Real: grounded user in terrain → type matches terrain + 100 BP (then the
+// terrain's own ×1.3 boost applies). Airborne user → stays 50 BP Normal.
+test('Terrain Pulse: type + BP follow terrain (grounded user only)', () => {
+  const atk = mkMon({ forme: 'Blastoise-Mega', ability: 'Mega Launcher', nature: 'Modest', ev: { spa: 32 }, moves: ['Terrain Pulse'] });
+  const def = mkMon({ forme: 'Rillaboom', ev: { hp: 32 } });
+  const run = (terrain, a = atk) => calc({ atk: a, def, sA: mkSide(), sB: mkSide(), w: 'none', f: mkField({ terrain }), move: 'Terrain Pulse' });
+  const none = run('none'), grassy = run('grassy'), psychic = run('psychic'), electric = run('electric'), misty = run('misty');
+  if (none.moveType !== 'normal') throw new Error(`no terrain: expected normal, got ${none.moveType}`);
+  if (grassy.moveType !== 'grass') throw new Error(`grassy: expected grass, got ${grassy.moveType}`);
+  if (psychic.moveType !== 'psychic') throw new Error(`psychic: expected psychic, got ${psychic.moveType}`);
+  if (electric.moveType !== 'electric') throw new Error(`electric: expected electric, got ${electric.moveType}`);
+  if (misty.moveType !== 'fairy') throw new Error(`misty: expected fairy, got ${misty.moveType}`);
+  // Grass resisted by Rillaboom (×0.5), Psychic neutral; both get terrain ×1.3.
+  assertRatio(grassy.hi / psychic.hi, 0.5, 'Grassy vs Psychic Terrain Pulse into Rillaboom');
+  // Psychic: 2× BP × 1.3 terrain vs 50 BP Normal → ~2.6×.
+  assertRatio(psychic.hi / none.hi, 2.6, 'Psychic Terrain Pulse vs no terrain');
+  // Airborne user (Flying type) gets neither the type shift nor the BP doubling.
+  const flyer = mkMon({ forme: 'Talonflame', nature: 'Modest', ev: { spa: 32 }, moves: ['Terrain Pulse'] });
+  const air = run('psychic', flyer);
+  if (air.moveType !== 'normal') throw new Error(`airborne: expected normal, got ${air.moveType}`);
+});

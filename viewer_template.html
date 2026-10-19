@@ -2415,6 +2415,9 @@ function effectiveBP(move, atk, def){
   // Weather Ball: base 50 → 100 BP when any weather is active (type shift
   // happens in calcDmg above; here we only handle the BP doubling).
   if(move==='Weather Ball' && weather!=='none') bp*=2;
+  // Terrain Pulse: 50 → 100 BP when a terrain is up AND the user is grounded
+  // (type shift happens in calcDmg alongside Weather Ball's).
+  if(move==='Terrain Pulse' && field.terrain && field.terrain!=='none' && isGrounded(atk)) bp*=2;
   // Weight-based moves. Heavy Metal / Light Metal modify the mon's OWN weight
   // (Aggron/Copperajah Heavy Metal → 2×; Klefki/Scream Tail Light Metal → 0.5×).
   const monWeight=(mon)=>{
@@ -2852,6 +2855,12 @@ function calcDmg(atk,move,def,atkSide,defSide,opts){
     else if(weather==='rain'||weather==='heavyrain') moveType='water';
     else if(weather==='sand') moveType='rock';
     else if(weather==='snow') moveType='ice';
+  }
+  // Terrain Pulse takes the terrain's type for a grounded user; the terrain's
+  // own ×1.3 boost then applies via the normal terrain check below.
+  if(move==='Terrain Pulse' && isGrounded(atk)){
+    const tt={electric:'electric',grassy:'grass',psychic:'psychic',misty:'fairy'}[field.terrain];
+    if(tt) moveType=tt;
   }
   const aT=DEX.formes[effectiveForme(atk)]?.types||[], dT=DEX.formes[effectiveForme(def)]?.types||[];
   // Magic Room disables held items
