@@ -1,7 +1,7 @@
 {
-  "generated_at_utc": "2026-10-23T16:00:28Z",
-  "build_sha": "7394399",
-  "build_date": "2026-10-23",
+  "generated_at_utc": "2026-10-26T00:57:10Z",
+  "build_sha": "a05d756",
+  "build_date": "2026-10-26",
   "scrape": {
     "team_total": 2667,
     "by_reg": {
@@ -13,7 +13,7 @@
     "resolve_rate": 1.0
   },
   "dex": {
-    "forme_count": 351,
+    "forme_count": 348,
     "move_count": 515,
     "type_count": 18,
     "item_icon_count": 154,
