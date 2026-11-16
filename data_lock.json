@@ -1,7 +1,7 @@
 {
-  "generated_at_utc": "2026-11-13T18:51:50Z",
-  "build_sha": "32bb8dd",
-  "build_date": "2026-11-13",
+  "generated_at_utc": "2026-11-16T02:32:03Z",
+  "build_sha": "d19cc1a",
+  "build_date": "2026-11-16",
   "scrape": {
     "team_total": 2892,
     "by_reg": {
